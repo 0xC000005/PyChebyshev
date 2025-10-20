@@ -1,0 +1,19 @@
+[project]
+name = "finregressor"
+version = "0.1.0"
+description = "Add your description here"
+readme = "README.md"
+requires-python = ">=3.13"
+dependencies = [
+    "blackscholes>=0.2.0",
+    "chebpy>=0.2",
+    "matplotlib>=3.10.7",
+    "numba>=0.62.1",
+    "numpy>=2.3.4",
+    "pandas>=2.3.3",
+    "scikit-fdiff>=0.7.0",
+    "scipy>=1.16.2",
+    "teneva>=0.14.9",
+    "tensorly>=0.9.0",
+    "tqdm>=4.67.1",
+]
