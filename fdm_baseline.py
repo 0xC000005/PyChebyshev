@@ -567,24 +567,37 @@ def convergence_study(
     r: float = 0.05,
     sigma: float = 0.2,
     q: float = 0.0,
-    option_type: str = 'call'
+    option_type: str = 'call',
+    include_expensive_greeks: bool = True
 ) -> Dict:
     """
     Study convergence: show that smaller grids improve accuracy but take longer.
 
     Tests multiple grid resolutions to demonstrate the accuracy/speed trade-off.
+    Now includes all Greeks: Delta, Gamma, Theta, Vega, Rho.
+
+    Parameters:
+    -----------
+    include_expensive_greeks : bool
+        If True, also computes Vega and Rho (which require re-solving PDE).
+        This is significantly slower but demonstrates full sensitivity analysis.
     """
     from blackscholes import BlackScholesCall, BlackScholesPut
 
-    # Get analytical reference
+    # Get analytical reference for all Greeks
     if option_type == 'call':
         bs_option = BlackScholesCall(S=S, K=K, T=T, r=r, sigma=sigma, q=q)
     else:
         bs_option = BlackScholesPut(S=S, K=K, T=T, r=r, sigma=sigma, q=q)
 
-    analytical_price = bs_option.price()
-    analytical_delta = bs_option.delta()
-    analytical_gamma = bs_option.gamma()
+    analytical = {
+        'price': bs_option.price(),
+        'delta': bs_option.delta(),
+        'gamma': bs_option.gamma(),
+        'theta': bs_option.theta(),
+        'vega': bs_option.vega(),
+        'rho': bs_option.rho(),
+    }
 
     # Test different grid resolutions (coarse to fine)
     grid_configs = [
@@ -602,15 +615,22 @@ def convergence_study(
     print("="*80)
     print(f"\nOption: {option_type.upper()}")
     print(f"Parameters: S=${S}, K=${K}, T={T}yr, r={r*100}%, σ={sigma*100}%")
-    print(f"\nAnalytical Reference:")
-    print(f"  Price: {analytical_price:.8f}")
-    print(f"  Delta: {analytical_delta:.8f}")
-    print(f"  Gamma: {analytical_gamma:.8f}")
+    print(f"\nAnalytical Reference (exact values):")
+    print(f"  Price: {analytical['price']:.8f}")
+    print(f"  Delta: {analytical['delta']:.8f}")
+    print(f"  Gamma: {analytical['gamma']:.8f}")
+    print(f"  Theta: {analytical['theta']:.8f}")
+    print(f"  Vega:  {analytical['vega']:.8f}")
+    print(f"  Rho:   {analytical['rho']:.8f}")
 
-    print("\n" + "-"*80)
+    # Section 1: Fast Greeks (Delta, Gamma, Theta)
+    print("\n" + "="*80)
+    print("SECTION 1: FAST GREEKS (Delta, Gamma, Theta)")
+    print("="*80)
+    print("\n" + "-"*90)
     print(f"{'Grid':<12} {'M':>6} {'N':>6} {'Time(s)':>10} "
-          f"{'Price Err%':>12} {'Delta Err%':>12} {'Gamma Err%':>12}")
-    print("-"*80)
+          f"{'Price Err%':>12} {'Delta Err%':>12} {'Gamma Err%':>12} {'Theta Err%':>12}")
+    print("-"*90)
 
     S_max = max(3 * K, 2 * S)
 
@@ -629,45 +649,111 @@ def convergence_study(
         fdm_price = fdm_solver.get_price(S)
         fdm_delta = fdm_solver.get_delta(S)
         fdm_gamma = fdm_solver.get_gamma(S)
+        fdm_theta = fdm_solver.get_theta(S)
 
         elapsed = time.time() - t0
 
         # Calculate errors
-        price_err = abs(fdm_price - analytical_price) / abs(analytical_price) * 100
-        delta_err = abs(fdm_delta - analytical_delta) / abs(analytical_delta) * 100
-        gamma_err = abs(fdm_gamma - analytical_gamma) / abs(analytical_gamma) * 100
+        price_err = abs(fdm_price - analytical['price']) / abs(analytical['price']) * 100
+        delta_err = abs(fdm_delta - analytical['delta']) / abs(analytical['delta']) * 100
+        gamma_err = abs(fdm_gamma - analytical['gamma']) / abs(analytical['gamma']) * 100
+        theta_err = abs(fdm_theta - analytical['theta']) / abs(analytical['theta']) * 100
 
         print(f"{label:<12} {M:>6} {N:>6} {elapsed:>10.3f} "
-              f"{price_err:>11.4f}% {delta_err:>11.4f}% {gamma_err:>11.4f}%")
+              f"{price_err:>11.4f}% {delta_err:>11.4f}% {gamma_err:>11.4f}% {theta_err:>11.4f}%")
 
         results.append({
             'label': label,
             'M': M,
             'N': N,
-            'time': elapsed,
+            'time_fast': elapsed,
             'price_error_pct': price_err,
             'delta_error_pct': delta_err,
             'gamma_error_pct': gamma_err,
+            'theta_error_pct': theta_err,
             'fdm_price': fdm_price,
             'fdm_delta': fdm_delta,
             'fdm_gamma': fdm_gamma,
+            'fdm_theta': fdm_theta,
         })
 
-    print("-"*80)
-    print("\nKEY OBSERVATIONS:")
+    print("-"*90)
+
+    # Section 2: Expensive Greeks (Vega, Rho) - only for selected grids
+    if include_expensive_greeks:
+        print("\n" + "="*80)
+        print("SECTION 2: EXPENSIVE GREEKS (Vega, Rho)")
+        print("Requires re-solving PDE with perturbed parameters")
+        print("="*80)
+        print("\n" + "-"*90)
+        print(f"{'Grid':<12} {'M':>6} {'N':>6} {'Time(s)':>10} "
+              f"{'Vega Err%':>12} {'Rho Err%':>12} {'Total Time(s)':>15}")
+        print("-"*90)
+
+        # Only compute for selected grids to save time
+        expensive_indices = [0, 2, 4]  # Coarse, Fine, Ultra Fine
+
+        for idx in expensive_indices:
+            config = grid_configs[idx]
+            M, N = config['M'], config['N']
+            label = config['label']
+
+            # Solve with this grid resolution
+            t0 = time.time()
+            fdm_solver = BlackScholesFDM(
+                S_max=S_max, K=K, T=T, r=r, sigma=sigma, q=q,
+                M=M, N=N, option_type=option_type
+            )
+            fdm_solver.solve_crank_nicolson()
+
+            # Compute expensive Greeks
+            fdm_vega = fdm_solver.get_vega_fd(S)
+            fdm_rho = fdm_solver.get_rho_fd(S)
+
+            elapsed_expensive = time.time() - t0
+
+            # Calculate errors
+            vega_err = abs(fdm_vega - analytical['vega']) / abs(analytical['vega']) * 100
+            rho_err = abs(fdm_rho - analytical['rho']) / abs(analytical['rho']) * 100
+
+            # Total time = fast Greeks + expensive Greeks
+            total_time = results[idx]['time_fast'] + elapsed_expensive
+
+            print(f"{label:<12} {M:>6} {N:>6} {elapsed_expensive:>10.3f} "
+                  f"{vega_err:>11.4f}% {rho_err:>11.4f}% {total_time:>15.3f}")
+
+            # Update results
+            results[idx]['time_expensive'] = elapsed_expensive
+            results[idx]['time_total'] = total_time
+            results[idx]['vega_error_pct'] = vega_err
+            results[idx]['rho_error_pct'] = rho_err
+            results[idx]['fdm_vega'] = fdm_vega
+            results[idx]['fdm_rho'] = fdm_rho
+
+        print("-"*90)
+
+    print("\n" + "="*80)
+    print("KEY OBSERVATIONS:")
+    print("="*80)
     print(f"  • Accuracy improves with finer grids (smaller dS, dt)")
     print(f"  • Computation time increases roughly O(M*N)")
-    print(f"  • Price converges faster than Greeks")
-    print(f"  • Ultra Fine is {results[-1]['time']/results[0]['time']:.1f}x slower but "
-          f"{results[0]['price_error_pct']/results[-1]['price_error_pct']:.1f}x more accurate")
+    print(f"  • Price converges faster than first-order Greeks (Delta, Theta)")
+    print(f"  • First-order Greeks converge faster than second-order (Gamma)")
+    print(f"  • Ultra Fine is {results[-1]['time_fast']/results[0]['time_fast']:.1f}x slower "
+          f"but {results[0]['price_error_pct']/results[-1]['price_error_pct']:.1f}x more accurate")
+
+    if include_expensive_greeks:
+        print(f"\n  EXPENSIVE GREEKS (Vega, Rho):")
+        print(f"  • Require 2 additional PDE solves each (perturbed parameters)")
+        print(f"  • ~3x slower than computing Delta/Gamma/Theta")
+        expensive_ratio = results[2].get('time_expensive', 0) / results[2]['time_fast']
+        print(f"  • Fine grid: Vega+Rho computation is {expensive_ratio:.1f}x slower than base solve")
+        print(f"  • Trade-off: Full sensitivity profile vs computational cost")
+
     print("="*80)
 
     return {
-        'analytical': {
-            'price': analytical_price,
-            'delta': analytical_delta,
-            'gamma': analytical_gamma,
-        },
+        'analytical': analytical,
         'results': results
     }
 

@@ -1,0 +1,10 @@
+MoCaXSuite-1.2.0/
+__pycache__/
+*.pyc
+*.pyo
+.venv/
+mocax_lib/
+simple-example-py.py
+*.pdf
+*.zip
+.DS_Store
