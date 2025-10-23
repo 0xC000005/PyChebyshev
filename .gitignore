@@ -4,6 +4,7 @@ __pycache__/
 *.pyo
 .venv/
 mocax_lib/
+mocaxextend_lib/
 simple-example-py.py
 *.pdf
 *.zip
