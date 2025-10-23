@@ -32,14 +32,14 @@ uv run python fdm_baseline.py
 # Finite difference convergence study (accuracy vs speed)
 uv run python fdm_baseline.py
 
-# Tensor interpolation demo (5D Chebyshev with CP decomposition)
-uv run python chebyshev_tensor_demo.py
+# Chebyshev baseline (uses NumPy's Chebyshev.interpolate with partial pre-computation)
+uv run python chebyshev_baseline.py
+
+# Chebyshev barycentric (true barycentric interpolation matching MoCaX algorithm)
+uv run python chebyshev_barycentric.py
 
 # MoCaX library test (requires setup - see MoCaX Setup section below)
 export LD_LIBRARY_PATH="$PWD/mocax_lib:$LD_LIBRARY_PATH" && uv run python mocax_test.py
-
-# Main entry point (minimal example)
-uv run python main.py
 ```
 
 ### Dependency Management
@@ -120,56 +120,52 @@ The test script validates MoCaX installation with three comprehensive tests:
 - `solve_crank_nicolson()`: Crank-Nicolson scheme (2nd order in time and space)
 - Grid-based Greek calculations using central differences
 
-**`chebyshev_tensor_demo.py`** - Multi-dimensional tensor interpolation
-- `TensorOptionPricer` class: 5D Chebyshev interpolation using CP decomposition
-  - Builds full 5D tensor V(S, K, T, σ, r) at Chebyshev nodes
-  - Compresses using CP (CANDECOMP/PARAFAC) decomposition
-  - Achieves 287× storage reduction with <1% reconstruction error
-  - Fast Greeks via finite difference on interpolated surface
-- `comprehensive_tensor_comparison()`: Validates tensor interpolation across 19 configurations
-- **Performance**: 1-8% error on Greeks, 855× faster than FDM for 1000 queries
+**`chebyshev_baseline.py`** - NumPy Chebyshev with partial pre-computation
+- `ChebyshevApproximation` class: Multi-dimensional interpolation using `Chebyshev.interpolate()`
+  - Uses dimensional decomposition (3D→2D→1D) to collapse multi-dimensional tensors
+  - Pre-computes polynomials for innermost dimension only (14,641 objects for 5D)
+  - Re-interpolates outer dimensions on each query (values depend on query point)
+  - **Performance**: Accurate but requires O(N log N) polynomial fitting per query
+  - **Limitation**: Polynomial coefficients depend on both nodes AND values
+
+**`chebyshev_barycentric.py`** - True barycentric interpolation (matches MoCaX algorithm)
+- `ChebyshevApproximation` class: Barycentric interpolation with full pre-computation
+  - Pre-computes barycentric weights for ALL dimensions (just 55 floats for 5D)
+  - Weights depend ONLY on node positions, NOT function values
+  - Uniform O(N) evaluation for all dimensions (no polynomial fitting during queries)
+  - **Performance**: 0.000% price error, 1.980% max Greek error
+  - **Key advantage**: Algorithmically equivalent to MoCaX, fair comparison
 
 **`mocax_test.py`** - MoCaX library integration test
-- Tests MoCaX (Multi-dimensional Chebyshev Approximation) library
-- Demonstrates Black-Scholes pricing with automatic differentiation for Greeks
-- Requires external `mocax_lib/` directory (proprietary library)
-- **Note**: MoCaX provides Chebyshev approximation with analytical derivatives (vs numerical for TensorOptionPricer)
+- Tests MoCaX (Multi-dimensional Chebyshev Approximation) proprietary library
+- Three comprehensive tests: simple 3D, Black-Scholes 3D, and 5D parametric BS
+- Demonstrates automatic differentiation for Greeks (analytical, not finite difference)
+- Requires external `mocax_lib/` directory (see MOCAX_SETUP_GUIDE.md)
+- **Results**: Spectral accuracy (0.000% price error), 1.98% Vega error on 5D test
 
 ### Research Documentation
 
-**`CHEBYSHEV_ACCELERATION.md`** - Comprehensive research on Chebyshev methods
-- **Part 1**: Basic Chebyshev methods for option pricing
-  - Parametric interpolation (offline/online phases)
-  - Dynamic Chebyshev method for American options
-  - Super-time-stepping for PDE acceleration
-  - Spectral/pseudo-spectral methods
-- **Part 2**: Advanced Chebyshev tensor methods
-  - Tensor Train (TT) format for high-dimensional problems
-  - TT-cross approximation algorithm
-  - Tensor completion techniques
-  - Applications: multi-asset options, XVA, initial margin (SIMM)
-  - Performance benchmarks from academic literature
-- **Part 3**: Detailed analysis of key arXiv papers
-  - arXiv:1505.04648 - Parametric option pricing
-  - arXiv:1805.00898 - Ultra-efficient risk calculations
-  - arXiv:1902.04367 - Low-rank tensor approximations
-  - arXiv:1808.08221 - Dynamic initial margin via tensors
-  - arXiv:2103.01934 - High-dimensional Bermudan options
+**`MOCAX_ALGORITHM_ANALYSIS.md`** - Comprehensive analysis of MoCaX algorithm
+- **Part 1**: Overview of MoCaX (Multi-dimensional Chebyshev Approximation)
+  - Algorithmic Pricing Acceleration (APA) and Greeks Acceleration (AGA)
+  - Standard MoCaX (full Chebyshev tensors) vs MoCaX Extend (Tensor Train format)
+- **Part 2**: Core Algorithm - Barycentric Chebyshev Interpolation
+  - Detailed explanation of barycentric formula: `p(x) = Σ[w_i * f_i / (x - x_i)] / Σ[w_i / (x - x_i)]`
+  - Why barycentric is superior to Lagrange form (O(N) vs O(N²))
+  - Source code evidence from `mocaxc_utils.private.h`
+- **Part 3**: Dimensional Decomposition Strategy
+  - 5D → 4D → 3D → 2D → 1D collapse process
+  - How to evaluate V(S, K, T, σ, r) by repeated 1D interpolation
+- **Part 4**: Key Optimization - Pre-computed Weights
+  - Barycentric weights depend ONLY on node positions (not function values!)
+  - Formula: `w_i = 1 / ∏(j≠i) (x_i - x_j)`
+  - Why polynomial coefficients can't be pre-computed for all dimensions
+  - Complexity: O(N^d) barycentric vs O(N^(d+1)) with refitting
 
-**`BLACKSCHOLES_LIBRARY_ANALYSIS.md`** - Analysis of the `blackscholes` library
-- Confirms it uses analytical closed-form formulas (NOT numerical PDE)
-- Documents all Greeks calculations (up to 3rd order)
-- Performance: ~17,000x faster than FDM but limited to European options
-
-**`FDM_COMPARISON_RESULTS.md`** - Validation results
-- FDM vs analytical comparison: < 0.1% error on price
-- Performance benchmarks
-- Trade-offs between methods
-
-**`verify_fdm_math.md`** - Mathematical verification
-- Complete derivation of finite difference discretization
-- Proof that implementation is mathematically correct
-- Validation of boundary conditions, terminal conditions, Greeks formulas
+**`MOCAX_SETUP_GUIDE.md`** - Installation and usage guide
+- Complete setup instructions for MoCaX proprietary library
+- How to extract and configure the Python bindings
+- Test suite documentation and expected results
 
 **`TENSOR_COMPARISON_SUMMARY.md`** - Detailed comparison of interpolation methods
 - **Step-by-step explanation** of 1D vs 5D Chebyshev interpolation
@@ -205,7 +201,7 @@ The test script validates MoCaX installation with three comprehensive tests:
 
 ## Architecture & Design Principles
 
-### Four-Tier Approach
+### Three-Tier Implementation Strategy
 
 1. **Analytical Layer** (`blackscholes` library)
    - Instant pricing (~10μs)
@@ -213,26 +209,29 @@ The test script validates MoCaX installation with three comprehensive tests:
    - Limited to European vanilla options
    - **Use case**: Single evaluations, ground truth validation
 
-2. **Tensor Interpolation Layer** (`chebyshev_tensor_demo.py`)
-   - 5D Chebyshev interpolation with CP decomposition
-   - **Offline phase**: Build compressed tensor in ~1.2s (161,051 evaluations)
-   - **Online phase**: Query in ~1ms, Greeks in ~2ms
-   - 1-8% error on Greeks across entire parameter space
-   - 855× faster than FDM for repeated queries
-   - **Use case**: Risk systems, parameter sweeps, portfolio Greeks
+2. **Chebyshev Approximation Layer** (two implementations for comparison)
+
+   **A. Baseline (`chebyshev_baseline.py`)**
+   - Uses `numpy.polynomial.chebyshev.Chebyshev.interpolate()`
+   - Dimensional decomposition with partial pre-computation
+   - Pre-computes polynomials for innermost dimension only (14,641 objects for 5D)
+   - Re-interpolates outer dimensions on each query (O(N log N) per dimension)
+   - **Limitation**: Polynomial coefficients depend on values, can't fully pre-compute
+
+   **B. Barycentric (`chebyshev_barycentric.py`)**
+   - Implements barycentric interpolation formula manually
+   - Pre-computes weights for ALL dimensions (just 55 floats for 5D)
+   - Uniform O(N) evaluation for all dimensions
+   - **Performance**: 0.000% price error, 1.980% max Greek error
+   - **Key insight**: Barycentric weights depend only on nodes, not values!
+   - **Algorithmically equivalent to MoCaX** - fair comparison benchmark
 
 3. **Numerical PDE Layer** (`fdm_baseline.py`)
-   - Flexible for exotic features (American, barriers, etc.)
+   - Finite difference methods for Black-Scholes PDE
+   - Flexible for exotic features (American, barriers, path-dependent)
    - Accurate baseline (~0.03% error with fine grids)
    - Slow (~500ms per solve)
-   - Used for validation and options without analytical formulas
-   - **Use case**: One-off exotic pricing, high-accuracy validation
-
-4. **Advanced Acceleration** (documented in `CHEBYSHEV_ACCELERATION.md`)
-   - Tensor Train (TT) methods for d>5 dimensions
-   - TT-cross adaptive sampling
-   - Dynamic tensors for American options
-   - **Use case**: Multi-asset options, XVA, regulatory capital
+   - **Use case**: Validation, exotic options without analytical formulas
 
 ### Important Implementation Details
 
@@ -247,37 +246,36 @@ The test script validates MoCaX installation with three comprehensive tests:
 - Solves tridiagonal system: `A·V^j = b` using scipy's sparse solver
 
 **Greeks Calculation**:
-- Delta: Central difference `(V[i+1] - V[i-1])/(2·dS)`
-- Gamma: Second-order central `(V[i+1] - 2·V[i] + V[i-1])/dS²`
-- Theta: Forward difference in time
+- Delta: Central difference `(V[i+1] - V[i-1])/(2·dS)` (FDM grid-based)
+- Gamma: Second-order central `(V[i+1] - 2·V[i] + V[i-1])/dS²` (FDM grid-based)
+- Theta: Forward difference in time (FDM grid-based)
 - Vega/Rho (FDM): Finite difference requiring PDE re-solve with perturbed parameters (~1s each)
-- Vega/Rho (Tensor): Finite difference on interpolated surface (~2ms each, 500× faster!)
+- Vega/Rho (Chebyshev): Finite difference on interpolated surface (~2ms each, 500× faster!)
+- Derivatives (Barycentric): 5-point stencil with adaptive epsilon for numerical stability
 
-**Tensor Interpolation Configuration**:
+**Chebyshev Interpolation Configuration**:
 - Dimensions: 5D → V(S, K, T, σ, r)
-- Nodes per dimension: 11 (Chebyshev nodes)
+- Nodes per dimension: 11 (Chebyshev nodes from `chebpts1()`)
 - Total grid: 11^5 = 161,051 points
-- CP rank: 10 (controls accuracy vs compression trade-off)
-- Compression: 287× (161,051 → 560 parameters)
-- Reconstruction error: ~0.5%
-- Interpolation method: Multi-linear on regular grid
+- **Baseline**: 14,641 polynomial objects (innermost dimension only)
+- **Barycentric**: 55 weights (ALL dimensions, just 440 bytes!)
+- Evaluation: Dimensional decomposition (5D → 4D → 3D → 2D → 1D → scalar)
 
 ### Convergence & Accuracy
 
-From `convergence_study()` results:
+**From FDM** (`convergence_study()` results):
 - **Coarse grid** (M=50, N=500): ~0.6% price error, 0.09s runtime
 - **Fine grid** (M=200, N=2000): ~0.04% price error, 0.5s runtime
 - **Ultra fine** (M=800, N=8000): ~0.002% price error, 6s runtime
 - Trade-off: 69× slower gives 273× better accuracy
+- **Error scaling**: O(dt, dS²) truncation error
 
-**Error scaling**: O(dt, dS²) truncation error
-
-From `chebyshev_tensor_demo.py` tensor interpolation:
-- **Price error**: Mean 0.79%, Max 1.94%
-- **Vega error**: Mean 3.22%, Max 7.60% (vs 40% for 1D interpolation!)
-- **Rho error**: Mean 1.36%, Max 4.28% (vs 109% for 1D interpolation!)
-- **Speedup**: 855× faster than FDM for 1000 queries
-- **Compression**: 287× storage reduction with 0.56% reconstruction error
+**From Chebyshev Barycentric** (`chebyshev_barycentric.py` 5D test):
+- **Price error**: 0.000% max (spectral accuracy!)
+- **Delta**: 0.000%, **Gamma**: 1.590%, **Vega**: 1.980%, **Rho**: 0.000%
+- Build time: ~0.35s (161,051 evaluations using analytical formulas)
+- Pre-computed weights: 55 floats (440 bytes) for all dimensions
+- Uniform O(N) evaluation approach
 
 ## Validation Strategy
 
@@ -296,12 +294,21 @@ All numerical methods are validated against analytical Black-Scholes formulas:
 - ✅ Ground truth validation
 - ❌ Don't use for American options or exotics
 
-**Use Tensor Interpolation** (`chebyshev_tensor_demo.py`):
+**Use Chebyshev Baseline** (`chebyshev_baseline.py`):
+- ✅ Learning dimensional decomposition concept
+- ✅ Using NumPy's built-in Chebyshev functions
+- ✅ Partial pre-computation acceptable
+- ❌ Not optimal for production (re-interpolates outer dimensions)
+- ❌ Use barycentric instead for fair MoCaX comparison
+
+**Use Chebyshev Barycentric** (`chebyshev_barycentric.py`):
+- ✅ **Fair comparison with MoCaX algorithm** (algorithmically equivalent!)
 - ✅ **Multiple parameters vary simultaneously** (key advantage!)
 - ✅ Need Greeks (Vega, Rho) across diverse scenarios
-- ✅ Many queries (>10) to amortize 1.2s offline cost
-- ✅ Can tolerate 1-8% error
+- ✅ Many queries (>10) to amortize ~0.35s offline cost
+- ✅ Can tolerate ~2% error on Greeks
 - ✅ Parameters within interpolation range
+- ✅ Minimal memory footprint (55 weights for 5D)
 - ❌ Don't use for single query (not worth offline cost)
 - ❌ Don't use for out-of-range extrapolation
 
@@ -311,33 +318,35 @@ All numerical methods are validated against analytical Black-Scholes formulas:
 - ✅ Need highest accuracy (<0.1% error)
 - ✅ Research/validation baseline
 - ✅ One-off calculations
-- ❌ Don't use for repeated similar queries (use tensor interpolation instead)
+- ❌ Don't use for repeated similar queries (use Chebyshev instead)
 
-**Use Advanced Tensor Methods** (from `CHEBYSHEV_ACCELERATION.md`):
-- ✅ Multi-asset options (d>5 dimensions)
+**Use MoCaX** (proprietary library, see `MOCAX_SETUP_GUIDE.md`):
+- ✅ Production risk systems requiring extreme performance
+- ✅ Automatic differentiation for Greeks (analytical, not finite difference)
+- ✅ Multi-asset options (d>5 dimensions with MoCaX Extend)
 - ✅ XVA calculations (CVA, DVA, FVA)
 - ✅ Regulatory capital (SIMM)
-- ✅ High-dimensional parameter spaces
-- ✅ Production risk systems
 
 ## Research References
 
-The project is based on extensive research documented in `CHEBYSHEV_ACCELERATION.md`:
-- 7+ key arXiv papers analyzed (1505.04648, 1805.00898, 1902.04367, 1808.08221, 2103.01934)
-- Production methods from major financial institutions
-- Speedups of 10,000× - 40,000× demonstrated in literature
-- Applications: parametric pricing, XVA, SIMM, volatility calibration
+The project focuses on comparing Chebyshev approximation methods:
 
-**Implemented methods**:
-- ✅ 5D Chebyshev tensor interpolation with CP decomposition (`chebyshev_tensor_demo.py`)
+**Core Documentation**:
+- `MOCAX_ALGORITHM_ANALYSIS.md`: Detailed analysis of MoCaX's barycentric algorithm
+- `TENSOR_COMPARISON_SUMMARY.md`: Why 5D matters (1D gives 40-108% errors when parameters vary)
+- `MOCAX_SETUP_GUIDE.md`: Complete MoCaX installation and usage guide
+
+**Implemented Methods**:
 - ✅ Finite difference methods for Black-Scholes PDE (`fdm_baseline.py`)
-- 🔬 MoCaX integration (under testing, requires proprietary library)
+- ✅ NumPy Chebyshev baseline with partial pre-computation (`chebyshev_baseline.py`)
+- ✅ Barycentric interpolation matching MoCaX algorithm (`chebyshev_barycentric.py`)
+- ✅ MoCaX integration tests (`mocax_test.py`, requires proprietary library)
 
-**Future directions** (documented but not yet implemented):
-- Tensor Train (TT) decomposition for d>5 dimensions
-- TT-cross adaptive sampling
-- Dynamic Chebyshev for American options
-- Super-time-stepping for PDE acceleration
+**Key Findings**:
+- Barycentric weights can be pre-computed for ALL dimensions (depend only on nodes)
+- Polynomial coefficients can't be fully pre-computed (depend on both nodes and values)
+- 5D Chebyshev barycentric: 0.000% price error, 1.98% max Greek error
+- MoCaX 5D test: 0.000% price error, 1.98% Vega error (spectral accuracy)
 
 ## Important Notes for Development
 
@@ -351,26 +360,31 @@ The project is based on extensive research documented in `CHEBYSHEV_ACCELERATION
 
 **When implementing new Greeks calculations**:
 1. Always consider whether parameters will vary in practice
-2. If yes → use 5D tensor interpolation (not 1D!)
-3. If no (truly fixed point) → 1D is 30× faster
+2. If yes → use 5D Chebyshev interpolation (not 1D!)
+3. If no (truly fixed point) → 1D is faster but limited
 
-### Tensor Rank Selection
+### Barycentric vs Polynomial Coefficients: Key Insight
 
-The `rank` parameter in CP decomposition controls accuracy vs compression:
-- **rank=5**: High compression (574×), moderate error (~10%)
-- **rank=10**: Balanced (287×), good error (1-8%) ← **current default**
-- **rank=20**: Lower compression (143×), excellent error (<1%)
+**Why barycentric weights can be pre-computed for ALL dimensions**:
+- Barycentric weight: `w_i = 1 / ∏(j≠i) (x_i - x_j)` → depends ONLY on node positions
+- Polynomial coefficients: depend on BOTH node positions AND function values
+- During evaluation, outer dimension "values" are intermediate results (depend on query point)
+- Therefore: Coefficients must be recomputed, but weights don't!
 
-Empirical rule: Start with rank=10, increase if errors exceed requirements.
+**Complexity comparison** (5D with 11 nodes per dimension):
+- **Baseline**: 14,641 polynomial objects (innermost only) + refitting for outer dimensions
+- **Barycentric**: 55 weights (ALL dimensions) + no refitting needed
+- **Result**: Uniform O(N) evaluation vs mixed O(N log N) + O(N)
 
 ### Performance Optimization
 
-**Offline phase** (building tensor):
-- Use analytical formulas when available (161,051 evals in 0.28s)
-- If using FDM, this becomes the bottleneck (would take 22 hours!)
-- Consider parallel evaluation for non-analytical cases
+**Offline phase** (building approximation):
+- Evaluate function at Chebyshev nodes: 11^5 = 161,051 points
+- Use analytical formulas when available (~0.28s for Black-Scholes)
+- If using FDM, this becomes the bottleneck (would take ~22 hours!)
+- Pre-compute barycentric weights (trivial, ~1ms)
 
 **Online phase** (queries):
-- Tensor interpolation: ~1ms per price, ~2ms per Greek
-- Break-even: >1-2 queries makes tensor worth it
-- For 1000 queries: 855× faster than FDM
+- Barycentric interpolation: ~1ms per price, ~2ms per Greek
+- Break-even: >1-2 queries makes pre-computation worth it
+- Evaluation: Dimensional decomposition (5D → 4D → 3D → 2D → 1D → scalar)
