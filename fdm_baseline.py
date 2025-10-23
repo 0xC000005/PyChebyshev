@@ -398,3 +398,195 @@ class BlackScholesFDM:
         }
 
 
+# ============================================================================
+# Tests
+# ============================================================================
+
+def test_black_scholes_3d():
+    """Test 3D Black-Scholes: C(S, T, σ)
+
+    Note: FDM solves for single parameter sets, so this tests
+    different configurations sequentially (not truly 3D interpolation).
+    """
+    print("\n" + "="*70)
+    print("TEST 1: Black-Scholes with FDM (varying S, T, σ)")
+    print("="*70)
+
+    K, r, q = 100.0, 0.05, 0.02
+    M, N = 200, 2000  # Grid resolution
+
+    # Test cases (matching chebyshev_barycentric.py)
+    cases = [
+        ([100, 1.0, 0.25], "ATM"),
+        ([120, 1.0, 0.25], "ITM"),
+        ([80, 1.0, 0.25], "OTM"),
+    ]
+
+    print(f"\n{'Case':<6} {'Price (Exact)':>13} {'Price (FDM)':>13} {'Error':>8}")
+    print("-" * 50)
+
+    max_err = 0
+    for params, name in cases:
+        S, T, sigma = params
+        S_max = 3 * K  # Grid extends to 3x strike
+
+        # Solve with FDM
+        fdm = BlackScholesFDM(S_max=S_max, K=K, T=T, r=r, sigma=sigma, q=q,
+                              M=M, N=N, option_type='call')
+        fdm.solve_crank_nicolson()
+        fdm_price = fdm.get_price(S)
+
+        # Exact solution
+        from blackscholes import BlackScholesCall
+        exact = BlackScholesCall(S=S, K=K, T=T, r=r, sigma=sigma, q=q).price()
+
+        err = abs(fdm_price - exact) / exact * 100
+        max_err = max(max_err, err)
+        print(f"{name:<6} {exact:>13.6f} {fdm_price:>13.6f} {err:>7.3f}%")
+
+    # Delta at ATM
+    S, T, sigma = 100, 1.0, 0.25
+    S_max = 3 * K
+    fdm = BlackScholesFDM(S_max=S_max, K=K, T=T, r=r, sigma=sigma, q=q,
+                          M=M, N=N, option_type='call')
+    fdm.solve_crank_nicolson()
+    delta_fdm = fdm.get_delta(S)
+
+    from blackscholes import BlackScholesCall
+    opt = BlackScholesCall(S=S, K=K, T=T, r=r, sigma=sigma, q=q)
+    delta_exact = opt.delta()
+    delta_err = abs(delta_fdm - delta_exact) / delta_exact * 100
+
+    print(f"\nDelta at ATM:")
+    print(f"  Exact:     {delta_exact:.6f}")
+    print(f"  FDM:       {delta_fdm:.6f}")
+    print(f"  Error:     {delta_err:.3f}%")
+
+    return max_err < 0.5
+
+
+def test_5d_black_scholes():
+    """Test with varying (S, K, T, σ, r) parameters
+
+    Note: FDM solves each configuration separately (not truly 5D).
+    This demonstrates FDM accuracy across parameter space.
+    """
+    print("\n" + "="*70)
+    print("TEST 2: Black-Scholes with FDM (varying S, K, T, σ, r)")
+    print("="*70)
+
+    q = 0.02
+    M, N = 200, 2000  # Grid resolution
+
+    # Test cases (matching chebyshev_barycentric.py)
+    cases = [
+        ([100, 100, 1.0, 0.25, 0.05], "ATM"),
+        ([110, 100, 1.0, 0.25, 0.05], "ITM"),
+        ([90, 100, 1.0, 0.25, 0.05], "OTM"),
+        ([100, 100, 0.5, 0.25, 0.05], "Short T"),
+        ([100, 100, 1.0, 0.35, 0.05], "High vol"),
+    ]
+
+    print(f"\n{'Case':<10} {'Price (Exact)':>13} {'Price (FDM)':>13} {'Error':>8}")
+    print("-" * 50)
+
+    errors = []
+    for params, name in cases:
+        S, K, T, sigma, r = params
+        S_max = 3 * K  # Grid extends to 3x strike
+
+        # Solve with FDM
+        fdm = BlackScholesFDM(S_max=S_max, K=K, T=T, r=r, sigma=sigma, q=q,
+                              M=M, N=N, option_type='call')
+        fdm.solve_crank_nicolson()
+        fdm_price = fdm.get_price(S)
+
+        # Exact solution
+        from blackscholes import BlackScholesCall
+        exact = BlackScholesCall(S=S, K=K, T=T, r=r, sigma=sigma, q=q).price()
+
+        err = abs(fdm_price - exact) / exact * 100
+        errors.append(err)
+        print(f"{name:<10} {exact:>13.6f} {fdm_price:>13.6f} {err:>7.3f}%")
+
+    # Greeks at ATM
+    S, K, T, sigma, r = 100, 100, 1.0, 0.25, 0.05
+    S_max = 3 * K
+    fdm = BlackScholesFDM(S_max=S_max, K=K, T=T, r=r, sigma=sigma, q=q,
+                          M=M, N=N, option_type='call')
+    fdm.solve_crank_nicolson()
+
+    from blackscholes import BlackScholesCall
+    opt = BlackScholesCall(S=S, K=K, T=T, r=r, sigma=sigma, q=q)
+
+    greeks = {
+        'Delta': (fdm.get_delta(S), opt.delta()),
+        'Gamma': (fdm.get_gamma(S), opt.gamma()),
+        'Vega': (fdm.get_vega_fd(S), opt.vega()),
+        'Rho': (fdm.get_rho_fd(S), opt.rho()),
+    }
+
+    print(f"\nGreeks at ATM:")
+    print(f"{'Greek':<8} {'Exact':>12} {'FDM':>12} {'Error':>8}")
+    print("-" * 50)
+
+    greek_errors = []
+    for name, (fdm_val, exact_val) in greeks.items():
+        err = abs(fdm_val - exact_val) / exact_val * 100
+        greek_errors.append(err)
+        print(f"{name:<8} {exact_val:>12.6f} {fdm_val:>12.6f} {err:>7.3f}%")
+
+    max_price_err = max(errors)
+    max_greek_err = max(greek_errors)
+
+    print(f"\nMax errors: Price {max_price_err:.3f}%, Greeks {max_greek_err:.3f}%")
+
+    # FDM has discretization error, so relax thresholds a bit
+    return max_price_err < 1.0 and max_greek_err < 10.0
+
+
+def main():
+    """Run all tests."""
+    import sys
+
+    print("="*70)
+    print("Finite Difference Method: Black-Scholes PDE Solver")
+    print("="*70)
+    print("Strategy: Solve PDE on (S, t) grid using Crank-Nicolson scheme")
+    print("Note: Each parameter set requires separate PDE solve")
+
+    results = [
+        ("Black-Scholes 3D", test_black_scholes_3d),
+        ("5D Parametric BS", test_5d_black_scholes),
+    ]
+
+    passed = []
+    for name, test_fn in results:
+        try:
+            result = test_fn()
+            passed.append((name, result))
+            status = "✓ PASSED" if result else "✗ FAILED"
+            print(f"\n{status}")
+        except Exception as e:
+            print(f"\n✗ FAILED: {e}")
+            import traceback
+            traceback.print_exc()
+            passed.append((name, False))
+
+    print("\n" + "="*70)
+    print("SUMMARY")
+    print("="*70)
+    for name, result in passed:
+        status = "✓" if result else "✗"
+        print(f"  {status} {name}")
+
+    all_passed = all(r for _, r in passed)
+    print("="*70)
+    print("✓ All tests PASSED!" if all_passed else "✗ Some tests FAILED")
+
+    return 0 if all_passed else 1
+
+
+if __name__ == "__main__":
+    import sys
+    sys.exit(main())
