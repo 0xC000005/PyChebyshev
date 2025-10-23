@@ -48,23 +48,16 @@ def barycentric_interpolate(x: float, nodes: np.ndarray, values: np.ndarray,
     Formula: p(x) = Σ[w_i * f_i / (x - x_i)] / Σ[w_i / (x - x_i)]
 
     This is O(N) - just arithmetic, no polynomial fitting!
+    Vectorized implementation for performance (eliminates Python loops).
     """
-    n = len(nodes)
-
     # Check if x coincides with a node (avoid division by zero)
-    for i in range(n):
-        if abs(x - nodes[i]) < 1e-14:
-            return values[i]
+    diffs = np.abs(nodes - x)
+    if np.any(diffs < 1e-14):
+        return float(values[np.argmin(diffs)])
 
-    # Barycentric formula
-    numerator = 0.0
-    denominator = 0.0
-    for i in range(n):
-        w = weights[i] / (x - nodes[i])
-        numerator += w * values[i]
-        denominator += w
-
-    return numerator / denominator
+    # Vectorized barycentric formula (eliminates loops!)
+    w = weights / (x - nodes)
+    return float(np.sum(w * values) / np.sum(w))
 
 
 def barycentric_derivative(x: float, nodes: np.ndarray, values: np.ndarray,
@@ -206,7 +199,7 @@ class ChebyshevApproximation:
         if self.tensor_values is None:
             raise RuntimeError("Call build() first")
 
-        current = self.tensor_values.copy()
+        current = self.tensor_values  # Use reference, not copy (never modified in place)
 
         # Collapse from last dimension to first
         for d in range(self.num_dimensions - 1, -1, -1):
