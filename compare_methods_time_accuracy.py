@@ -2,10 +2,10 @@
 Comprehensive Comparison of Option Pricing Methods
 
 Compares speed and accuracy of:
-1. FDM (Finite Difference Method)
-2. Chebyshev Baseline (NumPy Chebyshev.interpolate)
-3. Chebyshev Barycentric (manual barycentric interpolation)
-4. MoCaX Standard (full tensor)
+1. Chebyshev Barycentric (manual barycentric interpolation)
+2. MoCaX Standard (full tensor)
+3. (Optional) FDM (Finite Difference Method) [commented out]
+4. (Optional) Chebyshev Baseline (NumPy Chebyshev.interpolate) [commented out]
 
 Ground truth: blackscholes library analytical formulas
 """
@@ -62,6 +62,7 @@ class MethodResult:
     build_time: Optional[float]  # None for FDM
     eval_time: float
     errors: GreekErrors
+    grid_points: Optional[int] = None
 
 
 def setup_5d_domain():
@@ -190,7 +191,7 @@ def build_chebyshev_barycentric(domain: List[Tuple[float, float]], q: float) -> 
     return cheb, build_time
 
 
-def build_mocax(domain: List[Tuple[float, float]], q: float) -> Tuple[Optional[object], Optional[float]]:
+def build_mocax(domain: List[Tuple[float, float]], q: float) -> Tuple[Optional[object], Optional[float], Optional[int]]:
     """Build MoCaX approximation (returns None if library not available)."""
     print("\n" + "="*70)
     print("Building MoCaX Standard (Full Tensor)")
@@ -247,13 +248,13 @@ def build_mocax(domain: List[Tuple[float, float]], q: float) -> Tuple[Optional[o
         print(f"✓ Built in {build_time:.3f}s")
         print("="*70)
 
-        return mocax_obj, build_time
+        return mocax_obj, build_time, int(np.prod(n_values))
 
     except Exception as e:
         print(f"✗ MoCaX not available: {e}")
         print("  Skipping MoCaX comparison")
         print("="*70)
-        return None, None
+        return None, None, None
 
 
 def evaluate_chebyshev_method(
@@ -261,7 +262,8 @@ def evaluate_chebyshev_method(
     samples: np.ndarray,
     ground_truth_prices: np.ndarray,
     ground_truth_greeks: Dict[str, np.ndarray],
-    method_name: str
+    method_name: str,
+    use_fast_eval: bool = False
 ) -> Tuple[float, GreekErrors]:
     """
     Evaluate Chebyshev method on random samples.
@@ -272,6 +274,7 @@ def evaluate_chebyshev_method(
         ground_truth_prices: Array of shape (n_samples,)
         ground_truth_greeks: Dict of ground truth Greeks
         method_name: Name for progress bar
+        use_fast_eval: If True, use fast_eval() instead of eval() (for barycentric)
 
     Returns:
         eval_time: Total evaluation time
@@ -290,39 +293,42 @@ def evaluate_chebyshev_method(
         'rho': [0, 0, 0, 0, 1]
     }
 
+    # Select evaluation method
+    eval_method = cheb_obj.fast_eval if use_fast_eval else cheb_obj.eval
+
     start = time.time()
 
     for i in tqdm(range(n_samples), desc=f"{method_name:20s}", ncols=80):
         point = samples[i].tolist()
 
         # Price
-        price_approx = cheb_obj.eval(point, deriv_ids['price'])
+        price_approx = eval_method(point, deriv_ids['price'])
         price_error = abs(price_approx - ground_truth_prices[i]) / ground_truth_prices[i] * 100
         errors.add('price', price_error)
 
         # Delta
-        delta_approx = cheb_obj.eval(point, deriv_ids['delta'])
+        delta_approx = eval_method(point, deriv_ids['delta'])
         delta_error = abs(delta_approx - ground_truth_greeks['delta'][i]) / abs(ground_truth_greeks['delta'][i]) * 100
         errors.add('delta', delta_error)
 
         # Gamma
-        gamma_approx = cheb_obj.eval(point, deriv_ids['gamma'])
+        gamma_approx = eval_method(point, deriv_ids['gamma'])
         gamma_error = abs(gamma_approx - ground_truth_greeks['gamma'][i]) / abs(ground_truth_greeks['gamma'][i]) * 100
         errors.add('gamma', gamma_error)
 
         # Vega
-        vega_approx = cheb_obj.eval(point, deriv_ids['vega'])
+        vega_approx = eval_method(point, deriv_ids['vega'])
         vega_error = abs(vega_approx - ground_truth_greeks['vega'][i]) / abs(ground_truth_greeks['vega'][i]) * 100
         errors.add('vega', vega_error)
 
         # Theta (negative time derivative)
-        theta_deriv = cheb_obj.eval(point, deriv_ids['theta_deriv'])
+        theta_deriv = eval_method(point, deriv_ids['theta_deriv'])
         theta_approx = -theta_deriv
         theta_error = abs(theta_approx - ground_truth_greeks['theta'][i]) / abs(ground_truth_greeks['theta'][i]) * 100
         errors.add('theta', theta_error)
 
         # Rho
-        rho_approx = cheb_obj.eval(point, deriv_ids['rho'])
+        rho_approx = eval_method(point, deriv_ids['rho'])
         rho_error = abs(rho_approx - ground_truth_greeks['rho'][i]) / abs(ground_truth_greeks['rho'][i]) * 100
         errors.add('rho', rho_error)
 
@@ -460,7 +466,7 @@ def print_build_time_table(results: List[MethodResult]):
     print("\n" + "="*80)
     print("TABLE 1: Build/Precomputation Time")
     print("="*80)
-    print(f"{'Method':<22} | {'Build Time (s)':>14} | {'Grid Points':>12} | {'Notes':<25}")
+    print(f"{'Method':<22} | {'Build Time (s)':>14} | {'Grid Points':>12} | {'Notes':<24}")
     print("-"*80)
 
     for result in results:
@@ -470,18 +476,18 @@ def print_build_time_table(results: List[MethodResult]):
             notes = "No precomputation"
         else:
             build_str = f"{result.build_time:.3f}"
-            grid_str = "161,051"
+            grid_str = f"{result.grid_points:,}" if result.grid_points else "—"
 
             if "Baseline" in result.name:
                 notes = "Partial precompute"
             elif "Barycentric" in result.name:
-                notes = "Full precompute"
+                notes = "Fast barycentric eval"
             elif "MoCaX" in result.name:
                 notes = "Full tensor"
             else:
                 notes = ""
 
-        print(f"{result.name:<22} | {build_str:>14} | {grid_str:>12} | {notes:<25}")
+        print(f"{result.name:<22} | {build_str:>14} | {grid_str:>12} | {notes:<24}")
 
     print("="*80)
 
@@ -489,7 +495,7 @@ def print_build_time_table(results: List[MethodResult]):
 def print_accuracy_table(results: List[MethodResult]):
     """Print Table 2: Accuracy & Speed."""
     print("\n" + "="*80)
-    print("TABLE 2: Accuracy & Speed (10000 random samples)")
+    print("TABLE 2: Accuracy & Speed (random samples)")
     print("="*80)
 
     metrics = ['price', 'delta', 'gamma', 'vega', 'theta', 'rho']
@@ -514,7 +520,7 @@ def print_accuracy_table(results: List[MethodResult]):
 
         for metric in metrics:
             avg_err, max_err = result.errors.get_stats(metric)
-            row += f" {avg_err:>5.2f} / {max_err:>5.2f} |"
+            row += f" {avg_err:>5.2f}% / {max_err:>5.2f}% |"
 
         row += f" {result.eval_time:>11.2f}"
         print(row)
@@ -528,11 +534,18 @@ def main():
     print("COMPREHENSIVE COMPARISON: Speed & Accuracy of Option Pricing Methods")
     print("="*80)
     print("\nMethods:")
-    print("  1. Chebyshev Barycentric - Manual barycentric interpolation")
+    print("  1. Chebyshev Barycentric - Manual barycentric interpolation (fast_eval)")
     print("  2. MoCaX Standard - Full tensor (if available)")
-    print("  3. FDM (Finite Difference Method) - Solves PDE from scratch")
+    print("  3. (Optional) FDM - Finite Difference PDE [commented out]")
+    print("  4. (Optional) Chebyshev Baseline - NumPy Chebyshev.interpolate [commented out]")
     print("\nGround Truth: blackscholes library analytical formulas")
-    print("Test: 10000 random samples in 5D parameter space")
+    # Allow overriding sample count via env var N_SAMPLES
+    n_samples_env = os.environ.get('N_SAMPLES')
+    try:
+        n_samples = int(n_samples_env) if n_samples_env else 100
+    except ValueError:
+        n_samples = 100
+    print(f"Test: {n_samples} random samples in 5D parameter space")
 
     # Setup
     domain, q = setup_5d_domain()
@@ -551,15 +564,14 @@ def main():
     print("="*80)
 
     # cheb_baseline, cheb_baseline_time = build_chebyshev_baseline(domain, q)
-    # cheb_barycentric, cheb_barycentric_time = build_chebyshev_barycentric(domain, q)
-    mocax_obj, mocax_time = build_mocax(domain, q)
+    cheb_barycentric, cheb_barycentric_time = build_chebyshev_barycentric(domain, q)
+    mocax_obj, mocax_time, mocax_grid = build_mocax(domain, q)
 
     # Generate random samples
     print("\n" + "="*80)
     print("PHASE 2: Generate Random Samples & Compute Ground Truth")
     print("="*80)
 
-    n_samples = 10000
     print(f"\nGenerating {n_samples} random samples...")
     samples = generate_random_samples(domain, n_samples)
 
@@ -581,12 +593,12 @@ def main():
     # )
     # results.append(MethodResult("Chebyshev Baseline", cheb_baseline_time, eval_time, errors))
 
-    # # Chebyshev Barycentric
-    # print("\n1. Chebyshev Barycentric:")
-    # eval_time, errors = evaluate_chebyshev_method(
-    #     cheb_barycentric, samples, ground_truth_prices, ground_truth_greeks, "Chebyshev Barycentric"
-    # )
-    # results.append(MethodResult("Chebyshev Barycentric", cheb_barycentric_time, eval_time, errors))
+    # Chebyshev Barycentric (with fast_eval)
+    print("\n1. Chebyshev Barycentric:")
+    eval_time, errors = evaluate_chebyshev_method(
+        cheb_barycentric, samples, ground_truth_prices, ground_truth_greeks, "Cheb Barycentric", use_fast_eval=True
+    )
+    results.append(MethodResult("Chebyshev Barycentric", cheb_barycentric_time, eval_time, errors, grid_points=int(np.prod([11, 11, 11, 11, 11]))))
 
     # MoCaX (if available)
     if mocax_obj is not None:
@@ -594,7 +606,7 @@ def main():
         eval_time, errors = evaluate_mocax_method(
             mocax_obj, samples, ground_truth_prices, ground_truth_greeks
         )
-        results.append(MethodResult("MoCaX Standard", mocax_time, eval_time, errors))
+        results.append(MethodResult("MoCaX Standard", mocax_time, eval_time, errors, grid_points=mocax_grid))
 
     # # FDM
     # print("\n3. FDM (this will take a while - solving PDE for each sample):")

@@ -74,6 +74,20 @@ uv run python chebyshev_barycentric.py
 ./run_mocax_tt.sh
 ```
 
+### Comparison and Visualization
+
+```bash
+# Comprehensive time/accuracy comparison across all methods
+./run_comparison_time_accuracy.sh
+# OR manually:
+uv run python compare_methods_time_accuracy.py
+
+# 2D error surface visualization (tests spectral convergence)
+./run_comparison_2d_error_surface.sh
+# OR manually:
+uv run python compare_2d_error_surface.py
+```
+
 Each test runs identical test cases (ATM, ITM, OTM, short maturity, high volatility) enabling direct comparison of accuracy and performance across methods.
 
 **Note on MoCaX Sliding**: Demonstrates dimensional decomposition technique which is NOT suitable for Black-Scholes (strong multiplicative coupling). Expected errors: 20-50%. Educational purpose only - use MoCaX TT for coupled functions.
@@ -241,6 +255,23 @@ The test script validates MoCaX installation with three comprehensive tests:
   - Serialization/deserialization for deployment
   - Scales to higher dimensions efficiently
   - Suitable for production Black-Scholes pricing
+
+**`compare_methods_time_accuracy.py`** - Comprehensive method comparison
+- Compares speed and accuracy across FDM, Chebyshev Baseline, Chebyshev Barycentric, and MoCaX
+- Tests all methods on identical test cases for fair comparison
+- Measures build time, query time, and error metrics (price, Delta, Gamma, Vega, Theta, Rho)
+- Generates performance tables and comparative visualizations
+- Run with `./run_comparison_time_accuracy.sh` convenience script
+- **Purpose**: Quantitative comparison to choose optimal method for given requirements
+
+**`compare_2d_error_surface.py`** - Error surface visualization
+- Creates 3D surface plots of approximation errors across (K, T) parameter space
+- Tests multiple Chebyshev node configurations (4×4, 6×6, 8×8, 12×12)
+- Demonstrates spectral convergence (exponential error decay with more nodes)
+- Generates surface plots for price and Theta errors
+- Generates convergence plot showing error reduction with node count
+- Run with `./run_comparison_2d_error_surface.sh` convenience script
+- **Purpose**: Visual demonstration of Chebyshev approximation accuracy and convergence
 
 ### Research Documentation
 

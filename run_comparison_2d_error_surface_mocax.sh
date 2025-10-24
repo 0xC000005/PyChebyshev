@@ -13,7 +13,7 @@ echo ""
 export LD_LIBRARY_PATH="$PWD/mocax_lib:$LD_LIBRARY_PATH"
 
 # Run the comparison script
-uv run python compare_2d_error_surface.py
+uv run python compare_2d_error_surface_mocax.py
 
 echo ""
 echo "=================================================="
