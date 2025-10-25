@@ -2,7 +2,7 @@
 
 **A standalone Python implementation of multi-dimensional Chebyshev tensor interpolation**
 
-This project provides an **extremely short, standalone Python implementation** (although not fully optimized, without getting tidious) of the Chebyshev tensor method, demonstrating that it achieves **comparable accuracy to the state-of-the-art MoCaX library** for European option pricing via Black-Scholes.
+This project provides an **extremely short, standalone Python implementation** (although not fully optimized, without getting tedious) of the Chebyshev tensor method, **for educational purposes only**, demonstrating that it achieves **comparable accuracy to the state-of-the-art MoCaX library** for European option pricing via Black-Scholes.
 
 ## Visual Comparison: Spectral Convergence
 
