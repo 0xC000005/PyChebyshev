@@ -136,7 +136,7 @@ Polynomial **interpolation** (matching function values at specific points) can b
 
 1. **Chebyshev projection** (also called "best approximation"): Find the polynomial $$f_n$$ that minimizes
 
-   $$\|f - f_n\|_\infty = \max_{x \in [-1,1]} |f(x) - f_n(x)|$$
+   $$\|f - f_n\|_\infty = \max\_{x \in [-1,1]} |f(x) - f_n(x)|$$
 
    This is theoretically optimal, but requires solving an optimization problem.
 
