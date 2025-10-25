@@ -52,7 +52,7 @@ PyChebyshev provides a **proof-of-concept environment for conducting time and er
 
 ---
 
-## Technical Deep Dive
+## Technicals
 
 This demonstration uses Chebyshev tensor interpolation to accelerate the calculation of prices and derivatives for European options. The approach generalizes to all analytic functions, as proven by Theorems 2.1 and 2.2 in [Gaß et al. (2018), "Chebyshev Interpolation for Parametric Option Pricing", *Finance and Stochastics*, 22(3)](https://arxiv.org/abs/1505.04648), which establish (sub)exponential convergence rates for Chebyshev interpolation of parametric conditional expectations.
 
