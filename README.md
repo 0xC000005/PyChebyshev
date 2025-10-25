@@ -134,7 +134,11 @@ This uniqueness holds regardless of how we compute the polynomial (Lagrange form
 
 Polynomial **interpolation** (matching function values at specific points) can be compared to the **best possible polynomial approximation** (minimizing the maximum error over the entire interval). Two approaches exist for approximating $$f(x)$$ with a polynomial $$p_n(x)$$ of degree $$n$$:
 
-1. **Chebyshev projection** (also called "best approximation"): Find the polynomial $$f_n$$ that minimizes $$\|f - f_n\|_\infty = \max_{x \in [-1,1]} |f(x) - f_n(x)|$$. This is theoretically optimal, but requires solving an optimization problem.
+1. **Chebyshev projection** (also called "best approximation"): Find the polynomial $$f_n$$ that minimizes
+
+   $$\|f - f_n\|_\infty = \max_{x \in [-1,1]} |f(x) - f_n(x)|$$
+
+   This is theoretically optimal, but requires solving an optimization problem.
 
 2. **Chebyshev interpolation** (used in this work): Build a polynomial $$p_n$$ that matches $$f$$ exactly at the $$n+1$$ Chebyshev nodes. This is computationally simple - evaluate $$f$$ at the nodes and apply the interpolation formula.
 
