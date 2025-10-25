@@ -126,7 +126,7 @@ Three fundamental theorems guarantee the exceptional performance of Chebyshev in
 
 A fundamental result from numerical analysis states that for any $$n+1$$ distinct points $$(x_0, y_0), (x_1, y_1), \ldots, (x_n, y_n)$$, there exists **exactly one** polynomial $$p(x)$$ of degree at most $$n$$ such that $$p(x_i) = y_i$$ for all $$i = 0, 1, \ldots, n$$.
 
-This is known as the **Polynomial Interpolation Uniqueness Theorem** ([Conte & de Boor, "Elementary Numerical Analysis", McGraw-Hill](https://www.worldcat.org/title/elementary-numerical-analysis-an-algorithmic-approach/oclc/473102)). This guarantees that Chebyshev interpolants through $$n+1$$ function values at Chebyshev nodes produce a **well-defined, unique polynomial** with no computational ambiguity.
+This is known as the **Polynomial Interpolation Uniqueness Theorem** ([Wikipedia: Polynomial Interpolation](https://en.wikipedia.org/wiki/Polynomial_interpolation)). This guarantees that Chebyshev interpolants through $$n+1$$ function values at Chebyshev nodes produce a **well-defined, unique polynomial** with no computational ambiguity.
 
 This uniqueness holds regardless of how we compute the polynomial (Lagrange form, Newton form, barycentric form) - they all produce the same result, just through different computational paths.
 
@@ -286,7 +286,15 @@ Notice that steps 1-4 require calling `Chebyshev.interpolate()` during each quer
 - **Query complexity**: $$O(N)$$ for innermost dimension + $$O(N \log N) \times 4$$ for outer dimensions
 - **Query time**: ~2-3ms per evaluation
 
-The bottleneck: most query time is spent refitting polynomials for outer dimensions. Method 2 addresses this limitation.
+#### Derivatives: Numerical Approximation
+
+A critical limitation of Method 1 is **numerical derivative computation**. Greeks (Delta, Gamma, Vega, Rho, Theta) require derivatives $$\frac{\partial V}{\partial S}$$, $$\frac{\partial V}{\partial \sigma}$$, etc. With polynomial coefficients, these derivatives must be approximated using finite differences:
+
+$$\frac{\partial V}{\partial S} \approx \frac{V(S + \epsilon, K, T, \sigma, r) - V(S - \epsilon, K, T, \sigma, r)}{2\epsilon}$$
+
+This introduces additional approximation error ($$O(\epsilon^2)$$ for central differences) and requires multiple interpolation evaluations per Greek calculation. The choice of $$\epsilon$$ is delicate: too large introduces truncation error, too small causes numerical cancellation.
+
+The bottleneck: most query time is spent refitting polynomials for outer dimensions. Method 2 addresses both the pre-computation limitation and the derivative problem.
 
 ---
 
@@ -369,6 +377,30 @@ Numba compiles this to machine code on first call (~50ms overhead), then subsequ
 - **Query time**: ~1-2ms per evaluation
 
 The improvement over Method 1 comes from eliminating $$O(N \log N)$$ polynomial fitting for outer dimensions - we achieve 20-50× speedup with the same dimensional decomposition strategy but different interpolation basis.
+
+#### Analytical Derivatives: A Key Advantage
+
+Unlike Method 1, the barycentric formula enables **analytical derivative computation**. Greeks can be calculated by directly differentiating the interpolating polynomial, eliminating finite difference approximation errors.
+
+The derivative of the barycentric formula is obtained using the quotient rule. Let:
+
+$$p(x) = \frac{N(x)}{D(x)} = \frac{\sum_{i=0}^{n} \frac{w_i f_i}{x - x_i}}{\sum_{i=0}^{n} \frac{w_i}{x - x_i}}$$
+
+Then by the quotient rule:
+
+$$p'(x) = \frac{N'(x) D(x) - N(x) D'(x)}{D(x)^2}$$
+
+where:
+
+$$N'(x) = -\sum_{i=0}^{n} \frac{w_i f_i}{(x - x_i)^2}, \quad D'(x) = -\sum_{i=0}^{n} \frac{w_i}{(x - x_i)^2}$$
+
+Substituting and simplifying:
+
+$$p'(x) = \frac{\sum_{i=0}^{n} \frac{w_i f_i}{(x-x_i)^2}}{\sum_{i=0}^{n} \frac{w_i}{x-x_i}} - \frac{\left(\sum_{i=0}^{n} \frac{w_i f_i}{x-x_i}\right) \left(\sum_{i=0}^{n} \frac{w_i}{(x-x_i)^2}\right)}{\left(\sum_{i=0}^{n} \frac{w_i}{x-x_i}\right)^2}$$
+
+This formula provides **exact derivatives** of the interpolating polynomial at any point $$x$$ ([Berrut & Trefethen, 2004](https://people.maths.ox.ac.uk/trefethen/barycentric.pdf)). For multi-dimensional interpolation, derivatives with respect to each parameter are computed by applying the 1D derivative formula along the corresponding dimension during the dimensional collapse process.
+
+**Practical advantage**: Greeks calculated analytically achieve the same spectral accuracy as the interpolated prices (0.000% error for analytic functions), whereas finite difference approximations introduce additional $$O(\epsilon^2)$$ errors. This is why the barycentric implementation achieves 1.98% Vega error compared to potential degradation with numerical derivatives.
 
 #### Connecting to Theoretical Guarantees
 
