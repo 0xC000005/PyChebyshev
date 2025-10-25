@@ -5,6 +5,8 @@ __pycache__/
 .venv/
 mocax_lib/
 mocaxextend_lib/
+.claude/
 simple-example-py.py
 *.zip
 .DS_Store
+CLAUDE.md
