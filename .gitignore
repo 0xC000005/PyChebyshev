@@ -6,6 +6,5 @@ __pycache__/
 mocax_lib/
 mocaxextend_lib/
 simple-example-py.py
-*.pdf
 *.zip
 .DS_Store
