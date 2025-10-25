@@ -44,7 +44,7 @@ PyChebyshev provides a **proof-of-concept environment for conducting time and er
 | **FDM** | Finite Difference Method for PDE | Accurate, slow (~0.5s/case), flexible for exotics |
 | **Chebyshev Baseline** | NumPy's `Chebyshev.interpolate()` | Dimensional decomposition, partial pre-computation |
 | **Chebyshev Barycentric + JIT** | Manual barycentric formula with Numba | **Fastest pure Python** (~1-2ms/query), full pre-computation |
-| **MoCaX Standard** | Proprietary C++ library | Production-grade, spectral accuracy, ~1ms/query |
+| **MoCaX Standard** | Proprietary C++ library | Production-grade, spectral accuracy, ~0.01ms/query |
 
 ## Acknowledgments
 
@@ -421,14 +421,14 @@ Based on standardized 5D Black-Scholes tests (`test_5d_black_scholes()` with S, 
 | **Analytical** | 0.000% | 0.000% | N/A | ~10μs | Ground truth (blackscholes library) |
 | **Chebyshev Barycentric** | 0.000% | 1.980% | ~0.35s | ~1-2ms | **Fastest pure Python**, JIT-compiled |
 | **Chebyshev Baseline** | Similar | Similar | ~0.35s | ~2-3ms | NumPy implementation |
-| **MoCaX Standard** | 0.000% | 1.980% | ~1.04s | ~1ms | Proprietary C++, full tensor (161k evals) |
+| **MoCaX Standard** | 0.000% | 1.980% | ~1.04s | ~0.01ms | Proprietary C++, full tensor (161k evals) |
 | **FDM** | 0.803% | 2.234% | N/A | ~0.5s/case | PDE solver, no pre-computation |
 
 **Key Insights**:
 - **Chebyshev Barycentric achieves spectral accuracy** (0.000% price error, identical to MoCaX)
 - **Greeks accuracy**: 1.98% max error (Vega) due to finite difference approximation
 - **Build time**: 0.35s (161,051 analytical evaluations) vs MoCaX 1.04s (C++ overhead)
-- **Query time**: 1-2ms (pure Python + JIT) vs 1ms (MoCaX C++)
+- **Query time**: 1-2ms (pure Python + JIT) vs 0.01ms (MoCaX C++)
 - **Break-even**: > 1-2 queries make pre-computation worthwhile
 
 ---
