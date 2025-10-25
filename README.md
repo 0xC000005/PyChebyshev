@@ -114,7 +114,7 @@ $$\xi_i = \frac{a+b}{2} + \frac{b-a}{2} \cdot x_i$$
 
 #### Numerical Stability
 
-Beyond avoiding Runge's phenomenon, Chebyshev nodes provide excellent numerical stability. The Lebesgue constant for Chebyshev nodes grows only logarithmically: $$\Lambda_n \leq \frac{2}{\pi}\log(n+1) + 1$$ ([Günttner, 1980](https://epubs.siam.org/doi/10.1137/0717043)). This is nearly optimal - [Erdős (1961)](https://link.springer.com/article/10.1007/BF02020954) proved that **any** choice of nodes must have $$\Lambda_n > \frac{2}{\pi}\log(n+1) + \frac{1}{2}$$. Chebyshev nodes are within a constant factor of this theoretical lower bound, making them a near-perfect choice for polynomial interpolation.
+Beyond avoiding Runge's phenomenon, Chebyshev nodes provide excellent numerical stability. The Lebesgue constant for Chebyshev nodes grows only logarithmically: $$\Lambda_n \leq \frac{2}{\pi}\log(n+1) + 1$$ ([Günttner, 1980](https://epubs.siam.org/doi/10.1137/0717043)). 
 
 ---
 
@@ -165,12 +165,6 @@ A Bernstein ellipse is an ellipse in the complex plane with foci at $$x = -1$$ a
 
 **Exponential decay** means each additional node reduces error by a constant factor $$\rho$$, not a constant amount. This spectral accuracy causes errors to drop to machine precision rapidly.
 
-For Black-Scholes applications, pricing formulas are analytic over wide complex domains, explaining the 0.0000% errors achieved with just 12×12 nodes in 2D visualizations - the analytic function structure enables Chebyshev interpolation to reach near-machine-precision with relatively few points.
-
-**Non-analytic functions**: For functions that are only $$k$$ times continuously differentiable (not analytic), convergence rate slows to **algebraic**: $$O(N^{-k})$$ - still polynomial convergence, but much slower than exponential rates.
-
-**Relevance to option pricing**: Most financial pricing formulas (Black-Scholes, Heston, affine processes) are analytic functions of their parameters within reasonable domains, making Chebyshev interpolation extraordinarily effective - spectral accuracy is achieved by evaluating the function at strategically chosen points.
-
 ---
 
 ### Two Implementation Approaches
@@ -179,9 +173,7 @@ With the theoretical foundation established, Chebyshev interpolation can be impl
 
 1. **Polynomial Coefficients Approach** (Baseline): Express $$p(x) = \sum_{k=0}^{n} c_k T_k(x)$$ where $$T_k$$ are Chebyshev polynomials. Compute coefficients $$c_k$$ from function values. Simple and uses NumPy's built-in tools, but has a limitation for multi-dimensional pre-computation.
 
-2. **Barycentric Weights Approach** (Our Implementation): Use the barycentric interpolation formula with pre-computed weights $$w_i$$. This enables **full pre-computation** across all dimensions, resulting in dramatic speedups.
-
-Both approaches are detailed below with their respective trade-offs.
+2. **Barycentric Weights Approach** (Our Implementation): Use the barycentric interpolation formula with pre-computed weights $$w_i$$. This enables **full pre-computation** across all dimensions, and **analytic derivative taking** in any direction, resulting in significant speedups.
 
 ---
 
@@ -306,7 +298,7 @@ The bottleneck: most query time is spent refitting polynomials for outer dimensi
 
 **Implementation**: `chebyshev_barycentric.py`
 
-#### The Breakthrough: Separating Nodes from Values
+#### The Speedup: Separating Nodes from Values
 
 Method 1's limitation stems from polynomial coefficients $$c_k$$ depending on both node positions and function values. The barycentric interpolation formula offers a different computational path to the same unique interpolating polynomial (guaranteed by the Uniqueness Theorem), but with a critical structural advantage.
 
@@ -321,6 +313,31 @@ $$w_i = \frac{1}{\prod_{j \neq i} (x_i - x_j)}$$
 The critical property: $$w_i$$ depends **only on node positions** $$x_i$$, not on function values $$f_i$$.
 
 This is fundamentally different from the Chebyshev coefficient representation $$p(x) = \sum c_k T_k(x)$$ where coefficients $$c_k$$ mix both nodes and values. The separation enables full pre-computation across all dimensions.
+
+#### Analytical Derivatives: A Key Advantage
+
+Unlike Method 1, the barycentric formula enables **analytical derivative computation**. Greeks can be calculated by directly differentiating the interpolating polynomial, eliminating finite difference approximation errors.
+
+For an interpolant represented as $$p(x) = \sum_{j=0}^{n} f_j \ell_j(x)$$, where $$\ell_j(x)$$ are the Lagrange basis polynomials in barycentric form, the derivatives are:
+
+$$p'(x) = \sum_{j=0}^{n} f_j \ell'_j(x), \quad p''(x) = \sum_{j=0}^{n} f_j \ell''_j(x)$$
+
+The key is computing the derivatives of the basis polynomials at the interpolation nodes themselves. Using the barycentric representation, [Berrut & Trefethen (2004)](https://people.maths.ox.ac.uk/trefethen/barycentric.pdf) derive explicit formulas for these derivatives. For $$i \neq j$$:
+
+$$\ell'_j(x_i) = \frac{w_j/w_i}{x_i - x_j}$$
+
+For $$i = j$$:
+
+$$\ell'_j(x_j) = -\sum_{k \neq j} \ell'_j(x_k)$$
+
+These formulas define **differentiation matrices** $$D^{(1)}$$ and $$D^{(2)}$$ where 
+$$D^{(1)}_{ij} = \ell\'_j(x_i)$$ 
+and 
+
+$$D^{(2)}_{ij} = \ell\'\'_j(x_i)$$.
+Given a vector $$\mathbf{f}$$ of function values at the grid points, $$D^{(1)}\mathbf{f}$$ produces the first derivative values at those same points, and $$D^{(2)}\mathbf{f}$$ produces second derivatives. 
+
+This approach provides **exact derivatives** of the interpolating polynomial at the interpolation nodes. For multi-dimensional interpolation, derivatives with respect to each parameter are computed by applying these differentiation matrices along the corresponding dimension during the dimensional collapse process.
 
 #### Full Pre-computation Strategy
 
@@ -367,12 +384,6 @@ def barycentric_interpolate_jit(x, nodes, values, weights):
 
 Numba compiles this to machine code on first call (~50ms overhead), then subsequent evaluations run at ~50μs (10-20× speedup over pure Python). The dimensional decomposition process remains the same as Method 1 (5D → 4D → ... → scalar), but now every dimension uses pre-computed weights with uniform $$O(N)$$ evaluation.
 
-#### Additional Optimizations
-
-**Evaluation cache reuse**: Pre-allocate temporary arrays for dimensional collapse to avoid repeated allocations during queries.
-
-**Fast-path evaluation**: After testing/validation, the `fast_eval()` method skips input bounds checking and uses only JIT-compiled functions with pre-allocated caches.
-
 #### Performance Characteristics
 
 - **Build time**: ~0.35s (161,051 function evaluations + trivial weight computation)
@@ -381,34 +392,6 @@ Numba compiles this to machine code on first call (~50ms overhead), then subsequ
 - **Query time**: ~1-2ms per evaluation
 
 The improvement over Method 1 comes from eliminating $$O(N \log N)$$ polynomial fitting for outer dimensions - we achieve 20-50× speedup with the same dimensional decomposition strategy but different interpolation basis.
-
-#### Analytical Derivatives: A Key Advantage
-
-Unlike Method 1, the barycentric formula enables **analytical derivative computation**. Greeks can be calculated by directly differentiating the interpolating polynomial, eliminating finite difference approximation errors.
-
-The derivative of the barycentric formula is obtained using the quotient rule. Let:
-
-$$p(x) = \frac{N(x)}{D(x)} = \frac{\sum_{i=0}^{n} \frac{w_i f_i}{x - x_i}}{\sum_{i=0}^{n} \frac{w_i}{x - x_i}}$$
-
-Then by the quotient rule:
-
-$$p'(x) = \frac{N'(x) D(x) - N(x) D'(x)}{D(x)^2}$$
-
-where:
-
-$$N'(x) = -\sum_{i=0}^{n} \frac{w_i f_i}{(x - x_i)^2}, \quad D'(x) = -\sum_{i=0}^{n} \frac{w_i}{(x - x_i)^2}$$
-
-Substituting and simplifying:
-
-$$p'(x) = \frac{\sum_{i=0}^{n} \frac{w_i f_i}{(x-x_i)^2}}{\sum_{i=0}^{n} \frac{w_i}{x-x_i}} - \frac{\left(\sum_{i=0}^{n} \frac{w_i f_i}{x-x_i}\right) \left(\sum_{i=0}^{n} \frac{w_i}{(x-x_i)^2}\right)}{\left(\sum_{i=0}^{n} \frac{w_i}{x-x_i}\right)^2}$$
-
-This formula provides **exact derivatives** of the interpolating polynomial at any point $$x$$ ([Berrut & Trefethen, 2004](https://people.maths.ox.ac.uk/trefethen/barycentric.pdf)). For multi-dimensional interpolation, derivatives with respect to each parameter are computed by applying the 1D derivative formula along the corresponding dimension during the dimensional collapse process.
-
-**Practical advantage**: Greeks calculated analytically achieve the same spectral accuracy as the interpolated prices (0.000% error for analytic functions), whereas finite difference approximations introduce additional $$O(\epsilon^2)$$ errors. This is why the barycentric implementation achieves 1.98% Vega error compared to potential degradation with numerical derivatives.
-
-#### Connecting to Theoretical Guarantees
-
-The barycentric formula computes the same unique interpolating polynomial guaranteed by the Polynomial Uniqueness Theorem - it's simply a different computational representation. The Convergence Rate Theorem still applies: for analytic functions, we achieve the same exponential convergence $$O(\rho^{-n})$$ as Method 1, but with faster evaluation. The 0.000% price error in our benchmarks confirms we're computing the same Chebyshev interpolant that the Bernstein Ellipse Theorem predicts will have spectral accuracy.
 
 ---
 
