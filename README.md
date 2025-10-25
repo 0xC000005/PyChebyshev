@@ -114,7 +114,7 @@ $$\xi_i = \frac{a+b}{2} + \frac{b-a}{2} \cdot x_i$$
 
 #### Numerical Stability
 
-Beyond avoiding Runge's phenomenon, Chebyshev nodes provide excellent numerical stability. The Lebesgue constant for Chebyshev nodes grows only logarithmically: $$\Lambda_n \leq \frac{2}{\pi}\log(n+1) + 1$$. This is nearly optimal - Erdős proved in 1964 that **any** choice of nodes must have $$\Lambda_n > \frac{2}{\pi}\log(n+1) + \frac{1}{2}$$. Chebyshev nodes are within a constant factor of this theoretical lower bound, making them a near-perfect choice for polynomial interpolation.
+Beyond avoiding Runge's phenomenon, Chebyshev nodes provide excellent numerical stability. The Lebesgue constant for Chebyshev nodes grows only logarithmically: $$\Lambda_n \leq \frac{2}{\pi}\log(n+1) + 1$$ ([Günttner, 1980](https://epubs.siam.org/doi/10.1137/0717043)). This is nearly optimal - [Erdős (1961)](https://link.springer.com/article/10.1007/BF02020954) proved that **any** choice of nodes must have $$\Lambda_n > \frac{2}{\pi}\log(n+1) + \frac{1}{2}$$. Chebyshev nodes are within a constant factor of this theoretical lower bound, making them a near-perfect choice for polynomial interpolation.
 
 ---
 
