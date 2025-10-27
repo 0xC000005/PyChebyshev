@@ -43,7 +43,7 @@ PyChebyshev provides a **proof-of-concept environment for conducting time and er
 | **Analytical** | Closed-form Black-Scholes formulas | Instant (~10μs), machine precision |
 | **FDM** | Finite Difference Method for PDE | Accurate, slow (~0.5s/case), flexible for exotics |
 | **Chebyshev Baseline** | NumPy's `Chebyshev.interpolate()` | Dimensional decomposition, partial pre-computation |
-| **Chebyshev Barycentric + JIT** | Manual barycentric formula with Numba | **Fastest pure Python** (~1-2ms/query), full pre-computation |
+| **Chebyshev Barycentric + JIT** | Manual barycentric formula with Numba | **Fast pure Python** (~1-2ms/query), full pre-computation |
 | **MoCaX Standard** | Proprietary C++ library | Production-grade, spectral accuracy, ~0.01ms/query |
 
 ## Acknowledgments
@@ -372,8 +372,8 @@ Then interpolate $$\mathbf{p''}$$ to the query point using the same barycentric 
 **Why This Maintains Spectral Accuracy**
 
 This approach preserves the exponential convergence rate because:
-1. The differentiation matrix computes **exact** derivatives of the degree-$$n$$ interpolating polynomial
-2. These derivatives form a degree-$$(n-1)$$ polynomial
+1. The differentiation matrix computes **exact** derivatives of the degree $$n$$ interpolating polynomial
+2. These derivatives form a degree $$(n-1)$$ polynomial
 3. Barycentric interpolation of a polynomial is **exact** (within machine precision)
 4. No finite difference truncation errors are introduced
 
@@ -457,7 +457,7 @@ Based on standardized 5D Black-Scholes tests (`test_5d_black_scholes()` with S, 
 | Method | Price Error | Greek Error | Build Time | Query Time | Notes |
 |--------|-------------|-------------|------------|------------|-------|
 | **Analytical** | 0.000% | 0.000% | N/A | ~10μs | Ground truth (blackscholes library) |
-| **Chebyshev Barycentric** | 0.000% | 1.980% | ~0.35s | ~1-2ms | **Fastest pure Python**, JIT-compiled |
+| **Chebyshev Barycentric** | 0.000% | 1.980% | ~0.35s | ~1-2ms | **Fast pure Python**, JIT-compiled |
 | **Chebyshev Baseline** | Similar | Similar | ~0.35s | ~2-3ms | NumPy implementation |
 | **MoCaX Standard** | 0.000% | 1.980% | ~1.04s | ~0.01ms | Proprietary C++, full tensor (161k evals) |
 | **FDM** | 0.803% | 2.234% | N/A | ~0.5s/case | PDE solver, no pre-computation |
