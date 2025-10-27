@@ -46,6 +46,49 @@ def compute_barycentric_weights(nodes: np.ndarray) -> np.ndarray:
     return weights
 
 
+def compute_differentiation_matrix(nodes: np.ndarray, weights: np.ndarray) -> np.ndarray:
+    """
+    Compute differentiation matrix for barycentric interpolation.
+
+    Based on Berrut & Trefethen (2004), Section 9.3.
+    Implementation follows scipy's BarycentricInterpolator.
+
+    The differentiation matrix D satisfies: (D @ f) gives derivative values at nodes.
+
+    For i ≠ j:
+        D[i,j] = (w_j / w_i) / (x_i - x_j)
+
+    For i = j:
+        D[i,i] = -Σ(k≠i) D[i,k]
+
+    Args:
+        nodes: Interpolation nodes
+        weights: Barycentric weights (pre-computed)
+
+    Returns:
+        D: Differentiation matrix (n × n)
+    """
+    n = len(nodes)
+
+    # Compute node differences: c[i,j] = x_i - x_j
+    c = nodes[:, np.newaxis] - nodes
+
+    # Avoid division by zero on diagonal (temporarily set to 1)
+    np.fill_diagonal(c, 1.0)
+
+    # Apply barycentric weights: c[i,j] = (w_j / w_i) / (x_i - x_j)
+    c = weights / (c * weights[:, np.newaxis])
+
+    # Zero out diagonal temporarily
+    np.fill_diagonal(c, 0.0)
+
+    # Diagonal entries are negative sum of row: D[i,i] = -Σ(j≠i) D[i,j]
+    d = -c.sum(axis=1)
+    np.fill_diagonal(c, d)
+
+    return c
+
+
 @njit(cache=True, fastmath=True)
 def barycentric_interpolate_jit(x: float, nodes: np.ndarray, values: np.ndarray,
                                 weights: np.ndarray) -> float:
@@ -97,34 +140,41 @@ def barycentric_interpolate(x: float, nodes: np.ndarray, values: np.ndarray,
     return barycentric_interpolate_jit(x, nodes, values, weights)
 
 
-def barycentric_derivative(x: float, nodes: np.ndarray, values: np.ndarray,
-                          weights: np.ndarray, order: int = 1) -> float:
+def barycentric_derivative_analytical(x: float, nodes: np.ndarray, values: np.ndarray,
+                                     weights: np.ndarray, diff_matrix: np.ndarray,
+                                     order: int = 1) -> float:
     """
-    Compute derivative via finite difference on barycentric interpolant.
+    Compute analytical derivative using differentiation matrix.
 
-    Uses adaptive epsilon based on domain scale for better numerical stability.
+    Based on Berrut & Trefethen (2004), Section 9.3.
+
+    Process:
+    1. Apply differentiation matrix to values → derivative values at nodes
+    2. Interpolate these derivative values to point x using barycentric formula
+    3. For higher orders: apply differentiation matrix recursively
+
+    Args:
+        x: Evaluation point
+        nodes: Interpolation nodes
+        values: Function values at nodes
+        weights: Barycentric weights (pre-computed)
+        diff_matrix: Differentiation matrix (pre-computed)
+        order: Derivative order (1 or 2)
+
+    Returns:
+        Derivative value at x
     """
-    # Adaptive epsilon: scale with domain size
-    domain_scale = np.ptp(nodes)  # max - min
-    eps = max(1e-7 * domain_scale, 1e-8)  # Scale with domain, but not too small
-
     if order == 1:
-        # First derivative: central difference
-        f_plus = barycentric_interpolate(x + eps, nodes, values, weights)
-        f_minus = barycentric_interpolate(x - eps, nodes, values, weights)
-        return (f_plus - f_minus) / (2 * eps)
+        # First derivative: D @ values gives derivative values at nodes
+        deriv_values = diff_matrix @ values
+        # Interpolate derivative values to point x
+        return barycentric_interpolate(x, nodes, deriv_values, weights)
     elif order == 2:
-        # Second derivative: use better finite difference formula
-        # 5-point stencil for better accuracy
-        h = eps
-        f_pp = barycentric_interpolate(x + 2*h, nodes, values, weights)
-        f_p = barycentric_interpolate(x + h, nodes, values, weights)
-        f_c = barycentric_interpolate(x, nodes, values, weights)
-        f_m = barycentric_interpolate(x - h, nodes, values, weights)
-        f_mm = barycentric_interpolate(x - 2*h, nodes, values, weights)
-
-        # 5-point formula: (-f(x+2h) + 16f(x+h) - 30f(x) + 16f(x-h) - f(x-2h)) / (12h²)
-        return (-f_pp + 16*f_p - 30*f_c + 16*f_m - f_mm) / (12 * h**2)
+        # Second derivative: Apply differentiation matrix twice
+        # D @ (D @ values) gives second derivative values at nodes
+        deriv_values = diff_matrix @ (diff_matrix @ values)
+        # Interpolate second derivative values to point x
+        return barycentric_interpolate(x, nodes, deriv_values, weights)
     else:
         raise ValueError(f"Derivative order {order} not supported")
 
@@ -188,6 +238,7 @@ class ChebyshevApproximation:
         # Storage
         self.tensor_values = None
         self.weights = None  # Barycentric weights for ALL dimensions
+        self.diff_matrices = None  # Differentiation matrices for analytical derivatives
         self.build_time = 0
         self.n_evaluations = 0
 
@@ -222,6 +273,14 @@ class ChebyshevApproximation:
             w = compute_barycentric_weights(self.nodes[d])
             self.weights.append(w)
 
+        # Step 3: Pre-compute differentiation matrices for analytical derivatives
+        # Differentiation matrices depend only on nodes and weights, not function values!
+        print(f"Pre-computing differentiation matrices for all {self.num_dimensions} dimensions...")
+        self.diff_matrices = []
+        for d in range(self.num_dimensions):
+            D = compute_differentiation_matrix(self.nodes[d], self.weights[d])
+            self.diff_matrices.append(D)
+
         self.build_time = time.time() - start
 
         # Pre-allocate evaluation cache for fast_eval()
@@ -231,12 +290,15 @@ class ChebyshevApproximation:
             self._eval_cache[d] = np.zeros(shape)
 
         total_weights = sum(len(w) for w in self.weights)
+        total_diff_matrix_elements = sum(D.size for D in self.diff_matrices)
         cache_size = sum(arr.size for arr in self._eval_cache.values())
         print(f"✓ Built in {self.build_time:.3f}s")
         print(f"  Function evaluations: {self.n_evaluations:,}")
         print(f"  Pre-computed weights: {total_weights} floats ({total_weights * 8} bytes)")
+        print(f"  Pre-computed diff matrices: {total_diff_matrix_elements} floats ({total_diff_matrix_elements * 8} bytes)")
         print(f"  Pre-allocated cache: {cache_size} floats ({cache_size * 8} bytes)")
         print(f"  Uniform O(N) evaluation for all dimensions!")
+        print(f"  Analytical derivatives via differentiation matrices!")
         print(f"{'='*70}")
 
     def eval(self, point: List[float], derivative_order: List[int]) -> float:
@@ -256,13 +318,14 @@ class ChebyshevApproximation:
             deriv = derivative_order[d]
             nodes = self.nodes[d]
             weights = self.weights[d]
+            diff_matrix = self.diff_matrices[d]
 
             if d == 0:
                 # Final dimension: collapse to scalar
                 if deriv == 0:
                     return barycentric_interpolate(x, nodes, current, weights)
                 else:
-                    return barycentric_derivative(x, nodes, current, weights, deriv)
+                    return barycentric_derivative_analytical(x, nodes, current, weights, diff_matrix, deriv)
             else:
                 # Intermediate dimension: collapse to lower-dimensional array
                 shape = current.shape[:d]
@@ -273,11 +336,11 @@ class ChebyshevApproximation:
                     slice_idx = idx + (slice(None),) + (0,) * (len(current.shape) - d - 1)
                     values_1d = current[slice_idx]
 
-                    # Barycentric interpolation (uses pre-computed weights!)
+                    # Barycentric interpolation (uses pre-computed weights and diff matrices!)
                     if deriv == 0:
                         new[idx] = barycentric_interpolate(x, nodes, values_1d, weights)
                     else:
-                        new[idx] = barycentric_derivative(x, nodes, values_1d, weights, deriv)
+                        new[idx] = barycentric_derivative_analytical(x, nodes, values_1d, weights, diff_matrix, deriv)
 
                 current = new
 
@@ -303,13 +366,14 @@ class ChebyshevApproximation:
             deriv = derivative_order[d]
             nodes = self.nodes[d]
             weights = self.weights[d]
+            diff_matrix = self.diff_matrices[d]
 
             if d == 0:
                 # Final dimension: collapse to scalar
                 if deriv == 0:
                     return barycentric_interpolate_jit(x, nodes, current, weights)
                 else:
-                    return barycentric_derivative(x, nodes, current, weights, deriv)
+                    return barycentric_derivative_analytical(x, nodes, current, weights, diff_matrix, deriv)
             else:
                 # Intermediate dimension: collapse to lower-dimensional array
                 # Reuse pre-allocated cache (no new allocation!)
@@ -321,11 +385,11 @@ class ChebyshevApproximation:
                     slice_idx = idx + (slice(None),) + (0,) * (len(current.shape) - d - 1)
                     values_1d = current[slice_idx]
 
-                    # Barycentric interpolation (uses JIT version directly!)
+                    # Barycentric interpolation (uses JIT version and analytical derivatives!)
                     if deriv == 0:
                         cache[idx] = barycentric_interpolate_jit(x, nodes, values_1d, weights)
                     else:
-                        cache[idx] = barycentric_derivative(x, nodes, values_1d, weights, deriv)
+                        cache[idx] = barycentric_derivative_analytical(x, nodes, values_1d, weights, diff_matrix, deriv)
 
                 current = cache
 

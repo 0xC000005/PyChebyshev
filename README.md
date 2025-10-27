@@ -339,6 +339,61 @@ Given a vector $$\mathbf{f}$$ of function values at the grid points, $$D^{(1)}\m
 
 This approach provides **exact derivatives** of the interpolating polynomial at the interpolation nodes. For multi-dimensional interpolation, derivatives with respect to each parameter are computed by applying these differentiation matrices along the corresponding dimension during the dimensional collapse process.
 
+#### Evaluating Derivatives at Arbitrary Points
+
+The differentiation matrix $$D^{(1)}$$ provides derivative values **at the interpolation nodes** $$x_i$$. However, for option pricing we need derivatives at arbitrary query points that typically don't coincide with nodes. The algorithm follows a two-step process established by Berrut & Trefethen (2004, Section 9.3):
+
+**Step 1: Compute derivative values at nodes**
+
+Apply the differentiation matrix to the vector of function values:
+
+$$\mathbf{p'} = D^{(1)} \mathbf{f}$$
+
+where $$\mathbf{f} = [f(x_0), f(x_1), \ldots, f(x_n)]^T$$ are function values at nodes, and $$\mathbf{p'} = [p'(x_0), p'(x_1), \ldots, p'(x_n)]^T$$ are the **exact** derivative values of the interpolating polynomial at those same nodes.
+
+**Step 2: Interpolate derivative values to query point**
+
+Use barycentric interpolation to evaluate the derivative at arbitrary point $$x$$:
+
+$$p'(x) = \frac{\sum_{i=0}^{n} \frac{w_i \cdot p'(x_i)}{x - x_i}}{\sum_{i=0}^{n} \frac{w_i}{x - x_i}}$$
+
+Substituting $$p'(x_i) = (D^{(1)} \mathbf{f})_i$$:
+
+$$p'(x) = \frac{\sum_{i=0}^{n} \frac{w_i \cdot (D^{(1)} \mathbf{f})_i}{x - x_i}}{\sum_{i=0}^{n} \frac{w_i}{x - x_i}}$$
+
+**Higher-Order Derivatives**
+
+For second derivatives, apply the differentiation matrix twice before interpolating:
+
+$$\mathbf{p''} = D^{(1)} (D^{(1)} \mathbf{f}) = (D^{(1)})^2 \mathbf{f}$$
+
+Then interpolate $$\mathbf{p''}$$ to the query point using the same barycentric formula.
+
+**Why This Maintains Spectral Accuracy**
+
+This approach preserves the exponential convergence rate because:
+1. The differentiation matrix computes **exact** derivatives of the degree-$$n$$ interpolating polynomial
+2. These derivatives form a degree-$$(n-1)$$ polynomial
+3. Barycentric interpolation of a polynomial is **exact** (within machine precision)
+4. No finite difference truncation errors are introduced
+
+
+> As noted in the scipy implementation ([PR #18197](https://github.com/scipy/scipy/pull/18197)), this method computes "derivatives of the interpolating polynomial" rather than approximating derivatives of the original function directly. 
+
+The error in $$p'(x)$$ relative to $$f'(x)$$ depends only on how well $$p(x)$$ approximates $$f(x)$$, which exhibits spectral convergence for analytic functions.
+
+**Multi-Dimensional Application**
+
+For multi-dimensional interpolation via dimensional decomposition (5D → 4D → ... → 1D), derivatives with respect to parameter $$d$$ are computed by:
+1. Applying $$D^{(d)}$$ during the collapse of dimension $$d$$
+2. Continuing dimensional collapse with the derivative values
+3. This produces $$\frac{\partial V}{\partial x_d}$$ at the query point
+
+For example, computing $$\frac{\partial V}{\partial S}$$ (Delta) in 5D:
+- Collapse dimensions: $$r \to \sigma \to T \to K \to S$$
+- When collapsing the $$S$$ dimension, apply $$D^{(S)}$$ instead of interpolating
+- Result: Delta value at the exact query point
+
 #### Full Pre-computation Strategy
 
 For 5D interpolation with 11 nodes per dimension, we pre-compute:
