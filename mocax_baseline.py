@@ -49,6 +49,27 @@ except ImportError as e:
     print("  Install with: uv add blackscholes")
     sys.exit(1)
 
+from tqdm import tqdm
+
+
+def generate_5d_grid_samples(domain_values, n_points_per_dim):
+    """
+    Generate regular grid samples in 5D parameter space (S, K, T, σ, r).
+
+    Args:
+        domain_values: List of [min, max] for each dimension
+        n_points_per_dim: Number of points per dimension
+
+    Returns:
+        samples: Array of shape (n_points_per_dim^5, 5)
+    """
+    grids_1d = []
+    for d in range(5):
+        min_val, max_val = domain_values[d]
+        grids_1d.append(np.linspace(min_val, max_val, n_points_per_dim))
+    mesh = np.meshgrid(*grids_1d, indexing='ij')
+    return np.column_stack([g.ravel() for g in mesh])
+
 
 def test_simple_3d_function():
     """Test MoCaX with a simple 3D function."""
@@ -281,64 +302,159 @@ def test_5d_parametric_black_scholes():
     print(f"  Build time: {build_time:.3f} s ({build_time*1000:.1f} ms)")
     print(f"  Evaluations per second: {np.prod(n_values)/build_time:,.0f}")
 
-    # Test cases (matching chebyshev_barycentric.py)
+    # Test cases - comprehensive coverage of 5D parameter space
+    # Format: [S, K, T, sigma, r], "Name"
     test_cases = [
+        # Vary S (moneyness)
         ([100.0, 100.0, 1.0, 0.25, 0.05], "ATM"),
         ([110.0, 100.0, 1.0, 0.25, 0.05], "ITM"),
         ([90.0, 100.0, 1.0, 0.25, 0.05], "OTM"),
+        # Vary T (maturity)
         ([100.0, 100.0, 0.5, 0.25, 0.05], "Short T"),
+        ([100.0, 100.0, 0.25, 0.25, 0.05], "Very Short T"),
+        # Vary sigma (volatility)
+        ([100.0, 100.0, 1.0, 0.15, 0.05], "Low vol"),
         ([100.0, 100.0, 1.0, 0.35, 0.05], "High vol"),
+        # Vary r (interest rate)
+        ([100.0, 100.0, 1.0, 0.25, 0.01], "Low r"),
+        ([100.0, 100.0, 1.0, 0.25, 0.08], "High r"),
+        # Corner cases (multiple params vary)
+        ([85.0, 105.0, 0.5, 0.20, 0.03], "Corner1"),  # OTM, short, low vol, low r
+        ([115.0, 95.0, 0.75, 0.30, 0.07], "Corner2"),  # ITM, med T, high vol, high r
     ]
 
-    print(f"\n{'Case':<10} {'Price (Exact)':>13} {'Price (MoCaX)':>13} {'Error':>8}")
-    print("-" * 50)
+    # Define Greek derivative indices
+    greek_specs = [
+        ('Price', [0, 0, 0, 0, 0]),
+        ('Delta', [1, 0, 0, 0, 0]),
+        ('Gamma', [2, 0, 0, 0, 0]),
+        ('Vega',  [0, 0, 0, 1, 0]),
+        ('Rho',   [0, 0, 0, 0, 1]),
+        ('Vanna', [1, 0, 0, 1, 0]),
+        ('Charm', [1, 0, 1, 0, 0]),
+        ('Vomma', [0, 0, 0, 2, 0]),
+        ('Veta',  [0, 0, 1, 1, 0]),
+    ]
 
-    errors = []
+    # =========================================================================
+    # UNIFIED TABLE: Price + Greeks for ALL Scenarios
+    # =========================================================================
+    all_errors = []
+
     for test_point, case_name in test_cases:
         S, K, T, sigma, r = test_point
+        opt = BlackScholesCall(S=S, K=K, T=T, r=r, sigma=sigma, q=q)
 
-        # Analytical value
-        option = BlackScholesCall(S=S, K=K, T=T, r=r, sigma=sigma, q=q)
-        analytical = option.price()
+        print(f"\n{'='*70}")
+        print(f"SCENARIO: {case_name} (S={S:.0f}, K={K:.0f}, T={T:.2f}, σ={sigma:.2f}, r={r:.2f})")
+        print(f"{'='*70}")
+        print(f"{'Metric':<8} {'Exact':>14} {'MoCaX':>14} {'Error%':>10}")
+        print("-" * 50)
 
-        # MoCaX evaluation
-        derivative_id = mocax_5d.get_derivative_id([0, 0, 0, 0, 0])
-        mocax_value = mocax_5d.eval(test_point, derivative_id)
+        # Get analytical values
+        exact_values = {
+            'Price': opt.price(),
+            'Delta': opt.delta(),
+            'Gamma': opt.gamma(),
+            'Vega': opt.vega(),
+            'Rho': opt.rho(),
+            'Vanna': opt.vanna(),
+            'Charm': -opt.charm(),  # Negated: MoCaX uses opposite sign convention
+            'Vomma': opt.vomma(),
+            'Veta': opt.veta(),
+        }
 
-        error = abs(mocax_value - analytical)
-        rel_error = error / analytical * 100
-        errors.append(rel_error)
+        for metric_name, deriv in greek_specs:
+            exact = exact_values[metric_name]
+            derivative_id = mocax_5d.get_derivative_id(deriv)
+            approx = mocax_5d.eval(test_point, derivative_id)
 
-        print(f"{case_name:<10} {analytical:>13.6f} {mocax_value:>13.6f} {rel_error:>7.3f}%")
+            # Compute error
+            if abs(exact) > 1e-10:
+                err = abs(approx - exact) / abs(exact) * 100
+            else:
+                err = abs(approx - exact) * 100
 
-    max_price_err = max(errors)
+            all_errors.append(err)
+            print(f"{metric_name:<8} {exact:>14.6f} {approx:>14.6f} {err:>10.3f}%")
 
-    # Greeks at ATM
-    p = [100.0, 100.0, 1.0, 0.25, 0.05]
-    opt = BlackScholesCall(S=p[0], K=p[1], T=p[2], r=p[4], sigma=p[3], q=q)
-
-    greeks = {
-        'Delta': ([1, 0, 0, 0, 0], opt.delta()),
-        'Gamma': ([2, 0, 0, 0, 0], opt.gamma()),
-        'Vega': ([0, 0, 0, 1, 0], opt.vega()),
-        'Rho': ([0, 0, 0, 0, 1], opt.rho()),
-    }
-
-    print(f"\nGreeks at ATM:")
-    print(f"{'Greek':<8} {'Exact':>12} {'MoCaX':>12} {'Error':>8}")
-    print("-" * 50)
-
-    greek_errors = []
-    for name, (deriv, exact) in greeks.items():
-        derivative_id = mocax_5d.get_derivative_id(deriv)
-        approx = mocax_5d.eval(p, derivative_id)
-        err = abs(approx - exact) / exact * 100
-        greek_errors.append(err)
-        print(f"{name:<8} {exact:>12.6f} {approx:>12.6f} {err:>7.3f}%")
-
-    max_greek_err = max(greek_errors)
+    max_price_err = max([all_errors[i*9] for i in range(len(test_cases))])  # Price is index 0 of each scenario
+    max_greek_err = max(all_errors)
 
     print(f"\nMax errors: Price {max_price_err:.3f}%, Greeks {max_greek_err:.3f}%")
+
+    # =========================================================================
+    # COMPREHENSIVE GRID EVALUATION
+    # =========================================================================
+    print(f"\n{'='*70}")
+    print("COMPREHENSIVE GRID EVALUATION")
+    print(f"{'='*70}")
+
+    # Configuration (allow env var override)
+    n_points_per_dim = int(os.environ.get('N_GRID_POINTS', 10))
+    total_points = n_points_per_dim ** 5
+
+    print(f"Grid configuration:")
+    print(f"  Points per dimension: {n_points_per_dim}")
+    print(f"  Total evaluation points: {total_points:,}")
+    print(f"  (Set N_GRID_POINTS env var to change)")
+
+    # Generate grid samples
+    print(f"\nGenerating {n_points_per_dim}^5 = {total_points:,} grid points...")
+    samples = generate_5d_grid_samples(domain_values, n_points_per_dim)
+
+    # Compute ground truth using analytical Black-Scholes
+    print(f"Computing ground truth (analytical Black-Scholes)...")
+    ground_truth_prices = np.zeros(total_points)
+    for i in tqdm(range(total_points), desc="Ground truth", ncols=80):
+        S, K, T, sigma, r = samples[i]
+        opt = BlackScholesCall(S=S, K=K, T=T, r=r, sigma=sigma, q=q)
+        ground_truth_prices[i] = opt.price()
+
+    # Evaluate MoCaX on all grid points (sequential - MoCaX is not thread-safe)
+    print(f"Evaluating MoCaX approximation on {total_points:,} points...")
+    deriv_price = mocax_5d.get_derivative_id([0, 0, 0, 0, 0])
+    mocax_prices = np.zeros(total_points)
+
+    start_eval = time.time()
+    for i in tqdm(range(total_points), desc="MoCaX eval", ncols=80):
+        point = samples[i].tolist()
+        mocax_prices[i] = mocax_5d.eval(point, deriv_price)
+    eval_time = time.time() - start_eval
+
+    # Compute errors (percentage relative to ground truth)
+    errors = np.abs(mocax_prices - ground_truth_prices) / ground_truth_prices * 100
+
+    # Report results
+    print(f"\n{'='*70}")
+    print("GRID EVALUATION RESULTS")
+    print(f"{'='*70}")
+    print(f"  Points evaluated:     {total_points:,}")
+    print(f"  Total MoCaX time:     {eval_time:.3f} s")
+    print(f"  Time per evaluation:  {eval_time/total_points*1000:.4f} ms")
+    print(f"  Evals per second:     {total_points/eval_time:,.0f}")
+    print(f"")
+    print(f"  Mean error:           {np.mean(errors):.6f}%")
+    print(f"  Max error:            {np.max(errors):.6f}%")
+    print(f"  Std deviation:        {np.std(errors):.6f}%")
+    print(f"  Median error:         {np.median(errors):.6f}%")
+    print(f"  95th percentile:      {np.percentile(errors, 95):.6f}%")
+    print(f"{'='*70}")
+
+    # Print all grid points with error > 1%
+    high_error_mask = errors > 1.0
+    n_high_error = np.sum(high_error_mask)
+    if n_high_error > 0:
+        print(f"\nPoints with error > 1%: {n_high_error} ({n_high_error/total_points*100:.2f}%)")
+        print(f"{'S':>10} {'K':>10} {'T':>10} {'sigma':>10} {'r':>10} {'Exact':>12} {'MoCaX':>12} {'Error%':>10}")
+        print("-" * 96)
+        high_error_indices = np.where(high_error_mask)[0]
+        for idx in high_error_indices:
+            S, K, T, sigma, r = samples[idx]
+            print(f"{S:>10.4f} {K:>10.4f} {T:>10.4f} {sigma:>10.4f} {r:>10.4f} "
+                  f"{ground_truth_prices[idx]:>12.6f} {mocax_prices[idx]:>12.6f} {errors[idx]:>10.4f}")
+    else:
+        print(f"\nNo points with error > 1%")
 
     del mocax_5d
 
