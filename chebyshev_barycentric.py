@@ -368,9 +368,18 @@ class ChebyshevApproximation:
             weights = self.weights[d]
             diff_matrix = self.diff_matrices[d]
 
+            # Check node coincidence once per dimension (avoid div-by-zero in JIT)
+            coincident_idx = None
+            diffs = np.abs(x - nodes)
+            min_idx = np.argmin(diffs)
+            if diffs[min_idx] < 1e-14:
+                coincident_idx = int(min_idx)
+
             if d == 0:
                 # Final dimension: collapse to scalar
                 if deriv == 0:
+                    if coincident_idx is not None:
+                        return float(current[coincident_idx])
                     return barycentric_interpolate_jit(x, nodes, current, weights)
                 else:
                     return barycentric_derivative_analytical(x, nodes, current, weights, diff_matrix, deriv)
@@ -387,11 +396,63 @@ class ChebyshevApproximation:
 
                     # Barycentric interpolation (uses JIT version and analytical derivatives!)
                     if deriv == 0:
-                        cache[idx] = barycentric_interpolate_jit(x, nodes, values_1d, weights)
+                        if coincident_idx is not None:
+                            cache[idx] = values_1d[coincident_idx]
+                        else:
+                            cache[idx] = barycentric_interpolate_jit(x, nodes, values_1d, weights)
                     else:
                         cache[idx] = barycentric_derivative_analytical(x, nodes, values_1d, weights, diff_matrix, deriv)
 
                 current = cache
+
+    def vectorized_eval(self, point: List[float], derivative_order: List[int]) -> float:
+        """
+        Fully vectorized evaluation using NumPy matrix operations.
+
+        Replaces the Python np.ndindex loop with NumPy @ (matmul) operations:
+        - current @ w_over_diff contracts the last axis (barycentric interpolation)
+        - current @ D.T applies the differentiation matrix along the last axis
+
+        For 5D with 11 nodes: 5 BLAS calls instead of 16,105 Python iterations.
+        Expected ~30-50× faster than fast_eval().
+        """
+        if self.tensor_values is None:
+            raise RuntimeError("Call build() first")
+
+        current = self.tensor_values
+
+        for d in range(self.num_dimensions - 1, -1, -1):
+            x = point[d]
+            deriv = derivative_order[d]
+
+            # Apply diff matrix along last axis if derivative needed
+            if deriv > 0:
+                D_T = self.diff_matrices[d].T
+                for _ in range(deriv):
+                    current = current @ D_T
+
+            # Barycentric interpolation: contract last axis
+            diff = x - self.nodes[d]
+            exact = np.where(np.abs(diff) < 1e-14)[0]
+            if len(exact) > 0:
+                current = current[..., exact[0]]
+            else:
+                w_over_diff = self.weights[d] / diff
+                current = current @ w_over_diff / np.sum(w_over_diff)
+
+        return float(current)
+
+    def vectorized_eval_batch(self, points: np.ndarray, derivative_order: List[int]) -> np.ndarray:
+        """
+        Evaluate at N points simultaneously. points shape: (N, num_dims).
+
+        Returns array of shape (N,) with interpolated values.
+        """
+        N = points.shape[0]
+        results = np.empty(N)
+        for i in range(N):
+            results[i] = self.vectorized_eval(points[i], derivative_order)
+        return results
 
     def get_derivative_id(self, derivative_order: List[int]) -> List[int]:
         """Get derivative ID (for API compatibility)."""
@@ -562,6 +623,82 @@ def test_5d_black_scholes():
     print(f"  • Pre-computed weights: {total_weights} floats (vs {np.prod(cheb.n_nodes[:-1]):,} polynomials)")
     print(f"  • Uniform O(N) evaluation for ALL dimensions")
     print(f"  • No polynomial fitting during queries!")
+
+    # Verify vectorized_eval produces same results
+    print(f"\n--- Vectorized evaluation verification ---")
+    p_test = [100, 100, 1.0, 0.25, 0.05]
+    price_orig = cheb.eval(p_test, [0, 0, 0, 0, 0])
+    price_vec = cheb.vectorized_eval(p_test, [0, 0, 0, 0, 0])
+    print(f"  eval():            {price_orig:.10f}")
+    print(f"  vectorized_eval(): {price_vec:.10f}")
+    print(f"  Difference:        {abs(price_orig - price_vec):.2e}")
+
+    for name, (deriv, exact) in greeks.items():
+        v_orig = cheb.eval(p_test, deriv)
+        v_vec = cheb.vectorized_eval(p_test, deriv)
+        diff = abs(v_orig - v_vec)
+        print(f"  {name}: diff = {diff:.2e}")
+
+    # Performance comparison
+    print(f"\n--- Performance comparison (100 evals, price only) ---")
+    n_bench = 100
+    # Use random points in domain interior to avoid Chebyshev node coincidence
+    rng = np.random.default_rng(42)
+    test_points = []
+    for _ in range(n_bench):
+        test_points.append([
+            rng.uniform(85, 115),   # S
+            rng.uniform(92, 108),   # K
+            rng.uniform(0.3, 0.9),  # T
+            rng.uniform(0.17, 0.33),# sigma
+            rng.uniform(0.02, 0.07) # r
+        ])
+    zero_deriv = [0, 0, 0, 0, 0]
+
+    # Warmup JIT
+    cheb.fast_eval(test_points[0], zero_deriv)
+
+    import time as _time
+
+    t0 = _time.perf_counter()
+    for pt in test_points:
+        cheb.eval(pt, zero_deriv)
+    t_eval = (_time.perf_counter() - t0) / n_bench * 1000
+
+    t0 = _time.perf_counter()
+    for pt in test_points:
+        cheb.fast_eval(pt, zero_deriv)
+    t_fast = (_time.perf_counter() - t0) / n_bench * 1000
+
+    t0 = _time.perf_counter()
+    for pt in test_points:
+        cheb.vectorized_eval(pt, zero_deriv)
+    t_vec = (_time.perf_counter() - t0) / n_bench * 1000
+
+    print(f"  eval():            {t_eval:.3f} ms/query")
+    print(f"  fast_eval():       {t_fast:.3f} ms/query")
+    print(f"  vectorized_eval(): {t_vec:.3f} ms/query")
+    print(f"  Speedup (vec vs fast_eval): {t_fast / t_vec:.1f}×")
+
+    # Price + Greeks timing
+    print(f"\n--- Performance comparison (100 evals, price + 4 Greeks) ---")
+    all_derivs = [zero_deriv, [1,0,0,0,0], [2,0,0,0,0], [0,0,0,1,0], [0,0,0,0,1]]
+
+    t0 = _time.perf_counter()
+    for pt in test_points:
+        for d in all_derivs:
+            cheb.fast_eval(pt, d)
+    t_fast_all = (_time.perf_counter() - t0) / n_bench * 1000
+
+    t0 = _time.perf_counter()
+    for pt in test_points:
+        for d in all_derivs:
+            cheb.vectorized_eval(pt, d)
+    t_vec_all = (_time.perf_counter() - t0) / n_bench * 1000
+
+    print(f"  fast_eval():       {t_fast_all:.3f} ms/sample (5 metrics)")
+    print(f"  vectorized_eval(): {t_vec_all:.3f} ms/sample (5 metrics)")
+    print(f"  Speedup: {t_fast_all / t_vec_all:.1f}×")
 
     return max_price_err < 1.0 and max_greek_err < 10.0
 

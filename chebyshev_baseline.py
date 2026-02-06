@@ -198,6 +198,8 @@ class ChebyshevApproximation:
 
                 current = new
 
+        return float(current)
+
     def get_derivative_id(self, derivative_order: List[int]) -> List[int]:
         """Get derivative ID (for API compatibility)."""
         return derivative_order
