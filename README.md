@@ -31,12 +31,12 @@ Based on standardized 5D Black-Scholes tests (`test_5d_black_scholes()` with S, 
 
 **Chebyshev Barycentric (Python)**
 <p align="center">
-  <img src="barycentric_2d_error_n12.png" width="80%" alt="Chebyshev Barycentric Error Surface">
+  <img src="https://raw.githubusercontent.com/0xC000005/PyChebyshev/main/barycentric_2d_error_n12.png" width="80%" alt="Chebyshev Barycentric Error Surface">
 </p>
 
 **MoCaX Standard (C++)**
 <p align="center">
-  <img src="mocax_2d_error_n12.png" width="80%" alt="MoCaX Error Surface">
+  <img src="https://raw.githubusercontent.com/0xC000005/PyChebyshev/main/mocax_2d_error_n12.png" width="80%" alt="MoCaX Error Surface">
 </p>
 
 Both methods achieve **spectral accuracy** (exponential error decay) with identical node configurations, demonstrating that the pure Python implementation successfully replicates the MoCaX algorithm's mathematical foundation.
@@ -45,12 +45,12 @@ Both methods achieve **spectral accuracy** (exponential error decay) with identi
 
 **Chebyshev Barycentric**
 <p align="center">
-  <img src="barycentric_2d_convergence.png" width="80%" alt="Barycentric Convergence Plot">
+  <img src="https://raw.githubusercontent.com/0xC000005/PyChebyshev/main/barycentric_2d_convergence.png" width="80%" alt="Barycentric Convergence Plot">
 </p>
 
 **MoCaX Standard**
 <p align="center">
-  <img src="mocax_2d_convergence.png" width="80%" alt="MoCaX Convergence Plot">
+  <img src="https://raw.githubusercontent.com/0xC000005/PyChebyshev/main/mocax_2d_convergence.png" width="80%" alt="MoCaX Convergence Plot">
 </p>
 
 The convergence plots demonstrate exponential error decay as node count increases, confirming the spectral accuracy predicted by the Bernstein Ellipse Theorem. Errors drop rapidly from 4×4 to 12×12 nodes, reaching near-machine precision for this analytic function.
