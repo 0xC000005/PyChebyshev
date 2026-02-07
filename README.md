@@ -43,8 +43,8 @@ PyChebyshev provides a **proof-of-concept environment for conducting time and er
 | **Analytical** | Closed-form Black-Scholes formulas | Instant (~10μs), machine precision |
 | **FDM** | Finite Difference Method for PDE | Accurate, slow (~0.5s/case), flexible for exotics |
 | **Chebyshev Baseline** | NumPy's `Chebyshev.interpolate()` | Dimensional decomposition, partial pre-computation |
-| **Chebyshev Barycentric + JIT** | Manual barycentric formula with Numba | **Fast pure Python** (~1-2ms/query), full pre-computation |
-| **MoCaX Standard** | Proprietary C++ library | Production-grade, spectral accuracy, ~0.01ms/query |
+| **Chebyshev Barycentric** | Vectorized barycentric with BLAS | **Fast pure Python** (~0.065ms price, ~0.29ms price+Greeks) |
+| **MoCaX Standard** | Proprietary C++ library | Production-grade, spectral accuracy, ~0.47ms/query (Python ctypes) |
 
 ## Acknowledgments
 
@@ -439,14 +439,21 @@ def barycentric_interpolate_jit(x, nodes, values, weights):
 
 Numba compiles this to machine code on first call (~50ms overhead), then subsequent evaluations run at ~50μs (10-20× speedup over pure Python). The dimensional decomposition process remains the same as Method 1 (5D → 4D → ... → scalar), but now every dimension uses pre-computed weights with uniform $$O(N)$$ evaluation.
 
+#### Vectorized Evaluation (Primary Fast Path)
+
+Beyond the JIT-compiled scalar path, the implementation provides fully vectorized evaluation using NumPy matrix operations:
+
+- **`vectorized_eval()`**: Contracts each tensor dimension via a single BLAS call (`current @ w_norm`). A reshape trick flattens the leading dimensions before the first (largest) contraction, exposing BLAS GEMV for ~25% additional speedup. 5 BLAS calls replace 16,105 Python loop iterations.
+- **`vectorized_eval_multi()`**: Pre-computes normalized barycentric weights once per dimension, then reuses them across all derivative orders. Computing price + 5 Greeks costs ~0.29ms instead of 6 × 0.065ms = 0.39ms.
+
 #### Performance Characteristics
 
 - **Build time**: ~0.35s (161,051 function evaluations + trivial weight computation)
 - **Storage**: 55 floats (440 bytes) for all dimensions
 - **Query complexity**: Uniform $$O(N)$$ for all dimensions (no polynomial refitting)
-- **Query time**: ~1-2ms per evaluation
+- **Query time**: ~0.065ms per price query, ~0.29ms for price + 5 Greeks
 
-The improvement over Method 1 comes from eliminating $$O(N \log N)$$ polynomial fitting for outer dimensions - we achieve 20-50× speedup with the same dimensional decomposition strategy but different interpolation basis.
+The improvement over Method 1 comes from eliminating $$O(N \log N)$$ polynomial fitting for outer dimensions. The vectorized path achieves ~15× speedup over JIT-compiled `fast_eval()` and ~700× over the pure Python `eval()` loop.
 
 ---
 
@@ -457,17 +464,17 @@ Based on standardized 5D Black-Scholes tests (`test_5d_black_scholes()` with S, 
 | Method | Price Error | Greek Error | Build Time | Query Time | Notes |
 |--------|-------------|-------------|------------|------------|-------|
 | **Analytical** | 0.000% | 0.000% | N/A | ~10μs | Ground truth (blackscholes library) |
-| **Chebyshev Barycentric** | 0.000% | 1.980% | ~0.35s | ~1-2ms | **Fast pure Python**, JIT-compiled |
-| **Chebyshev Baseline** | Similar | Similar | ~0.35s | ~2-3ms | NumPy implementation |
-| **MoCaX Standard** | 0.000% | 1.980% | ~1.04s | ~0.01ms | Proprietary C++, full tensor (161k evals) |
+| **Chebyshev Barycentric** | 0.000% | 1.980% | ~0.35s | ~0.065ms | Vectorized NumPy + BLAS reshape trick |
+| **Chebyshev Baseline** | Similar | Similar | ~0.35s | ~2-3ms | NumPy polynomial basis |
+| **MoCaX Standard** | 0.000% | 1.980% | ~1.04s | ~0.47ms | Proprietary C++, full tensor (161k evals) |
 | **FDM** | 0.803% | 2.234% | N/A | ~0.5s/case | PDE solver, no pre-computation |
 
 **Key Insights**:
 - **Chebyshev Barycentric achieves spectral accuracy** (0.000% price error, identical to MoCaX)
-- **Greeks accuracy**: 1.98% max error (Vega) due to finite difference approximation
+- **Greeks accuracy**: 1.98% max error (Vega) via analytical differentiation matrices
 - **Build time**: 0.35s (161,051 analytical evaluations) vs MoCaX 1.04s (C++ overhead)
-- **Query time**: 1-2ms (pure Python + JIT) vs 0.01ms (MoCaX C++)
-- **Break-even**: > 1-2 queries make pre-computation worthwhile
+- **Query time**: 0.065ms price / 0.29ms price+5 Greeks (vectorized NumPy) vs 0.47ms (MoCaX Standard)
+- **Break-even**: > 1 query makes pre-computation worthwhile
 
 ---
 
