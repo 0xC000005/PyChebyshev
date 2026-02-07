@@ -10,3 +10,6 @@ simple-example-py.py
 *.zip
 .DS_Store
 CLAUDE.md
+site/
+dist/
+*.egg-info/

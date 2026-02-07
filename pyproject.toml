@@ -1,20 +1,71 @@
+[build-system]
+requires = ["hatchling"]
+build-backend = "hatchling.build"
+
 [project]
-name = "finregressor"
+name = "pychebyshev"
 version = "0.1.0"
-description = "Add your description here"
+description = "Fast multi-dimensional Chebyshev tensor interpolation with analytical derivatives"
 readme = "README.md"
-requires-python = ">=3.13"
+license = {text = "MIT"}
+requires-python = ">=3.10"
+authors = [{name = "Max Zhang"}]
+keywords = [
+    "chebyshev",
+    "interpolation",
+    "numerical-methods",
+    "option-pricing",
+    "spectral-methods",
+]
+classifiers = [
+    "Development Status :: 4 - Beta",
+    "Intended Audience :: Science/Research",
+    "License :: OSI Approved :: MIT License",
+    "Programming Language :: Python :: 3",
+    "Programming Language :: Python :: 3.10",
+    "Programming Language :: Python :: 3.11",
+    "Programming Language :: Python :: 3.12",
+    "Programming Language :: Python :: 3.13",
+    "Topic :: Scientific/Engineering :: Mathematics",
+]
 dependencies = [
-    "blackscholes>=0.2.0",
-    "chebpy>=0.2",
-    "matplotlib>=3.10.7",
-    "numba>=0.62.1",
-    "numpy>=2.3.4",
-    "pandas>=2.3.3",
+    "numpy>=2.0",
     "pytest>=8.4.2",
-    "scikit-fdiff>=0.7.0",
-    "scipy>=1.16.2",
-    "teneva>=0.14.9",
-    "tensorly>=0.9.0",
-    "tqdm>=4.67.1",
+    "scipy>=1.12",
+]
+
+[project.optional-dependencies]
+jit = ["numba>=0.60"]
+dev = [
+    "blackscholes>=0.2.0",
+    "matplotlib>=3.10",
+    "numba>=0.62",
+    "pytest>=8.0",
+    "ruff>=0.4",
+    "tqdm>=4.60",
+]
+docs = [
+    "mkdocs-material>=9.5",
+    "mkdocstrings[python]>=0.24",
+]
+
+[project.urls]
+Homepage = "https://github.com/maxjingwezhang/PyChebyshev"
+Documentation = "https://maxjingwezhang.github.io/PyChebyshev"
+Repository = "https://github.com/maxjingwezhang/PyChebyshev"
+
+[tool.hatch.build.targets.wheel]
+packages = ["src/pychebyshev"]
+
+[tool.pytest.ini_options]
+testpaths = ["tests"]
+
+[tool.ruff]
+target-version = "py310"
+
+[dependency-groups]
+dev = [
+    "mkdocs-material>=9.7.1",
+    "mkdocstrings[python]>=1.0.3",
+    "pytest>=8.4.2",
 ]

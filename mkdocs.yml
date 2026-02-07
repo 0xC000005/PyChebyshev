@@ -1,0 +1,55 @@
+site_name: PyChebyshev
+site_description: Fast multi-dimensional Chebyshev tensor interpolation with analytical derivatives
+repo_url: https://github.com/maxjingwezhang/PyChebyshev
+repo_name: PyChebyshev
+
+theme:
+  name: material
+  features:
+    - content.code.copy
+    - navigation.sections
+    - navigation.top
+    - search.highlight
+  palette:
+    - scheme: default
+      primary: indigo
+      accent: indigo
+
+markdown_extensions:
+  - pymdownx.arithmatex:
+      generic: true
+  - pymdownx.highlight:
+      anchor_linenums: true
+  - pymdownx.superfences
+  - admonition
+  - pymdownx.details
+  - toc:
+      permalink: true
+
+extra_javascript:
+  - javascripts/katex.js
+  - https://unpkg.com/katex@0/dist/katex.min.js
+  - https://unpkg.com/katex@0/dist/contrib/auto-render.min.js
+
+extra_css:
+  - https://unpkg.com/katex@0/dist/katex.min.css
+
+plugins:
+  - search
+  - mkdocstrings:
+      handlers:
+        python:
+          options:
+            show_source: false
+            docstring_style: numpy
+            members_order: source
+
+nav:
+  - Home: index.md
+  - Getting Started: getting-started.md
+  - User Guide:
+      - Mathematical Concepts: user-guide/concepts.md
+      - Usage Patterns: user-guide/usage.md
+      - Computing Greeks: user-guide/greeks.md
+  - API Reference: api/reference.md
+  - Benchmarks: benchmarks.md
