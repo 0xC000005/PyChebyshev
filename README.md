@@ -4,6 +4,27 @@
 
 This project provides an **extremely short, standalone Python implementation** (although not fully optimized, without getting tedious) of the Chebyshev tensor method, **for educational purposes only**, demonstrating that it achieves **comparable accuracy to the state-of-the-art MoCaX library** for European option pricing via Black-Scholes.
 
+## Performance Comparison
+
+Based on standardized 5D Black-Scholes tests (`test_5d_black_scholes()` with S, K, T, σ, r):
+
+| Method | Price Error | Greek Error | Build Time | Query Time | Notes |
+|--------|-------------|-------------|------------|------------|-------|
+| **Analytical** | 0.000% | 0.000% | N/A | ~10μs | Ground truth (blackscholes library) |
+| **Chebyshev Barycentric** | 0.000% | 1.980% | ~0.35s | ~0.065ms | Vectorized NumPy + BLAS reshape trick |
+| **Chebyshev Baseline** | 0.000% | 1.980% | ~0.35s | ~2-3ms | NumPy polynomial basis |
+| **MoCaX Standard** | 0.000% | 1.980% | ~1.04s | ~0.47ms | Proprietary C++, full tensor (161k evals) |
+| **FDM** | 0.803% | 2.234% | N/A | ~0.5s/case | PDE solver, no pre-computation |
+
+**Key Insights**:
+- **Chebyshev Barycentric achieves spectral accuracy** (0.000% price error, identical to MoCaX)
+- **Greeks accuracy**: 1.98% max error (Vega) via analytical differentiation matrices
+- **Build time**: 0.35s (161,051 analytical evaluations) vs MoCaX 1.04s (C++ overhead)
+- **Query time**: 0.065ms price / 0.29ms price+5 Greeks (vectorized NumPy) vs 0.47ms (MoCaX Standard)
+- **Break-even**: > 1 query makes pre-computation worthwhile
+
+---
+
 ## Visual Comparison: Spectral Convergence
 
 ### Error Surface at 12×12 Nodes
@@ -49,6 +70,50 @@ PyChebyshev provides a **proof-of-concept environment for conducting time and er
 ## Acknowledgments
 
 **Special thanks to MoCaX** for their high-quality [videos](https://www.youtube.com/@MoCaX) on YouTube explaining the mathematical foundations behind their library. These resources were invaluable for understanding and implementing the barycentric Chebyshev interpolation algorithm.
+
+---
+
+## Getting Started
+
+### Installation
+
+This project uses [uv](https://github.com/astral-sh/uv) for dependency management:
+
+```bash
+# Install dependencies
+uv sync
+
+# Activate virtual environment (optional, uv handles this automatically)
+source .venv/bin/activate
+```
+
+### Quick Demo
+
+**Run comprehensive method comparison**:
+```bash
+uv run python compare_methods_time_accuracy.py
+```
+
+**Visualize 2D error surfaces** (varying K and T):
+```bash
+# Chebyshev Barycentric (30×30 grid, optimized for speed)
+./run_comparison_2d_error_surface_barycentric.sh
+
+# MoCaX Standard (50×50 grid, reference implementation)
+./run_comparison_2d_error_surface_mocax.sh
+```
+
+**Test individual methods**:
+```bash
+# Finite Difference Method convergence study
+uv run python fdm_baseline.py
+
+# Chebyshev Baseline (NumPy implementation)
+uv run python chebyshev_baseline.py
+
+# Chebyshev Barycentric (JIT-optimized)
+uv run python chebyshev_barycentric.py
+```
 
 ---
 
@@ -454,69 +519,4 @@ Beyond the JIT-compiled scalar path, the implementation provides fully vectorize
 - **Query time**: ~0.065ms per price query, ~0.29ms for price + 5 Greeks
 
 The improvement over Method 1 comes from eliminating $$O(N \log N)$$ polynomial fitting for outer dimensions. The vectorized path achieves ~15× speedup over JIT-compiled `fast_eval()` and ~700× over the pure Python `eval()` loop.
-
----
-
-## Performance Comparison
-
-Based on standardized 5D Black-Scholes tests (`test_5d_black_scholes()` with S, K, T, σ, r):
-
-| Method | Price Error | Greek Error | Build Time | Query Time | Notes |
-|--------|-------------|-------------|------------|------------|-------|
-| **Analytical** | 0.000% | 0.000% | N/A | ~10μs | Ground truth (blackscholes library) |
-| **Chebyshev Barycentric** | 0.000% | 1.980% | ~0.35s | ~0.065ms | Vectorized NumPy + BLAS reshape trick |
-| **Chebyshev Baseline** | Similar | Similar | ~0.35s | ~2-3ms | NumPy polynomial basis |
-| **MoCaX Standard** | 0.000% | 1.980% | ~1.04s | ~0.47ms | Proprietary C++, full tensor (161k evals) |
-| **FDM** | 0.803% | 2.234% | N/A | ~0.5s/case | PDE solver, no pre-computation |
-
-**Key Insights**:
-- **Chebyshev Barycentric achieves spectral accuracy** (0.000% price error, identical to MoCaX)
-- **Greeks accuracy**: 1.98% max error (Vega) via analytical differentiation matrices
-- **Build time**: 0.35s (161,051 analytical evaluations) vs MoCaX 1.04s (C++ overhead)
-- **Query time**: 0.065ms price / 0.29ms price+5 Greeks (vectorized NumPy) vs 0.47ms (MoCaX Standard)
-- **Break-even**: > 1 query makes pre-computation worthwhile
-
----
-
-## Getting Started
-
-### Installation
-
-This project uses [uv](https://github.com/astral-sh/uv) for dependency management:
-
-```bash
-# Install dependencies
-uv sync
-
-# Activate virtual environment (optional, uv handles this automatically)
-source .venv/bin/activate
-```
-
-### Quick Demo
-
-**Run comprehensive method comparison**:
-```bash
-uv run python compare_methods_time_accuracy.py
-```
-
-**Visualize 2D error surfaces** (varying K and T):
-```bash
-# Chebyshev Barycentric (30×30 grid, optimized for speed)
-./run_comparison_2d_error_surface_barycentric.sh
-
-# MoCaX Standard (50×50 grid, reference implementation)
-./run_comparison_2d_error_surface_mocax.sh
-```
-
-**Test individual methods**:
-```bash
-# Finite Difference Method convergence study
-uv run python fdm_baseline.py
-
-# Chebyshev Baseline (NumPy implementation)
-uv run python chebyshev_baseline.py
-
-# Chebyshev Barycentric (JIT-optimized)
-uv run python chebyshev_barycentric.py
-```
 
