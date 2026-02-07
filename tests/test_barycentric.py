@@ -6,7 +6,7 @@ import numpy as np
 import pytest
 
 from pychebyshev import ChebyshevApproximation
-from tests.conftest import (
+from conftest import (
     _bs_call_delta,
     _bs_call_gamma,
     _bs_call_price,

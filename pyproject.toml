@@ -30,7 +30,6 @@ classifiers = [
 ]
 dependencies = [
     "numpy>=2.0",
-    "pytest>=8.4.2",
     "scipy>=1.12",
 ]
 
@@ -50,9 +49,9 @@ docs = [
 ]
 
 [project.urls]
-Homepage = "https://github.com/maxjingwezhang/PyChebyshev"
-Documentation = "https://maxjingwezhang.github.io/PyChebyshev"
-Repository = "https://github.com/maxjingwezhang/PyChebyshev"
+Homepage = "https://github.com/0xC000005/PyChebyshev"
+Documentation = "https://0xC000005.github.io/PyChebyshev"
+Repository = "https://github.com/0xC000005/PyChebyshev"
 
 [tool.hatch.build.targets.wheel]
 packages = ["src/pychebyshev"]
