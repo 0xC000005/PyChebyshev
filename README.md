@@ -1,5 +1,11 @@
 # PyChebyshev
 
+[![PyPI version](https://img.shields.io/pypi/v/pychebyshev)](https://pypi.org/project/pychebyshev/)
+[![Python versions](https://img.shields.io/pypi/pyversions/pychebyshev)](https://pypi.org/project/pychebyshev/)
+[![Tests](https://github.com/0xC000005/PyChebyshev/actions/workflows/test.yml/badge.svg)](https://github.com/0xC000005/PyChebyshev/actions/workflows/test.yml)
+[![codecov](https://codecov.io/gh/0xC000005/PyChebyshev/graph/badge.svg)](https://codecov.io/gh/0xC000005/PyChebyshev)
+[![License: MIT](https://img.shields.io/badge/License-MIT-yellow.svg)](https://opensource.org/licenses/MIT)
+
 **A standalone Python implementation of multi-dimensional Chebyshev tensor interpolation**
 
 This project provides an **extremely short, standalone Python implementation** (although not fully optimized, without getting tedious) of the Chebyshev tensor method, **for educational purposes only**, demonstrating that it achieves **comparable accuracy to the state-of-the-art MoCaX library** for European option pricing via Black-Scholes.
