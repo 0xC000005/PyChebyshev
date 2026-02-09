@@ -2,7 +2,9 @@
 
 Provides the :class:`ChebyshevApproximation` class for building and
 evaluating multi-dimensional Chebyshev interpolants with analytical
-derivatives via spectral differentiation matrices.
+derivatives via spectral differentiation matrices, and the
+:class:`ChebyshevSlider` class for high-dimensional approximation
+via the Sliding Technique.
 
 Example
 -------
@@ -18,5 +20,6 @@ Example
 
 from pychebyshev._version import __version__
 from pychebyshev.barycentric import ChebyshevApproximation
+from pychebyshev.slider import ChebyshevSlider
 
-__all__ = ["ChebyshevApproximation", "__version__"]
+__all__ = ["ChebyshevApproximation", "ChebyshevSlider", "__version__"]

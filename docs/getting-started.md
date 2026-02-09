@@ -17,7 +17,7 @@ pip install pychebyshev[jit]
 ### From source (development)
 
 ```bash
-git clone https://github.com/maxjingwezhang/PyChebyshev.git
+git clone https://github.com/0xC000005/PyChebyshev.git
 cd PyChebyshev
 pip install -e ".[dev]"
 ```

@@ -4,6 +4,10 @@
 
 ::: pychebyshev.ChebyshevApproximation
 
+## ChebyshevSlider
+
+::: pychebyshev.ChebyshevSlider
+
 ## Module Functions
 
 ::: pychebyshev.barycentric.compute_barycentric_weights

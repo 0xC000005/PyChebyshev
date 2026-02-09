@@ -1351,6 +1351,7 @@ jit = [
 
 [package.dev-dependencies]
 dev = [
+    { name = "blackscholes" },
     { name = "mkdocs-material" },
     { name = "mkdocstrings", extra = ["python"] },
     { name = "pytest" },
@@ -1375,6 +1376,7 @@ provides-extras = ["jit", "dev", "docs"]
 
 [package.metadata.requires-dev]
 dev = [
+    { name = "blackscholes", specifier = ">=0.2.0" },
     { name = "mkdocs-material", specifier = ">=9.7.1" },
     { name = "mkdocstrings", extras = ["python"], specifier = ">=1.0.3" },
     { name = "pytest", specifier = ">=8.4.2" },

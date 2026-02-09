@@ -6,9 +6,9 @@
 [![codecov](https://codecov.io/gh/0xC000005/PyChebyshev/graph/badge.svg)](https://codecov.io/gh/0xC000005/PyChebyshev)
 [![License: MIT](https://img.shields.io/badge/License-MIT-yellow.svg)](https://opensource.org/licenses/MIT)
 
-**A standalone Python implementation of multi-dimensional Chebyshev tensor interpolation**
+**A fast Python library for multi-dimensional Chebyshev tensor interpolation with analytical derivatives**
 
-This project provides an **extremely short, standalone Python implementation** (although not fully optimized, without getting tedious) of the Chebyshev tensor method, **for educational purposes only**, demonstrating that it achieves **comparable accuracy to the state-of-the-art MoCaX library** for European option pricing via Black-Scholes.
+PyChebyshev provides a **fully optimized Python implementation** of the Chebyshev tensor method, demonstrating that it achieves **comparable speed and accuracy to the state-of-the-art MoCaX C++ library** for European option pricing via Black-Scholes — with pure Python and NumPy only.
 
 ## Performance Comparison
 
@@ -61,17 +61,13 @@ Both methods achieve **spectral accuracy** (exponential error decay) with identi
 
 The convergence plots demonstrate exponential error decay as node count increases, confirming the spectral accuracy predicted by the Bernstein Ellipse Theorem. Errors drop rapidly from 4×4 to 12×12 nodes, reaching near-machine precision for this analytic function.
 
-## Project Purpose
+## Features
 
-PyChebyshev provides a **proof-of-concept environment for conducting time and error analysis** of several popular methods for evaluating European options via Black-Scholes:
-
-| Method | Description | Characteristics |
-|--------|-------------|-----------------|
-| **Analytical** | Closed-form Black-Scholes formulas | Instant (~10μs), machine precision |
-| **FDM** | Finite Difference Method for PDE | Accurate, slow (~0.5s/case), flexible for exotics |
-| **Chebyshev Baseline** | NumPy's `Chebyshev.interpolate()` | Dimensional decomposition, partial pre-computation |
-| **Chebyshev Barycentric** | Vectorized barycentric with BLAS | **Fast pure Python** (~0.065ms price, ~0.29ms price+Greeks) |
-| **MoCaX Standard** | Proprietary C++ library | Production-grade, spectral accuracy, ~0.47ms/query (Python ctypes) |
+- **Full tensor interpolation** via `ChebyshevApproximation` — spectral accuracy for up to ~5-6 dimensions
+- **Sliding technique** via `ChebyshevSlider` — additive decomposition for high-dimensional functions (10+ dims)
+- **Analytical derivatives** via spectral differentiation matrices (no finite differences)
+- **Vectorized evaluation** using BLAS matrix-vector products (~0.065ms/query)
+- **Pure Python** — NumPy + SciPy only; optional Numba JIT acceleration
 
 ## Acknowledgments
 
@@ -83,43 +79,66 @@ PyChebyshev provides a **proof-of-concept environment for conducting time and er
 
 ### Installation
 
-This project uses [uv](https://github.com/astral-sh/uv) for dependency management:
-
 ```bash
-# Install dependencies
-uv sync
-
-# Activate virtual environment (optional, uv handles this automatically)
-source .venv/bin/activate
+pip install pychebyshev
 ```
 
-### Quick Demo
+With optional Numba JIT acceleration:
 
-**Run comprehensive method comparison**:
 ```bash
-uv run python compare_methods_time_accuracy.py
+pip install pychebyshev[jit]
 ```
 
-**Visualize 2D error surfaces** (varying K and T):
-```bash
-# Chebyshev Barycentric (30×30 grid, optimized for speed)
-./run_comparison_2d_error_surface_barycentric.sh
+### Quick Example
 
-# MoCaX Standard (50×50 grid, reference implementation)
-./run_comparison_2d_error_surface_mocax.sh
+```python
+import math
+from pychebyshev import ChebyshevApproximation
+
+# Approximate any smooth function
+def my_func(x, _):
+    return math.sin(x[0]) * math.exp(-x[1])
+
+cheb = ChebyshevApproximation(
+    my_func,
+    num_dimensions=2,
+    domain=[[-1, 1], [0, 2]],
+    n_nodes=[15, 15],
+)
+cheb.build()
+
+# Evaluate function value
+value = cheb.vectorized_eval([0.5, 1.0], [0, 0])
+
+# Analytical first derivative w.r.t. x[0]
+dfdx = cheb.vectorized_eval([0.5, 1.0], [1, 0])
+
+# Price + all derivatives at once (shared weights, ~25% faster)
+results = cheb.vectorized_eval_multi(
+    [0.5, 1.0],
+    [[0, 0], [1, 0], [0, 1], [2, 0]],
+)
 ```
 
-**Test individual methods**:
-```bash
-# Finite Difference Method convergence study
-uv run python fdm_baseline.py
+### High-Dimensional Functions (Sliding Technique)
 
-# Chebyshev Baseline (NumPy implementation)
-uv run python chebyshev_baseline.py
+For functions with more than ~6 dimensions, use `ChebyshevSlider` to decompose into low-dimensional slides:
 
-# Chebyshev Barycentric (JIT-optimized)
-uv run python chebyshev_barycentric.py
+```python
+from pychebyshev import ChebyshevSlider
+
+slider = ChebyshevSlider(
+    my_func, num_dimensions=10,
+    domain=[[-1, 1]] * 10,
+    n_nodes=[11] * 10,
+    partition=[[0, 1], [2, 3], [4, 5], [6, 7], [8, 9]],
+    pivot_point=[0.0] * 10,
+)
+slider.build()
+val = slider.eval([0.5] * 10, [0] * 10)
 ```
+
+See the [documentation](https://0xc000005.github.io/PyChebyshev/) for full API reference and usage guides.
 
 ---
 
@@ -250,7 +269,7 @@ With the theoretical foundation established, Chebyshev interpolation can be impl
 
 ### Method 1: Chebyshev Baseline (Polynomial Coefficients)
 
-**Implementation**: `chebyshev_baseline.py`
+**Benchmark script**: `chebyshev_baseline.py`
 
 #### Dimensional Decomposition Strategy
 
@@ -367,7 +386,7 @@ The bottleneck: most query time is spent refitting polynomials for outer dimensi
 
 ### Method 2: Chebyshev Barycentric (Barycentric Weights)
 
-**Implementation**: `chebyshev_barycentric.py`
+**Library implementation**: `src/pychebyshev/barycentric.py` | **Benchmark script**: `chebyshev_barycentric.py`
 
 #### The Speedup: Separating Nodes from Values
 

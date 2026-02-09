@@ -13,3 +13,6 @@ CLAUDE.md
 site/
 dist/
 *.egg-info/
+.coverage
+coverage.xml
+*.pdf
