@@ -1,6 +1,8 @@
 """Tests for ChebyshevApproximation: accuracy, derivatives, and eval methods."""
 
 import math
+import pathlib
+import warnings
 
 import numpy as np
 import pytest
@@ -159,3 +161,129 @@ class TestEvalMethods:
         cheb = ChebyshevApproximation(f, 1, [[0, 1]], [5])
         with pytest.raises(RuntimeError, match="build"):
             cheb.vectorized_eval([0.5], [0])
+
+
+# ---------------------------------------------------------------------------
+# Serialization
+# ---------------------------------------------------------------------------
+
+class TestSerialization:
+    """Tests for save/load round-trip on ChebyshevApproximation."""
+
+    TEST_POINTS = [
+        [0.1, 0.3, 1.7],
+        [-0.5, 0.0, 2.5],
+        [0.9, -0.9, 1.1],
+        [0.0, 0.0, 2.0],
+        [-0.3, 0.7, 2.9],
+    ]
+
+    def test_save_load_roundtrip(self, cheb_sin_3d, tmp_path):
+        path = tmp_path / "cheb.pkl"
+        cheb_sin_3d.save(path)
+        loaded = ChebyshevApproximation.load(path)
+
+        for pt in self.TEST_POINTS:
+            orig = cheb_sin_3d.vectorized_eval(pt, [0, 0, 0])
+            rest = loaded.vectorized_eval(pt, [0, 0, 0])
+            np.testing.assert_allclose(rest, orig, atol=0, rtol=0)
+
+    def test_fast_eval_after_load(self, cheb_sin_3d, tmp_path):
+        path = tmp_path / "cheb.pkl"
+        cheb_sin_3d.save(path)
+        loaded = ChebyshevApproximation.load(path)
+
+        for pt in self.TEST_POINTS:
+            orig = cheb_sin_3d.fast_eval(pt, [0, 0, 0])
+            rest = loaded.fast_eval(pt, [0, 0, 0])
+            np.testing.assert_allclose(rest, orig, atol=1e-12)
+
+    def test_function_is_none_after_load(self, cheb_sin_3d, tmp_path):
+        path = tmp_path / "cheb.pkl"
+        cheb_sin_3d.save(path)
+        loaded = ChebyshevApproximation.load(path)
+        assert loaded.function is None
+
+    def test_loaded_state_attributes(self, cheb_sin_3d, tmp_path):
+        path = tmp_path / "cheb.pkl"
+        cheb_sin_3d.save(path)
+        loaded = ChebyshevApproximation.load(path)
+
+        assert loaded.tensor_values is not None
+        assert loaded.tensor_values.shape == tuple(cheb_sin_3d.n_nodes)
+        assert loaded.weights is not None
+        assert len(loaded.weights) == cheb_sin_3d.num_dimensions
+        assert loaded.diff_matrices is not None
+        assert len(loaded.diff_matrices) == cheb_sin_3d.num_dimensions
+        assert len(loaded.nodes) == cheb_sin_3d.num_dimensions
+        for d in range(cheb_sin_3d.num_dimensions):
+            np.testing.assert_array_equal(
+                loaded.nodes[d], cheb_sin_3d.nodes[d]
+            )
+
+    def test_save_before_build_raises(self, tmp_path):
+        def f(x, _):
+            return x[0]
+        cheb = ChebyshevApproximation(f, 1, [[0, 1]], [5])
+        with pytest.raises(RuntimeError, match="unbuilt"):
+            cheb.save(tmp_path / "fail.pkl")
+
+    def test_version_mismatch_warning(self, cheb_sin_3d):
+        # Directly test __setstate__ with a tampered version
+        state = cheb_sin_3d.__getstate__()
+        state["_pychebyshev_version"] = "0.0.0-fake"
+
+        obj = object.__new__(ChebyshevApproximation)
+        with warnings.catch_warnings(record=True) as w:
+            warnings.simplefilter("always")
+            obj.__setstate__(state)
+            assert len(w) == 1
+            assert "0.0.0-fake" in str(w[0].message)
+
+    def test_pathlib_path(self, cheb_sin_3d, tmp_path):
+        path = pathlib.Path(tmp_path) / "cheb.pkl"
+        cheb_sin_3d.save(path)
+        loaded = ChebyshevApproximation.load(path)
+        pt = [0.1, 0.3, 1.7]
+        orig = cheb_sin_3d.vectorized_eval(pt, [0, 0, 0])
+        rest = loaded.vectorized_eval(pt, [0, 0, 0])
+        np.testing.assert_allclose(rest, orig, atol=0, rtol=0)
+
+
+# ---------------------------------------------------------------------------
+# Repr / Str
+# ---------------------------------------------------------------------------
+
+class TestRepr:
+    def test_repr_unbuilt(self):
+        def f(x, _):
+            return x[0]
+        cheb = ChebyshevApproximation(f, 2, [[0, 1], [0, 1]], [11, 11])
+        r = repr(cheb)
+        assert "built=False" in r
+        assert "dims=2" in r
+        assert "[11, 11]" in r
+
+    def test_repr_built(self, cheb_sin_3d):
+        r = repr(cheb_sin_3d)
+        assert "built=True" in r
+        assert "dims=3" in r
+
+    def test_str_unbuilt(self):
+        def f(x, _):
+            return x[0]
+        cheb = ChebyshevApproximation(f, 2, [[0, 1], [2, 3]], [11, 11])
+        s = str(cheb)
+        assert "not built" in s
+        assert "2D" in s
+        assert "[11, 11]" in s
+        assert "[0, 1]" in s
+        assert "Build:" not in s
+
+    def test_str_built(self, cheb_sin_3d):
+        s = str(cheb_sin_3d)
+        assert "built" in s
+        assert "3D" in s
+        assert "Build:" in s
+        assert "evaluations" in s
+        assert "Derivatives:" in s

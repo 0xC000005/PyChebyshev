@@ -1,7 +1,10 @@
 """Tests for ChebyshevSlider (Sliding Technique)."""
 
 import math
+import pathlib
+import warnings
 
+import numpy as np
 import pytest
 
 from pychebyshev import ChebyshevSlider
@@ -300,3 +303,153 @@ class TestBlackScholesSliding:
         # Error exists but should be within ~50% for this separable approximation
         rel_error = abs(result - expected) / abs(expected)
         assert rel_error < 1.0  # loose bound; sliding isn't great for BS
+
+
+# ---------------------------------------------------------------------------
+# Serialization
+# ---------------------------------------------------------------------------
+
+class TestSliderSerialization:
+    """Tests for save/load round-trip on ChebyshevSlider."""
+
+    TEST_POINTS = [
+        [0.5, -0.3, 1.7],
+        [-0.8, 0.6, 2.5],
+        [0.0, 0.0, 2.0],
+        [0.9, -0.9, 1.1],
+        [-0.3, 0.7, 2.9],
+    ]
+
+    @pytest.fixture
+    def slider_sin_3d(self):
+        slider = ChebyshevSlider(
+            sin_sum_3d, 3,
+            [[-1, 1], [-1, 1], [1, 3]],
+            [12, 10, 10],
+            partition=[[0], [1], [2]],
+            pivot_point=[0.0, 0.0, 2.0],
+        )
+        slider.build(verbose=False)
+        return slider
+
+    def test_save_load_roundtrip(self, slider_sin_3d, tmp_path):
+        path = tmp_path / "slider.pkl"
+        slider_sin_3d.save(path)
+        loaded = ChebyshevSlider.load(path)
+
+        for pt in self.TEST_POINTS:
+            orig = slider_sin_3d.eval(pt, [0, 0, 0])
+            rest = loaded.eval(pt, [0, 0, 0])
+            np.testing.assert_allclose(rest, orig, atol=0, rtol=0)
+
+    def test_derivative_after_load(self, slider_sin_3d, tmp_path):
+        path = tmp_path / "slider.pkl"
+        slider_sin_3d.save(path)
+        loaded = ChebyshevSlider.load(path)
+
+        for pt in self.TEST_POINTS:
+            # Test first derivative w.r.t. dim 0
+            orig = slider_sin_3d.eval(pt, [1, 0, 0])
+            rest = loaded.eval(pt, [1, 0, 0])
+            np.testing.assert_allclose(rest, orig, atol=0, rtol=0)
+
+    def test_function_is_none_after_load(self, slider_sin_3d, tmp_path):
+        path = tmp_path / "slider.pkl"
+        slider_sin_3d.save(path)
+        loaded = ChebyshevSlider.load(path)
+
+        assert loaded.function is None
+        for slide in loaded.slides:
+            assert slide.function is None
+
+    def test_slider_internal_state(self, slider_sin_3d, tmp_path):
+        path = tmp_path / "slider.pkl"
+        slider_sin_3d.save(path)
+        loaded = ChebyshevSlider.load(path)
+
+        assert loaded._dim_to_slide == slider_sin_3d._dim_to_slide
+        assert loaded.pivot_value == slider_sin_3d.pivot_value
+        assert loaded.partition == slider_sin_3d.partition
+        assert loaded.pivot_point == slider_sin_3d.pivot_point
+        assert loaded._built is True
+
+    def test_save_before_build_raises(self, tmp_path):
+        slider = ChebyshevSlider(
+            sin_sum_3d, 3,
+            [[-1, 1]] * 3,
+            [5] * 3,
+            partition=[[0], [1], [2]],
+            pivot_point=[0.0] * 3,
+        )
+        with pytest.raises(RuntimeError, match="unbuilt"):
+            slider.save(tmp_path / "fail.pkl")
+
+    def test_pathlib_path(self, slider_sin_3d, tmp_path):
+        path = pathlib.Path(tmp_path) / "slider.pkl"
+        slider_sin_3d.save(path)
+        loaded = ChebyshevSlider.load(path)
+        pt = [0.5, -0.3, 1.7]
+        orig = slider_sin_3d.eval(pt, [0, 0, 0])
+        rest = loaded.eval(pt, [0, 0, 0])
+        np.testing.assert_allclose(rest, orig, atol=0, rtol=0)
+
+
+# ---------------------------------------------------------------------------
+# Repr / Str
+# ---------------------------------------------------------------------------
+
+class TestSliderRepr:
+    @pytest.fixture
+    def slider_built(self):
+        slider = ChebyshevSlider(
+            sin_sum_3d, 3,
+            [[-1, 1], [-1, 1], [1, 3]],
+            [12, 10, 10],
+            partition=[[0], [1], [2]],
+            pivot_point=[0.0, 0.0, 2.0],
+        )
+        slider.build(verbose=False)
+        return slider
+
+    def test_repr_unbuilt(self):
+        slider = ChebyshevSlider(
+            sin_sum_3d, 3,
+            [[-1, 1]] * 3,
+            [11, 11, 11],
+            partition=[[0], [1], [2]],
+            pivot_point=[0.0] * 3,
+        )
+        r = repr(slider)
+        assert "built=False" in r
+        assert "dims=3" in r
+        assert "slides=3" in r
+        assert "partition=" in r
+
+    def test_repr_built(self, slider_built):
+        r = repr(slider_built)
+        assert "built=True" in r
+        assert "dims=3" in r
+
+    def test_str_unbuilt(self):
+        slider = ChebyshevSlider(
+            sin_sum_3d, 3,
+            [[-1, 1], [-1, 1], [1, 3]],
+            [11, 11, 11],
+            partition=[[0], [1], [2]],
+            pivot_point=[0.0, 0.0, 2.0],
+        )
+        s = str(slider)
+        assert "not built" in s
+        assert "Partition:" in s
+        assert "Pivot:" in s
+        assert "Nodes:" in s
+        assert "Domain:" in s
+        assert "Slides:" not in s  # no slide details when unbuilt
+
+    def test_str_built(self, slider_built):
+        s = str(slider_built)
+        assert "built" in s
+        assert "Partition:" in s
+        assert "Pivot:" in s
+        assert "Slides:" in s
+        assert "[0] dims" in s

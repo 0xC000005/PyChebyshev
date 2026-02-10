@@ -50,6 +50,7 @@ nav:
   - User Guide:
       - Mathematical Concepts: user-guide/concepts.md
       - Usage Patterns: user-guide/usage.md
+      - Saving & Loading: user-guide/serialization.md
       - Computing Greeks: user-guide/greeks.md
       - Sliding Technique: user-guide/sliding.md
   - API Reference: api/reference.md

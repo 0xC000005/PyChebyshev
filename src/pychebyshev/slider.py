@@ -13,7 +13,10 @@ References
 
 from __future__ import annotations
 
+import os
+import pickle
 import time
+import warnings
 from typing import Callable, List, Tuple
 
 import numpy as np
@@ -262,3 +265,174 @@ class ChebyshevSlider:
             int(np.prod([self.n_nodes[d] for d in group]))
             for group in self.partition
         )
+
+    # ------------------------------------------------------------------
+    # Serialization
+    # ------------------------------------------------------------------
+
+    def __getstate__(self) -> dict:
+        """Return picklable state, excluding the original function."""
+        from pychebyshev._version import __version__
+
+        state = self.__dict__.copy()
+        state["function"] = None
+        state["_pychebyshev_version"] = __version__
+        return state
+
+    def __setstate__(self, state: dict) -> None:
+        """Restore state from a pickled dict."""
+        from pychebyshev._version import __version__
+
+        saved_version = state.pop("_pychebyshev_version", None)
+        if saved_version is not None and saved_version != __version__:
+            warnings.warn(
+                f"This object was saved with pychebyshev {saved_version}, "
+                f"but you are loading it with {__version__}. "
+                f"Evaluation results may differ if internal data layout changed.",
+                UserWarning,
+                stacklevel=2,
+            )
+
+        self.__dict__.update(state)
+        self.function = None
+
+    def save(self, path: str | os.PathLike) -> None:
+        """Save the built slider to a file.
+
+        The original function is **not** saved — only the numerical data
+        needed for evaluation. The saved file can be loaded with
+        :meth:`load` without access to the original function.
+
+        Parameters
+        ----------
+        path : str or path-like
+            Destination file path.
+
+        Raises
+        ------
+        RuntimeError
+            If the slider has not been built yet.
+        """
+        if not self._built:
+            raise RuntimeError(
+                "Cannot save an unbuilt slider. Call build() first."
+            )
+        with open(os.fspath(path), "wb") as f:
+            pickle.dump(self, f, protocol=pickle.HIGHEST_PROTOCOL)
+
+    @classmethod
+    def load(cls, path: str | os.PathLike) -> "ChebyshevSlider":
+        """Load a previously saved slider from a file.
+
+        The loaded object can evaluate immediately; no rebuild is needed.
+        The ``function`` attribute will be ``None``. Assign a new function
+        before calling ``build()`` again if a rebuild is desired.
+
+        Parameters
+        ----------
+        path : str or path-like
+            Path to the saved file.
+
+        Returns
+        -------
+        ChebyshevSlider
+            The restored slider.
+
+        Warns
+        -----
+        UserWarning
+            If the file was saved with a different PyChebyshev version.
+
+        .. warning::
+
+            This method uses :mod:`pickle` internally. Pickle can execute
+            arbitrary code during deserialization. **Only load files you
+            trust.**
+        """
+        with open(os.fspath(path), "rb") as f:
+            obj = pickle.load(f)  # noqa: S301
+        if not isinstance(obj, cls):
+            raise TypeError(
+                f"Expected a {cls.__name__} instance, got {type(obj).__name__}"
+            )
+        return obj
+
+    # ------------------------------------------------------------------
+    # Printing
+    # ------------------------------------------------------------------
+
+    def __repr__(self) -> str:
+        built = self._built
+        return (
+            f"ChebyshevSlider("
+            f"dims={self.num_dimensions}, "
+            f"slides={len(self.partition)}, "
+            f"partition={self.partition}, "
+            f"built={built})"
+        )
+
+    def __str__(self) -> str:
+        built = self._built
+        status = "built" if built else "not built"
+        total_slide_evals = self.total_build_evals
+        full_tensor_evals = int(np.prod(self.n_nodes))
+
+        max_display = 6
+
+        # Nodes line
+        if self.num_dimensions > max_display:
+            nodes_str = (
+                "[" + ", ".join(str(n) for n in self.n_nodes[:max_display])
+                + ", ...]"
+            )
+        else:
+            nodes_str = str(self.n_nodes)
+
+        # Domain line
+        if self.num_dimensions > max_display:
+            domain_str = (
+                " x ".join(
+                    f"[{lo}, {hi}]"
+                    for lo, hi in self.domain[:max_display]
+                )
+                + " x ..."
+            )
+        else:
+            domain_str = " x ".join(
+                f"[{lo}, {hi}]" for lo, hi in self.domain
+            )
+
+        # Pivot line
+        if self.num_dimensions > max_display:
+            pivot_str = (
+                "[" + ", ".join(str(v) for v in self.pivot_point[:max_display])
+                + ", ...]"
+            )
+        else:
+            pivot_str = str(self.pivot_point)
+
+        lines = [
+            f"ChebyshevSlider ({self.num_dimensions}D, "
+            f"{len(self.partition)} slides, {status})",
+            f"  Partition: {self.partition}",
+            f"  Pivot:     {pivot_str}",
+            f"  Nodes:     {nodes_str} "
+            f"({total_slide_evals:,} vs {full_tensor_evals:,} full tensor)",
+            f"  Domain:    {domain_str}",
+        ]
+
+        if built and self.slides:
+            lines.append("  Slides:")
+            for i, (group, slide) in enumerate(
+                zip(self.partition, self.slides)
+            ):
+                slide_evals = int(
+                    np.prod([self.n_nodes[d] for d in group])
+                )
+                lines.append(
+                    f"    [{i}] dims {group}: "
+                    f"{slide_evals:,} evals, "
+                    f"built in {slide.build_time:.3f}s"
+                )
+
+        return "\n".join(lines)

@@ -5,6 +5,16 @@ All notable changes to PyChebyshev will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [Unreleased]
+
+### Added
+
+- `save()` and `load()` methods on `ChebyshevApproximation` and `ChebyshevSlider` for persisting built interpolants to disk (pickle-based)
+- `__repr__` and `__str__` methods on both classes for human-readable printing
+- Version compatibility check on load with warning for mismatched versions
+- New documentation page: Saving & Loading Interpolants
+- 21 new tests for serialization and printing
+
 ## [0.2.0] - 2026-02-09
 
 ### Added

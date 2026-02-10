@@ -15,7 +15,10 @@ References
 
 from __future__ import annotations
 
+import os
+import pickle
 import time
+import warnings
 from typing import Callable, List, Tuple
 
 import numpy as np
@@ -509,3 +512,158 @@ class ChebyshevApproximation:
     def get_derivative_id(self, derivative_order: List[int]) -> List[int]:
         """Return derivative order as-is (for API compatibility)."""
         return derivative_order
+
+    # ------------------------------------------------------------------
+    # Serialization
+    # ------------------------------------------------------------------
+
+    def __getstate__(self) -> dict:
+        """Return picklable state, excluding the original function and eval cache."""
+        from pychebyshev._version import __version__
+
+        state = self.__dict__.copy()
+        state["function"] = None
+        state.pop("_eval_cache", None)
+        state["_pychebyshev_version"] = __version__
+        return state
+
+    def __setstate__(self, state: dict) -> None:
+        """Restore state and reconstruct the eval cache."""
+        from pychebyshev._version import __version__
+
+        saved_version = state.pop("_pychebyshev_version", None)
+        if saved_version is not None and saved_version != __version__:
+            warnings.warn(
+                f"This object was saved with pychebyshev {saved_version}, "
+                f"but you are loading it with {__version__}. "
+                f"Evaluation results may differ if internal data layout changed.",
+                UserWarning,
+                stacklevel=2,
+            )
+
+        self.__dict__.update(state)
+        self.function = None
+
+        # Reconstruct pre-allocated eval cache for fast_eval()
+        self._eval_cache = {}
+        if self.tensor_values is not None:
+            for d in range(self.num_dimensions - 1, 0, -1):
+                shape = tuple(self.n_nodes[i] for i in range(d))
+                self._eval_cache[d] = np.zeros(shape)
+
+    def save(self, path: str | os.PathLike) -> None:
+        """Save the built interpolant to a file.
+
+        The original function is **not** saved — only the numerical data
+        needed for evaluation. The saved file can be loaded with
+        :meth:`load` without access to the original function.
+
+        Parameters
+        ----------
+        path : str or path-like
+            Destination file path.
+
+        Raises
+        ------
+        RuntimeError
+            If the interpolant has not been built yet.
+        """
+        if self.tensor_values is None:
+            raise RuntimeError(
+                "Cannot save an unbuilt interpolant. Call build() first."
+            )
+        with open(os.fspath(path), "wb") as f:
+            pickle.dump(self, f, protocol=pickle.HIGHEST_PROTOCOL)
+
+    @classmethod
+    def load(cls, path: str | os.PathLike) -> "ChebyshevApproximation":
+        """Load a previously saved interpolant from a file.
+
+        The loaded object can evaluate immediately; no rebuild is needed.
+        The ``function`` attribute will be ``None``. Assign a new function
+        before calling ``build()`` again if a rebuild is desired.
+
+        Parameters
+        ----------
+        path : str or path-like
+            Path to the saved file.
+
+        Returns
+        -------
+        ChebyshevApproximation
+            The restored interpolant.
+
+        Warns
+        -----
+        UserWarning
+            If the file was saved with a different PyChebyshev version.
+
+        .. warning::
+
+            This method uses :mod:`pickle` internally. Pickle can execute
+            arbitrary code during deserialization. **Only load files you
+            trust.**
+        """
+        with open(os.fspath(path), "rb") as f:
+            obj = pickle.load(f)  # noqa: S301
+        if not isinstance(obj, cls):
+            raise TypeError(
+                f"Expected a {cls.__name__} instance, got {type(obj).__name__}"
+            )
+        return obj
+
+    # ------------------------------------------------------------------
+    # Printing
+    # ------------------------------------------------------------------
+
+    def __repr__(self) -> str:
+        built = self.tensor_values is not None
+        return (
+            f"ChebyshevApproximation("
+            f"dims={self.num_dimensions}, "
+            f"nodes={self.n_nodes}, "
+            f"built={built})"
+        )
+
+    def __str__(self) -> str:
+        built = self.tensor_values is not None
+        total_nodes = int(np.prod(self.n_nodes))
+        status = "built" if built else "not built"
+
+        # Truncate display for high-dimensional objects (>6 dims)
+        max_display = 6
+        if self.num_dimensions > max_display:
+            nodes_str = (
+                "[" + ", ".join(str(n) for n in self.n_nodes[:max_display])
+                + ", ...]"
+            )
+            domain_str = (
+                " x ".join(
+                    f"[{lo}, {hi}]"
+                    for lo, hi in self.domain[:max_display]
+                )
+                + " x ..."
+            )
+        else:
+            nodes_str = str(self.n_nodes)
+            domain_str = " x ".join(
+                f"[{lo}, {hi}]" for lo, hi in self.domain
+            )
+
+        lines = [
+            f"ChebyshevApproximation ({self.num_dimensions}D, {status})",
+            f"  Nodes:       {nodes_str} ({total_nodes:,} total)",
+            f"  Domain:      {domain_str}",
+        ]
+
+        if built:
+            lines.append(
+                f"  Build:       {self.build_time:.3f}s, "
+                f"{self.n_evaluations:,} evaluations"
+            )
+
+        lines.append(
+            f"  Derivatives: up to order {self.max_derivative_order}"
+        )
+
+        return "\n".join(lines)
