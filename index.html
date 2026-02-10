@@ -737,7 +737,7 @@
 <li><strong>Fast evaluation</strong> — ~0.065 ms per query (price), ~0.29 ms for price + 5 Greeks</li>
 <li><strong>Minimal storage</strong> — 55 floats (440 bytes) for a 5D interpolant with 11 nodes per dimension</li>
 <li><strong>Save &amp; load</strong> — persist built interpolants to disk; rebuild-free deployment</li>
-<li><strong>Pure Python</strong> — NumPy + SciPy only; optional Numba JIT for additional speed</li>
+<li><strong>Pure Python</strong> — NumPy + SciPy only, no compiled extensions needed</li>
 </ul>
 <h2 id="quick-example">Quick Example<a class="headerlink" href="#quick-example" title="Permanent link">&para;</a></h2>
 <div class="highlight"><pre><span></span><code><a id="__codelineno-0-1" name="__codelineno-0-1" href="#__codelineno-0-1"></a><span class="kn">import</span><span class="w"> </span><span class="nn">math</span>
@@ -765,9 +765,8 @@
 <h2 id="installation">Installation<a class="headerlink" href="#installation" title="Permanent link">&para;</a></h2>
 <div class="highlight"><pre><span></span><code><a id="__codelineno-1-1" name="__codelineno-1-1" href="#__codelineno-1-1"></a>pip<span class="w"> </span>install<span class="w"> </span>pychebyshev
 </code></pre></div>
-<p>For Numba JIT acceleration:</p>
-<div class="highlight"><pre><span></span><code><a id="__codelineno-2-1" name="__codelineno-2-1" href="#__codelineno-2-1"></a>pip<span class="w"> </span>install<span class="w"> </span>pychebyshev<span class="o">[</span>jit<span class="o">]</span>
-</code></pre></div>
+<!-- No optional dependencies needed — all evaluation uses BLAS via NumPy -->
+
 <h2 id="performance">Performance<a class="headerlink" href="#performance" title="Permanent link">&para;</a></h2>
 <table>
 <thead>

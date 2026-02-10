@@ -820,12 +820,6 @@
 <td>Testing and debugging</td>
 </tr>
 <tr>
-<td><code>fast_eval()</code></td>
-<td>Medium</td>
-<td>Minimal checks</td>
-<td>Production with Numba</td>
-</tr>
-<tr>
 <td><code>vectorized_eval()</code></td>
 <td>Fastest</td>
 <td>Full validation</td>
@@ -839,6 +833,14 @@
 </tr>
 </tbody>
 </table>
+<div class="admonition note">
+<p class="admonition-title">Why no JIT?</p>
+<p>Earlier versions offered a Numba JIT <code>fast_eval()</code> path, but <code>vectorized_eval()</code>
+is <strong>~150x faster</strong> because it routes N-D tensor contractions through BLAS GEMV
+— a single optimized matrix-vector multiply per dimension. JIT compilation cannot
+beat BLAS for this workload. <code>fast_eval()</code> is deprecated and will be removed in
+a future version.</p>
+</div>
 <h3 id="vectorized_eval-recommended"><code>vectorized_eval()</code> — Recommended<a class="headerlink" href="#vectorized_eval-recommended" title="Permanent link">&para;</a></h3>
 <p>Uses BLAS matrix-vector products. For 5D with 11 nodes, replaces 16,105 Python loop
 iterations with 5 BLAS calls:</p>

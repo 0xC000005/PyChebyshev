@@ -809,6 +809,7 @@
 <th>Method</th>
 <th>Price Only</th>
 <th>Price + 5 Greeks</th>
+<th>Notes</th>
 </tr>
 </thead>
 <tbody>
@@ -816,25 +817,39 @@
 <td><code>eval()</code></td>
 <td>~45 ms</td>
 <td>~270 ms</td>
+<td>Python loops, full validation</td>
 </tr>
 <tr>
 <td><code>fast_eval()</code></td>
 <td>~10 ms</td>
 <td>~95 ms</td>
+<td><strong>Deprecated</strong> — JIT scalar loops</td>
 </tr>
 <tr>
 <td><code>vectorized_eval()</code></td>
 <td>0.065 ms</td>
 <td>0.39 ms</td>
+<td><strong>Recommended</strong> — BLAS GEMV</td>
 </tr>
 <tr>
 <td><code>vectorized_eval_multi()</code></td>
 <td>—</td>
 <td>0.29 ms</td>
+<td>Shared weights across derivatives</td>
 </tr>
 </tbody>
 </table>
 <p><code>vectorized_eval()</code> is the recommended default. Use <code>vectorized_eval_multi()</code> when computing multiple derivatives at the same point.</p>
+<div class="admonition note">
+<p class="admonition-title">Why BLAS beats JIT</p>
+<p><code>fast_eval()</code> uses Numba JIT to compile scalar barycentric interpolation loops.
+But <code>vectorized_eval()</code> restructures the algorithm into matrix-vector products
+(BLAS GEMV), replacing 16,105 Python loop iterations with 5 BLAS calls for a 5D
+problem. Optimized BLAS (OpenBLAS/MKL) running a single GEMV is fundamentally
+faster than JIT-compiled scalar loops — the data access pattern is more
+cache-friendly and leverages SIMD vectorization at the hardware level.
+<code>fast_eval()</code> is deprecated and will be removed in a future version.</p>
+</div>
 
 
 

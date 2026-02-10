@@ -1555,6 +1555,9 @@ derivative, 2 = second derivative).</p>
     <div class="doc doc-contents ">
 
         <p>Fast evaluation using pre-allocated cache (skips validation).</p>
+<p>.. deprecated:: 0.3.0
+    Use :meth:<code>vectorized_eval</code> instead, which is ~150x faster via
+    BLAS GEMV and requires no optional dependencies.</p>
 
 
 <p><span class="doc-section-title">Parameters:</span></p>
