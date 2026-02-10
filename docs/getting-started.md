@@ -84,6 +84,25 @@ results = cheb.vectorized_eval_multi(
 This shares barycentric weights across all derivative orders, saving ~25% compared
 to separate calls.
 
+### 5. Save for later
+
+Save the built interpolant to skip rebuilding next time:
+
+```python
+cheb.save("my_interpolant.pkl")
+```
+
+Load it back — no rebuild needed:
+
+```python
+from pychebyshev import ChebyshevApproximation
+
+cheb = ChebyshevApproximation.load("my_interpolant.pkl")
+value = cheb.vectorized_eval([1.0, 2.0], [0, 0])
+```
+
+See [Saving & Loading](user-guide/serialization.md) for details.
+
 ## Choosing Node Counts
 
 - **10-15 nodes** per dimension is typical for smooth analytic functions

@@ -10,6 +10,7 @@ PyChebyshev builds a Chebyshev interpolant of any smooth function in up to N dim
 - **Analytical derivatives** — via spectral differentiation matrices (no finite differences)
 - **Fast evaluation** — ~0.065 ms per query (price), ~0.29 ms for price + 5 Greeks
 - **Minimal storage** — 55 floats (440 bytes) for a 5D interpolant with 11 nodes per dimension
+- **Save & load** — persist built interpolants to disk; rebuild-free deployment
 - **Pure Python** — NumPy + SciPy only; optional Numba JIT for additional speed
 
 ## Quick Example
