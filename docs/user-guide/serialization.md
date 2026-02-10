@@ -92,7 +92,7 @@ print(slider)
 # ChebyshevSlider (5D, 2 slides, built)
 #   Partition: [[0, 1, 2], [3, 4]]
 #   Pivot:     [100.0, 1.0, 0.25, 0.05, 0.2]
-#   Nodes:     [11, 11, 11, 11, 11] (2,662 vs 161,051 full tensor)
+#   Nodes:     [11, 11, 11, 11, 11] (1,452 vs 161,051 full tensor)
 #   Domain:    [80.0, 120.0] x [0.5, 2.0] x [0.01, 0.5] x [0.01, 0.1] x [0.05, 0.5]
 #   Slides:
 #     [0] dims [0, 1, 2]: 1,331 evals, built in 0.189s
