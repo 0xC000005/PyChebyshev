@@ -440,6 +440,17 @@
   
 </li>
         
+          <li class="md-nav__item">
+  <a href="#5-save-for-later" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        5. Save for later
+      
+    </span>
+  </a>
+  
+</li>
+        
       </ul>
     </nav>
   
@@ -579,6 +590,34 @@
   
   
     <li class="md-nav__item">
+      <a href="../user-guide/serialization/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Saving & Loading
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
       <a href="../user-guide/greeks/" class="md-nav__link">
         
   
@@ -587,6 +626,34 @@
     
   
     Computing Greeks
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../user-guide/sliding/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Sliding Technique
   
 
     
@@ -793,6 +860,17 @@
   
 </li>
         
+          <li class="md-nav__item">
+  <a href="#5-save-for-later" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        5. Save for later
+      
+    </span>
+  </a>
+  
+</li>
+        
       </ul>
     </nav>
   
@@ -838,7 +916,7 @@
 <div class="highlight"><pre><span></span><code><a id="__codelineno-1-1" name="__codelineno-1-1" href="#__codelineno-1-1"></a>pip<span class="w"> </span>install<span class="w"> </span>pychebyshev<span class="o">[</span>jit<span class="o">]</span>
 </code></pre></div>
 <h3 id="from-source-development">From source (development)<a class="headerlink" href="#from-source-development" title="Permanent link">&para;</a></h3>
-<div class="highlight"><pre><span></span><code><a id="__codelineno-2-1" name="__codelineno-2-1" href="#__codelineno-2-1"></a>git<span class="w"> </span>clone<span class="w"> </span>https://github.com/maxjingwezhang/PyChebyshev.git
+<div class="highlight"><pre><span></span><code><a id="__codelineno-2-1" name="__codelineno-2-1" href="#__codelineno-2-1"></a>git<span class="w"> </span>clone<span class="w"> </span>https://github.com/0xC000005/PyChebyshev.git
 <a id="__codelineno-2-2" name="__codelineno-2-2" href="#__codelineno-2-2"></a><span class="nb">cd</span><span class="w"> </span>PyChebyshev
 <a id="__codelineno-2-3" name="__codelineno-2-3" href="#__codelineno-2-3"></a>pip<span class="w"> </span>install<span class="w"> </span>-e<span class="w"> </span><span class="s2">&quot;.[dev]&quot;</span>
 </code></pre></div>
@@ -888,6 +966,17 @@ is optional additional data (pass <code>None</code> if unused).</p>
 </code></pre></div>
 <p>This shares barycentric weights across all derivative orders, saving ~25% compared
 to separate calls.</p>
+<h3 id="5-save-for-later">5. Save for later<a class="headerlink" href="#5-save-for-later" title="Permanent link">&para;</a></h3>
+<p>Save the built interpolant to skip rebuilding next time:</p>
+<div class="highlight"><pre><span></span><code><a id="__codelineno-7-1" name="__codelineno-7-1" href="#__codelineno-7-1"></a><span class="n">cheb</span><span class="o">.</span><span class="n">save</span><span class="p">(</span><span class="s2">&quot;my_interpolant.pkl&quot;</span><span class="p">)</span>
+</code></pre></div>
+<p>Load it back — no rebuild needed:</p>
+<div class="highlight"><pre><span></span><code><a id="__codelineno-8-1" name="__codelineno-8-1" href="#__codelineno-8-1"></a><span class="kn">from</span><span class="w"> </span><span class="nn">pychebyshev</span><span class="w"> </span><span class="kn">import</span> <span class="n">ChebyshevApproximation</span>
+<a id="__codelineno-8-2" name="__codelineno-8-2" href="#__codelineno-8-2"></a>
+<a id="__codelineno-8-3" name="__codelineno-8-3" href="#__codelineno-8-3"></a><span class="n">cheb</span> <span class="o">=</span> <span class="n">ChebyshevApproximation</span><span class="o">.</span><span class="n">load</span><span class="p">(</span><span class="s2">&quot;my_interpolant.pkl&quot;</span><span class="p">)</span>
+<a id="__codelineno-8-4" name="__codelineno-8-4" href="#__codelineno-8-4"></a><span class="n">value</span> <span class="o">=</span> <span class="n">cheb</span><span class="o">.</span><span class="n">vectorized_eval</span><span class="p">([</span><span class="mf">1.0</span><span class="p">,</span> <span class="mf">2.0</span><span class="p">],</span> <span class="p">[</span><span class="mi">0</span><span class="p">,</span> <span class="mi">0</span><span class="p">])</span>
+</code></pre></div>
+<p>See <a href="../user-guide/serialization/">Saving &amp; Loading</a> for details.</p>
 <h2 id="choosing-node-counts">Choosing Node Counts<a class="headerlink" href="#choosing-node-counts" title="Permanent link">&para;</a></h2>
 <ul>
 <li><strong>10-15 nodes</strong> per dimension is typical for smooth analytic functions</li>
