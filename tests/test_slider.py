@@ -2,7 +2,6 @@
 
 import math
 import pathlib
-import warnings
 
 import numpy as np
 import pytest
