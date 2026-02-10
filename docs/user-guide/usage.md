@@ -23,9 +23,15 @@ PyChebyshev provides several evaluation methods with different speed/safety trad
 | Method | Speed | Safety | Use When |
 |--------|-------|--------|----------|
 | `eval()` | Slowest | Full validation | Testing and debugging |
-| `fast_eval()` | Medium | Minimal checks | Production with Numba |
 | `vectorized_eval()` | Fastest | Full validation | **Default choice** |
 | `vectorized_eval_multi()` | Fastest (multi) | Full validation | Price + Greeks at same point |
+
+!!! note "Why no JIT?"
+    Earlier versions offered a Numba JIT `fast_eval()` path, but `vectorized_eval()`
+    is **~150x faster** because it routes N-D tensor contractions through BLAS GEMV
+    — a single optimized matrix-vector multiply per dimension. JIT compilation cannot
+    beat BLAS for this workload. `fast_eval()` is deprecated and will be removed in
+    a future version.
 
 ### `vectorized_eval()` — Recommended
 

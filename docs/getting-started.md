@@ -8,12 +8,6 @@
 pip install pychebyshev
 ```
 
-### With Numba JIT acceleration
-
-```bash
-pip install pychebyshev[jit]
-```
-
 ### From source (development)
 
 ```bash

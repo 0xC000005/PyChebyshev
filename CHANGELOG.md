@@ -5,6 +5,20 @@ All notable changes to PyChebyshev will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [0.3.0] - 2026-02-10
+
+### Deprecated
+
+- `fast_eval()` — use `vectorized_eval()` instead, which is ~150x faster via BLAS GEMV
+- `[jit]` optional dependency (Numba) — no longer needed since BLAS path outperforms JIT
+- `_jit.py` module — will be removed in a future version
+
+### Changed
+
+- README, docs, and CLAUDE.md updated to reflect BLAS GEMV as the primary fast path
+- Removed Numba JIT installation instructions from all documentation
+- Removed `numba` from dev dependencies
+
 ## [0.2.1] - 2026-02-10
 
 ### Added

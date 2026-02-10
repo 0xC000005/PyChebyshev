@@ -1,7 +1,11 @@
-"""Optional Numba JIT-compiled kernels for barycentric interpolation.
+"""Barycentric interpolation kernel used by the deprecated fast_eval() path.
 
-If Numba is not installed, falls back to pure Python implementations.
-Install with: pip install pychebyshev[jit]
+.. deprecated:: 0.3.0
+    The Numba JIT path is deprecated. The vectorized_eval() method using
+    BLAS GEMV is ~150x faster and requires no optional dependencies.
+    This module will be removed in a future version.
+
+If Numba is not installed, falls back to a pure NumPy implementation.
 """
 
 import numpy as np

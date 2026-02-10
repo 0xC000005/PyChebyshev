@@ -26,11 +26,20 @@ Both Chebyshev methods achieve machine-precision price accuracy and identical Gr
 
 Within PyChebyshev, multiple evaluation paths exist:
 
-| Method | Price Only | Price + 5 Greeks |
-|--------|-----------|------------------|
-| `eval()` | ~45 ms | ~270 ms |
-| `fast_eval()` | ~10 ms | ~95 ms |
-| `vectorized_eval()` | 0.065 ms | 0.39 ms |
-| `vectorized_eval_multi()` | — | 0.29 ms |
+| Method | Price Only | Price + 5 Greeks | Notes |
+|--------|-----------|------------------|-------|
+| `eval()` | ~45 ms | ~270 ms | Python loops, full validation |
+| `fast_eval()` | ~10 ms | ~95 ms | **Deprecated** — JIT scalar loops |
+| `vectorized_eval()` | 0.065 ms | 0.39 ms | **Recommended** — BLAS GEMV |
+| `vectorized_eval_multi()` | — | 0.29 ms | Shared weights across derivatives |
 
 `vectorized_eval()` is the recommended default. Use `vectorized_eval_multi()` when computing multiple derivatives at the same point.
+
+!!! note "Why BLAS beats JIT"
+    `fast_eval()` uses Numba JIT to compile scalar barycentric interpolation loops.
+    But `vectorized_eval()` restructures the algorithm into matrix-vector products
+    (BLAS GEMV), replacing 16,105 Python loop iterations with 5 BLAS calls for a 5D
+    problem. Optimized BLAS (OpenBLAS/MKL) running a single GEMV is fundamentally
+    faster than JIT-compiled scalar loops — the data access pattern is more
+    cache-friendly and leverages SIMD vectorization at the hardware level.
+    `fast_eval()` is deprecated and will be removed in a future version.

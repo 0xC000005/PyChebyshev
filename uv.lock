@@ -1323,7 +1323,7 @@ wheels = [
 
 [[package]]
 name = "pychebyshev"
-version = "0.2.1"
+version = "0.3.0"
 source = { editable = "." }
 dependencies = [
     { name = "numpy", version = "2.2.6", source = { registry = "https://pypi.org/simple" }, marker = "python_full_version < '3.11'" },
@@ -1336,7 +1336,6 @@ dependencies = [
 dev = [
     { name = "blackscholes" },
     { name = "matplotlib" },
-    { name = "numba" },
     { name = "pytest" },
     { name = "ruff" },
     { name = "tqdm" },
@@ -1364,7 +1363,6 @@ requires-dist = [
     { name = "matplotlib", marker = "extra == 'dev'", specifier = ">=3.10" },
     { name = "mkdocs-material", marker = "extra == 'docs'", specifier = ">=9.5" },
     { name = "mkdocstrings", extras = ["python"], marker = "extra == 'docs'", specifier = ">=0.24" },
-    { name = "numba", marker = "extra == 'dev'", specifier = ">=0.62" },
     { name = "numba", marker = "extra == 'jit'", specifier = ">=0.60" },
     { name = "numpy", specifier = ">=2.0" },
     { name = "pytest", marker = "extra == 'dev'", specifier = ">=8.0" },

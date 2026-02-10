@@ -11,7 +11,7 @@ PyChebyshev builds a Chebyshev interpolant of any smooth function in up to N dim
 - **Fast evaluation** — ~0.065 ms per query (price), ~0.29 ms for price + 5 Greeks
 - **Minimal storage** — 55 floats (440 bytes) for a 5D interpolant with 11 nodes per dimension
 - **Save & load** — persist built interpolants to disk; rebuild-free deployment
-- **Pure Python** — NumPy + SciPy only; optional Numba JIT for additional speed
+- **Pure Python** — NumPy + SciPy only, no compiled extensions needed
 
 ## Quick Example
 
@@ -45,11 +45,7 @@ dfdx = cheb.vectorized_eval([0.5, 1.0], [1, 0])
 pip install pychebyshev
 ```
 
-For Numba JIT acceleration:
-
-```bash
-pip install pychebyshev[jit]
-```
+<!-- No optional dependencies needed — all evaluation uses BLAS via NumPy -->
 
 ## Performance
 

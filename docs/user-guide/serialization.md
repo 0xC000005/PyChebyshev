@@ -64,7 +64,7 @@ value = slider.eval([0.5, 1.0], [0, 0])
 ```
 
 The loaded `ChebyshevApproximation` supports all evaluation methods
-(`vectorized_eval`, `fast_eval`, `vectorized_eval_multi`, `vectorized_eval_batch`).
+(`vectorized_eval`, `vectorized_eval_multi`, `vectorized_eval_batch`).
 The loaded `ChebyshevSlider` supports `eval` and `eval_multi`.
 
 ## Inspecting Objects

@@ -244,7 +244,7 @@ class ChebyshevApproximation:
 
         self.build_time = time.time() - start
 
-        # Pre-allocate evaluation cache for fast_eval()
+        # Pre-allocate evaluation cache for fast_eval() (deprecated)
         for d in range(self.num_dimensions - 1, 0, -1):
             shape = tuple(self.n_nodes[i] for i in range(d))
             self._eval_cache[d] = np.zeros(shape)
@@ -311,6 +311,10 @@ class ChebyshevApproximation:
     def fast_eval(self, point: List[float], derivative_order: List[int]) -> float:
         """Fast evaluation using pre-allocated cache (skips validation).
 
+        .. deprecated:: 0.3.0
+            Use :meth:`vectorized_eval` instead, which is ~150x faster via
+            BLAS GEMV and requires no optional dependencies.
+
         Parameters
         ----------
         point : list of float
@@ -323,6 +327,13 @@ class ChebyshevApproximation:
         float
             Interpolated value or derivative.
         """
+        warnings.warn(
+            "fast_eval() is deprecated and will be removed in a future version. "
+            "Use vectorized_eval() instead — it is ~150x faster via BLAS GEMV "
+            "and requires no optional dependencies.",
+            DeprecationWarning,
+            stacklevel=2,
+        )
         current = self.tensor_values
 
         for d in range(self.num_dimensions - 1, -1, -1):
@@ -544,7 +555,7 @@ class ChebyshevApproximation:
         self.__dict__.update(state)
         self.function = None
 
-        # Reconstruct pre-allocated eval cache for fast_eval()
+        # Reconstruct pre-allocated eval cache for fast_eval() (deprecated)
         self._eval_cache = {}
         if self.tensor_values is not None:
             for d in range(self.num_dimensions - 1, 0, -1):
