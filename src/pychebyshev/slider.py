@@ -411,10 +411,20 @@ class ChebyshevSlider:
         else:
             pivot_str = str(self.pivot_point)
 
+        # Partition line
+        if len(self.partition) > max_display:
+            partition_str = (
+                "["
+                + ", ".join(str(g) for g in self.partition[:max_display])
+                + ", ...]"
+            )
+        else:
+            partition_str = str(self.partition)
+
         lines = [
             f"ChebyshevSlider ({self.num_dimensions}D, "
             f"{len(self.partition)} slides, {status})",
-            f"  Partition: {self.partition}",
+            f"  Partition: {partition_str}",
             f"  Pivot:     {pivot_str}",
             f"  Nodes:     {nodes_str} "
             f"({total_slide_evals:,} vs {full_tensor_evals:,} full tensor)",
