@@ -14,7 +14,7 @@
         <link rel="prev" href="../greeks/">
       
       
-        <link rel="next" href="../../api/reference/">
+        <link rel="next" href="../error-estimation/">
       
       
         
@@ -716,6 +716,17 @@
 </li>
       
         <li class="md-nav__item">
+  <a href="#pychebyshev.slider.ChebyshevSlider.error_estimate" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        error_estimate
+      
+    </span>
+  </a>
+  
+</li>
+      
+        <li class="md-nav__item">
   <a href="#pychebyshev.slider.ChebyshevSlider.__getstate__" class="md-nav__link">
     <span class="md-ellipsis">
       
@@ -763,6 +774,34 @@
   
 </nav>
       
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../error-estimation/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Error Estimation
+  
+
+    
+  </span>
+  
+  
+
+      </a>
     </li>
   
 
@@ -1037,6 +1076,17 @@
     <span class="md-ellipsis">
       
         eval_multi
+      
+    </span>
+  </a>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#pychebyshev.slider.ChebyshevSlider.error_estimate" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        error_estimate
       
     </span>
   </a>
@@ -1642,6 +1692,77 @@ their pivot values.</p>
             <td>
               <div class="doc-md-description">
                 <p>Results for each derivative order.</p>
+              </div>
+            </td>
+          </tr>
+      </tbody>
+    </table>
+
+
+    </div>
+
+</div>
+
+<div class="doc doc-object doc-function">
+
+
+<h2 id="pychebyshev.slider.ChebyshevSlider.error_estimate" class="doc doc-heading">
+            <code class="highlight language-python"><span class="n">error_estimate</span><span class="p">()</span></code>
+
+<a href="#pychebyshev.slider.ChebyshevSlider.error_estimate" class="headerlink" title="Permanent link">&para;</a></h2>
+
+
+    <div class="doc doc-contents ">
+
+        <p>Estimate the sliding approximation error.</p>
+<p>Returns the sum of per-slide Chebyshev error estimates.
+Each slide's error is estimated independently using the
+Chebyshev coefficient method from Ruiz &amp; Zeron (2021),
+Section 3.4.</p>
+<p>Note: This captures per-slide interpolation error only.
+Cross-group interaction error (inherent to the sliding
+decomposition) is <strong>not</strong> included.</p>
+
+
+    <p><span class="doc-section-title">Returns:</span></p>
+    <table>
+      <thead>
+        <tr>
+          <th>Type</th>
+          <th>Description</th>
+        </tr>
+      </thead>
+      <tbody>
+          <tr class="doc-section-item">
+            <td>
+                  <code><span title="float">float</span></code>
+            </td>
+            <td>
+              <div class="doc-md-description">
+                <p>Estimated interpolation error (per-slide sum).</p>
+              </div>
+            </td>
+          </tr>
+      </tbody>
+    </table>
+
+
+<p><span class="doc-section-title">Raises:</span></p>
+    <table>
+      <thead>
+        <tr>
+          <th>Type</th>
+          <th>Description</th>
+        </tr>
+      </thead>
+      <tbody>
+          <tr class="doc-section-item">
+            <td>
+                  <code><span title="RuntimeError">RuntimeError</span></code>
+            </td>
+            <td>
+              <div class="doc-md-description">
+                <p>If <code>build()</code> has not been called.</p>
               </div>
             </td>
           </tr>

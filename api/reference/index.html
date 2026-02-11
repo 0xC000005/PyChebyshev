@@ -11,7 +11,7 @@
       
       
       
-        <link rel="prev" href="../../user-guide/sliding/">
+        <link rel="prev" href="../../user-guide/error-estimation/">
       
       
         <link rel="next" href="../../benchmarks/">
@@ -487,6 +487,34 @@
 
               
             
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../user-guide/error-estimation/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Error Estimation
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
           </ul>
         </nav>
       
@@ -660,6 +688,17 @@
 </li>
       
         <li class="md-nav__item">
+  <a href="#pychebyshev.ChebyshevApproximation.error_estimate" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        error_estimate
+      
+    </span>
+  </a>
+  
+</li>
+      
+        <li class="md-nav__item">
   <a href="#pychebyshev.ChebyshevApproximation.__getstate__" class="md-nav__link">
     <span class="md-ellipsis">
       
@@ -763,6 +802,17 @@
     <span class="md-ellipsis">
       
         eval_multi
+      
+    </span>
+  </a>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#pychebyshev.ChebyshevSlider.error_estimate" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        error_estimate
       
     </span>
   </a>
@@ -1018,6 +1068,17 @@
 </li>
       
         <li class="md-nav__item">
+  <a href="#pychebyshev.ChebyshevApproximation.error_estimate" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        error_estimate
+      
+    </span>
+  </a>
+  
+</li>
+      
+        <li class="md-nav__item">
   <a href="#pychebyshev.ChebyshevApproximation.__getstate__" class="md-nav__link">
     <span class="md-ellipsis">
       
@@ -1121,6 +1182,17 @@
     <span class="md-ellipsis">
       
         eval_multi
+      
+    </span>
+  </a>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#pychebyshev.ChebyshevSlider.error_estimate" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        error_estimate
       
     </span>
   </a>
@@ -1970,6 +2042,79 @@ costs ~0.29 ms instead of 6 x 0.065 ms = 0.39 ms.</p>
 <div class="doc doc-object doc-function">
 
 
+<h2 id="pychebyshev.ChebyshevApproximation.error_estimate" class="doc doc-heading">
+            <code class="highlight language-python"><span class="n">error_estimate</span><span class="p">()</span></code>
+
+<a href="#pychebyshev.ChebyshevApproximation.error_estimate" class="headerlink" title="Permanent link">&para;</a></h2>
+
+
+    <div class="doc doc-contents ">
+
+        <p>Estimate the supremum-norm interpolation error.</p>
+<p>Computes Chebyshev expansion coefficients via DCT-II for each
+1-D slice of the tensor, and returns the sum of per-dimension
+maximum last-coefficient magnitudes:</p>
+<p>.. math::</p>
+<div class="highlight"><pre><span></span><code>\hat{E} = \sum_{d=1}^{D}
+    \max_{\text{slices along } d} |c_{n_d - 1}|
+</code></pre></div>
+<p>This follows the ex ante error estimation from Ruiz &amp; Zeron
+(2021), Section 3.4, adapted for Type I Chebyshev nodes.</p>
+
+
+    <p><span class="doc-section-title">Returns:</span></p>
+    <table>
+      <thead>
+        <tr>
+          <th>Type</th>
+          <th>Description</th>
+        </tr>
+      </thead>
+      <tbody>
+          <tr class="doc-section-item">
+            <td>
+                  <code><span title="float">float</span></code>
+            </td>
+            <td>
+              <div class="doc-md-description">
+                <p>Estimated maximum interpolation error (sup-norm).</p>
+              </div>
+            </td>
+          </tr>
+      </tbody>
+    </table>
+
+
+<p><span class="doc-section-title">Raises:</span></p>
+    <table>
+      <thead>
+        <tr>
+          <th>Type</th>
+          <th>Description</th>
+        </tr>
+      </thead>
+      <tbody>
+          <tr class="doc-section-item">
+            <td>
+                  <code><span title="RuntimeError">RuntimeError</span></code>
+            </td>
+            <td>
+              <div class="doc-md-description">
+                <p>If <code>build()</code> has not been called.</p>
+              </div>
+            </td>
+          </tr>
+      </tbody>
+    </table>
+
+
+    </div>
+
+</div>
+
+<div class="doc doc-object doc-function">
+
+
 <h2 id="pychebyshev.ChebyshevApproximation.__getstate__" class="doc doc-heading">
             <code class="highlight language-python"><span class="n">__getstate__</span><span class="p">()</span></code>
 
@@ -2630,6 +2775,77 @@ their pivot values.</p>
             <td>
               <div class="doc-md-description">
                 <p>Results for each derivative order.</p>
+              </div>
+            </td>
+          </tr>
+      </tbody>
+    </table>
+
+
+    </div>
+
+</div>
+
+<div class="doc doc-object doc-function">
+
+
+<h2 id="pychebyshev.ChebyshevSlider.error_estimate" class="doc doc-heading">
+            <code class="highlight language-python"><span class="n">error_estimate</span><span class="p">()</span></code>
+
+<a href="#pychebyshev.ChebyshevSlider.error_estimate" class="headerlink" title="Permanent link">&para;</a></h2>
+
+
+    <div class="doc doc-contents ">
+
+        <p>Estimate the sliding approximation error.</p>
+<p>Returns the sum of per-slide Chebyshev error estimates.
+Each slide's error is estimated independently using the
+Chebyshev coefficient method from Ruiz &amp; Zeron (2021),
+Section 3.4.</p>
+<p>Note: This captures per-slide interpolation error only.
+Cross-group interaction error (inherent to the sliding
+decomposition) is <strong>not</strong> included.</p>
+
+
+    <p><span class="doc-section-title">Returns:</span></p>
+    <table>
+      <thead>
+        <tr>
+          <th>Type</th>
+          <th>Description</th>
+        </tr>
+      </thead>
+      <tbody>
+          <tr class="doc-section-item">
+            <td>
+                  <code><span title="float">float</span></code>
+            </td>
+            <td>
+              <div class="doc-md-description">
+                <p>Estimated interpolation error (per-slide sum).</p>
+              </div>
+            </td>
+          </tr>
+      </tbody>
+    </table>
+
+
+<p><span class="doc-section-title">Raises:</span></p>
+    <table>
+      <thead>
+        <tr>
+          <th>Type</th>
+          <th>Description</th>
+        </tr>
+      </thead>
+      <tbody>
+          <tr class="doc-section-item">
+            <td>
+                  <code><span title="RuntimeError">RuntimeError</span></code>
+            </td>
+            <td>
+              <div class="doc-md-description">
+                <p>If <code>build()</code> has not been called.</p>
               </div>
             </td>
           </tr>
