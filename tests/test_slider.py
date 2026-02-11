@@ -452,3 +452,63 @@ class TestSliderRepr:
         assert "Pivot:" in s
         assert "Slides:" in s
         assert "[0] dims" in s
+
+
+# ---------------------------------------------------------------------------
+# Error estimation
+# ---------------------------------------------------------------------------
+
+class TestSliderErrorEstimation:
+    def test_slider_error_estimate_separable(self):
+        """Separable sin sum with partition [[0],[1],[2]] should have tiny error."""
+        slider = ChebyshevSlider(
+            sin_sum_3d, 3,
+            [[-1, 1], [-1, 1], [-1, 1]],
+            [12, 12, 12],
+            partition=[[0], [1], [2]],
+            pivot_point=[0.0, 0.0, 0.0],
+        )
+        slider.build(verbose=False)
+        est = slider.error_estimate()
+        assert est > 0
+        assert est < 1e-7
+
+    def test_slider_error_estimate_coupled(self):
+        """Coupled polynomial with appropriate partition should have small error."""
+        slider = ChebyshevSlider(
+            coupled_2d_plus_1d, 3,
+            [[-1, 1], [-1, 1], [-1, 1]],
+            [12, 12, 6],
+            partition=[[0, 1], [2]],
+            pivot_point=[0.0, 0.0, 0.0],
+        )
+        slider.build(verbose=False)
+        est = slider.error_estimate()
+        assert est > 0
+        assert est < 1e-3
+
+    def test_slider_error_estimate_equals_slide_sum(self):
+        """Slider error_estimate() should equal sum of individual slide estimates."""
+        slider = ChebyshevSlider(
+            sin_sum_3d, 3,
+            [[-1, 1], [-1, 1], [-1, 1]],
+            [12, 12, 12],
+            partition=[[0], [1], [2]],
+            pivot_point=[0.0, 0.0, 0.0],
+        )
+        slider.build(verbose=False)
+
+        manual_sum = sum(slide.error_estimate() for slide in slider.slides)
+        assert slider.error_estimate() == manual_sum
+
+    def test_slider_error_estimate_not_built(self):
+        """error_estimate() should raise RuntimeError if not built."""
+        slider = ChebyshevSlider(
+            sin_sum_3d, 3,
+            [[-1, 1]] * 3,
+            [5] * 3,
+            partition=[[0], [1], [2]],
+            pivot_point=[0.0] * 3,
+        )
+        with pytest.raises(RuntimeError, match="build"):
+            slider.error_estimate()

@@ -111,6 +111,7 @@ class ChebyshevSlider:
         self.slides: List[ChebyshevApproximation] = []
         self.pivot_value: float = 0.0
         self._built = False
+        self._cached_error_estimate: float | None = None
 
     def build(self, verbose: bool = True) -> None:
         """Build all slides by evaluating the function at slide-specific grids.
@@ -124,6 +125,7 @@ class ChebyshevSlider:
             If True, print build progress. Default is True.
         """
         start = time.time()
+        self._cached_error_estimate = None
 
         # Evaluate pivot value
         self.pivot_value = self.function(self.pivot_point, None)
@@ -258,6 +260,41 @@ class ChebyshevSlider:
         """
         return [self.eval(point, do) for do in derivative_orders]
 
+    # ------------------------------------------------------------------
+    # Error estimation
+    # ------------------------------------------------------------------
+
+    def error_estimate(self) -> float:
+        """Estimate the sliding approximation error.
+
+        Returns the sum of per-slide Chebyshev error estimates.
+        Each slide's error is estimated independently using the
+        Chebyshev coefficient method from Ruiz & Zeron (2021),
+        Section 3.4.
+
+        Note: This captures per-slide interpolation error only.
+        Cross-group interaction error (inherent to the sliding
+        decomposition) is **not** included.
+
+        Returns
+        -------
+        float
+            Estimated interpolation error (per-slide sum).
+
+        Raises
+        ------
+        RuntimeError
+            If ``build()`` has not been called.
+        """
+        if not self._built:
+            raise RuntimeError("Call build() before error_estimate().")
+        if self._cached_error_estimate is not None:
+            return self._cached_error_estimate
+        self._cached_error_estimate = sum(
+            slide.error_estimate() for slide in self.slides
+        )
+        return self._cached_error_estimate
+
     @property
     def total_build_evals(self) -> int:
         """Total number of function evaluations used during build."""
@@ -295,6 +332,10 @@ class ChebyshevSlider:
 
         self.__dict__.update(state)
         self.function = None
+
+        # Ensure fields added in later versions exist (backward compat)
+        if not hasattr(self, "_cached_error_estimate"):
+            self._cached_error_estimate = None
 
     def save(self, path: str | os.PathLike) -> None:
         """Save the built slider to a file.
@@ -432,6 +473,7 @@ class ChebyshevSlider:
         ]
 
         if built and self.slides:
+            lines.append(f"  Error est: {self.error_estimate():.2e}")
             lines.append("  Slides:")
             for i, (group, slide) in enumerate(
                 zip(self.partition, self.slides)

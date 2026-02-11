@@ -207,6 +207,7 @@ class ChebyshevApproximation:
         self.build_time: float = 0.0
         self.n_evaluations: int = 0
         self._eval_cache: dict = {}
+        self._cached_error_estimate: float | None = None
 
     def build(self, verbose: bool = True) -> None:
         """Evaluate the function at all node combinations and pre-compute weights.
@@ -222,6 +223,7 @@ class ChebyshevApproximation:
                   f"({total:,} evaluations)...")
 
         start = time.time()
+        self._cached_error_estimate = None
 
         # Step 1: Evaluate at all node combinations
         self.tensor_values = np.zeros(self.n_nodes)
@@ -525,6 +527,91 @@ class ChebyshevApproximation:
         return derivative_order
 
     # ------------------------------------------------------------------
+    # Error estimation
+    # ------------------------------------------------------------------
+
+    @staticmethod
+    def _chebyshev_coefficients_1d(values: np.ndarray) -> np.ndarray:
+        """Compute Chebyshev expansion coefficients from values at Type I nodes.
+
+        Uses DCT-II (`scipy.fft.dct`) matching the Type I (``chebpts1``)
+        node distribution used by this library.
+
+        Parameters
+        ----------
+        values : ndarray of shape (n,)
+            Function values at Chebyshev Type I nodes in ascending order.
+
+        Returns
+        -------
+        ndarray of shape (n,)
+            Chebyshev coefficients c_0, c_1, ..., c_{n-1}.
+
+        References
+        ----------
+        Ruiz & Zeron (2021), Section 3.4 — Ex Ante Error Estimation.
+        """
+        from scipy.fft import dct
+
+        n = len(values)
+        # Reverse to decreasing-node order for DCT-II convention
+        coeffs = dct(values[::-1], type=2) / n
+        coeffs[0] /= 2
+        return coeffs
+
+    def error_estimate(self) -> float:
+        """Estimate the supremum-norm interpolation error.
+
+        Computes Chebyshev expansion coefficients via DCT-II for each
+        1-D slice of the tensor, and returns the sum of per-dimension
+        maximum last-coefficient magnitudes:
+
+        .. math::
+
+            \\hat{E} = \\sum_{d=1}^{D}
+                \\max_{\\text{slices along } d} |c_{n_d - 1}|
+
+        This follows the ex ante error estimation from Ruiz & Zeron
+        (2021), Section 3.4, adapted for Type I Chebyshev nodes.
+
+        Returns
+        -------
+        float
+            Estimated maximum interpolation error (sup-norm).
+
+        Raises
+        ------
+        RuntimeError
+            If ``build()`` has not been called.
+        """
+        if self.tensor_values is None:
+            raise RuntimeError("Call build() first")
+
+        if self._cached_error_estimate is not None:
+            return self._cached_error_estimate
+
+        total_error = 0.0
+        for d in range(self.num_dimensions):
+            max_err_this_dim = 0.0
+            # Build shape of indices for all dims except d
+            other_shape = tuple(
+                self.n_nodes[i]
+                for i in range(self.num_dimensions)
+                if i != d
+            )
+            for idx in np.ndindex(*other_shape):
+                # Insert slice(None) at position d to extract 1-D slice
+                full_idx = list(idx)
+                full_idx.insert(d, slice(None))
+                values_1d = self.tensor_values[tuple(full_idx)]
+                coeffs = self._chebyshev_coefficients_1d(values_1d)
+                max_err_this_dim = max(max_err_this_dim, abs(coeffs[-1]))
+            total_error += max_err_this_dim
+
+        self._cached_error_estimate = total_error
+        return total_error
+
+    # ------------------------------------------------------------------
     # Serialization
     # ------------------------------------------------------------------
 
@@ -554,6 +641,10 @@ class ChebyshevApproximation:
 
         self.__dict__.update(state)
         self.function = None
+
+        # Ensure fields added in later versions exist (backward compat)
+        if not hasattr(self, "_cached_error_estimate"):
+            self._cached_error_estimate = None
 
         # Reconstruct pre-allocated eval cache for fast_eval() (deprecated)
         self._eval_cache = {}
@@ -672,6 +763,7 @@ class ChebyshevApproximation:
                 f"  Build:       {self.build_time:.3f}s, "
                 f"{self.n_evaluations:,} evaluations"
             )
+            lines.append(f"  Error est:   {self.error_estimate():.2e}")
 
         lines.append(
             f"  Derivatives: up to order {self.max_derivative_order}"

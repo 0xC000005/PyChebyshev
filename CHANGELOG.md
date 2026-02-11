@@ -5,6 +5,18 @@ All notable changes to PyChebyshev will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [0.4.0] - 2026-02-10
+
+### Added
+
+- `error_estimate()` method on `ChebyshevApproximation` — estimates supremum-norm interpolation error from Chebyshev expansion coefficients via DCT-II, without needing the true function (Ruiz & Zeron 2021, Section 3.4)
+- `error_estimate()` method on `ChebyshevSlider` — returns sum of per-slide error estimates
+- `_chebyshev_coefficients_1d()` static method for computing Chebyshev expansion coefficients from values at Type I nodes
+- Error estimate shown in `__str__()` output for both classes when built
+- New documentation page: Error Estimation (mathematical background, usage examples)
+- 12 new tests for error estimation (8 for barycentric, 4 for slider)
+- `compare_error_estimation.py` — local benchmarking script comparing PyChebyshev vs MoCaX error estimates
+
 ## [0.3.0] - 2026-02-10
 
 ### Deprecated

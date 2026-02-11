@@ -287,3 +287,114 @@ class TestRepr:
         assert "Build:" in s
         assert "evaluations" in s
         assert "Derivatives:" in s
+
+
+# ---------------------------------------------------------------------------
+# Error estimation
+# ---------------------------------------------------------------------------
+
+class TestErrorEstimation:
+    def test_error_estimate_decreases_with_n(self):
+        """Error estimate should decrease monotonically as n increases.
+
+        Uses even node counts to avoid aliasing: sin(x) has only odd
+        Chebyshev coefficients, so for odd n the last coefficient can
+        land on an even index and be spuriously near zero.
+        """
+        def sin_1d(x, _):
+            return math.sin(x[0])
+
+        n_values = [6, 8, 10, 12, 14]
+        estimates = []
+        for n in n_values:
+            cheb = ChebyshevApproximation(sin_1d, 1, [[-1, 1]], [n])
+            cheb.build(verbose=False)
+            estimates.append(cheb.error_estimate())
+
+        for i in range(1, len(estimates)):
+            assert estimates[i] < estimates[i - 1], (
+                f"error_estimate did not decrease: n={n_values[i]} "
+                f"gave {estimates[i]:.2e} >= {estimates[i-1]:.2e}"
+            )
+
+    def test_error_estimate_tracks_empirical_1d(self):
+        """Error estimate should be within 2 orders of magnitude of empirical error."""
+        def sin_1d(x, _):
+            return math.sin(x[0])
+
+        cheb = ChebyshevApproximation(sin_1d, 1, [[-1, 1]], [10])
+        cheb.build(verbose=False)
+
+        estimate = cheb.error_estimate()
+
+        # Compute empirical max error on a dense grid
+        test_x = np.linspace(-1, 1, 1000)
+        max_err = 0.0
+        for x in test_x:
+            exact = math.sin(x)
+            approx = cheb.vectorized_eval([x], [0])
+            max_err = max(max_err, abs(exact - approx))
+
+        assert estimate > 0.01 * max_err, (
+            f"estimate {estimate:.2e} < 0.01 * empirical {max_err:.2e}"
+        )
+        assert estimate < 1000 * max_err, (
+            f"estimate {estimate:.2e} > 1000 * empirical {max_err:.2e}"
+        )
+
+    def test_error_estimate_sin_3d(self, cheb_sin_3d):
+        """3D sin interpolant should have small but positive error estimate."""
+        est = cheb_sin_3d.error_estimate()
+        assert est > 0
+        assert est < 0.1
+
+    def test_error_estimate_bs_3d(self, cheb_bs_3d):
+        """3D Black-Scholes interpolant error estimate should be bounded."""
+        est = cheb_bs_3d.error_estimate()
+        assert est > 0
+        assert est < 1.0
+
+    def test_error_estimate_bs_5d(self, cheb_bs_5d):
+        """5D Black-Scholes interpolant should have small error estimate."""
+        est = cheb_bs_5d.error_estimate()
+        assert est > 0
+        assert est < 1.0
+
+    def test_error_estimate_not_built(self):
+        """error_estimate() should raise RuntimeError if not built."""
+        def f(x, _):
+            return x[0]
+        cheb = ChebyshevApproximation(f, 1, [[0, 1]], [5])
+        with pytest.raises(RuntimeError, match="build"):
+            cheb.error_estimate()
+
+    def test_chebyshev_coefficients_1d_simple(self):
+        """Chebyshev coefficients of x^2 should be c_0=0.5, c_2=0.5, rest ~0."""
+        def x_squared(x, _):
+            return x[0] ** 2
+
+        cheb = ChebyshevApproximation(x_squared, 1, [[-1, 1]], [10])
+        cheb.build(verbose=False)
+
+        # Extract 1D values (the only slice)
+        values_1d = cheb.tensor_values.ravel()
+        coeffs = ChebyshevApproximation._chebyshev_coefficients_1d(values_1d)
+
+        # x^2 = (T_0 + T_2) / 2, so c_0 = 0.5, c_2 = 0.5
+        np.testing.assert_allclose(coeffs[0], 0.5, atol=1e-12)
+        np.testing.assert_allclose(coeffs[2], 0.5, atol=1e-12)
+        # All other coefficients should be near zero
+        for i in range(len(coeffs)):
+            if i not in (0, 2):
+                assert abs(coeffs[i]) < 1e-12, (
+                    f"c_{i} = {coeffs[i]:.2e}, expected ~0"
+                )
+
+    def test_error_estimate_high_n_near_zero(self):
+        """With 30 nodes, sin(x) error estimate should be near machine epsilon."""
+        def sin_1d(x, _):
+            return math.sin(x[0])
+
+        cheb = ChebyshevApproximation(sin_1d, 1, [[-1, 1]], [30])
+        cheb.build(verbose=False)
+        assert cheb.error_estimate() < 1e-14
