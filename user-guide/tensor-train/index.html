@@ -1,0 +1,3662 @@
+
+<!doctype html>
+<html lang="en" class="no-js">
+  <head>
+    
+      <meta charset="utf-8">
+      <meta name="viewport" content="width=device-width,initial-scale=1">
+      
+        <meta name="description" content="Fast multi-dimensional Chebyshev tensor interpolation with analytical derivatives">
+      
+      
+      
+      
+        <link rel="prev" href="../sliding/">
+      
+      
+        <link rel="next" href="../error-estimation/">
+      
+      
+        
+      
+      
+      <link rel="icon" href="../../assets/images/favicon.png">
+      <meta name="generator" content="mkdocs-1.6.1, mkdocs-material-9.7.1">
+    
+    
+      
+        <title>Tensor Train - PyChebyshev</title>
+      
+    
+    
+      <link rel="stylesheet" href="../../assets/stylesheets/main.484c7ddc.min.css">
+      
+        
+        <link rel="stylesheet" href="../../assets/stylesheets/palette.ab4e12ef.min.css">
+      
+      
+
+
+    
+    
+      
+    
+    
+      
+        
+        
+        <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+        <link rel="stylesheet" href="https://fonts.googleapis.com/css?family=Roboto:300,300i,400,400i,700,700i%7CRoboto+Mono:400,400i,700,700i&display=fallback">
+        <style>:root{--md-text-font:"Roboto";--md-code-font:"Roboto Mono"}</style>
+      
+    
+    
+      <link rel="stylesheet" href="../../assets/_mkdocstrings.css">
+    
+      <link rel="stylesheet" href="https://unpkg.com/katex@0/dist/katex.min.css">
+    
+    <script>__md_scope=new URL("../..",location),__md_hash=e=>[...e].reduce(((e,_)=>(e<<5)-e+_.charCodeAt(0)),0),__md_get=(e,_=localStorage,t=__md_scope)=>JSON.parse(_.getItem(t.pathname+"."+e)),__md_set=(e,_,t=localStorage,a=__md_scope)=>{try{t.setItem(a.pathname+"."+e,JSON.stringify(_))}catch(e){}}</script>
+    
+      
+
+    
+    
+  </head>
+  
+  
+    
+    
+      
+    
+    
+    
+    
+    <body dir="ltr" data-md-color-scheme="default" data-md-color-primary="indigo" data-md-color-accent="indigo">
+  
+    
+    <input class="md-toggle" data-md-toggle="drawer" type="checkbox" id="__drawer" autocomplete="off">
+    <input class="md-toggle" data-md-toggle="search" type="checkbox" id="__search" autocomplete="off">
+    <label class="md-overlay" for="__drawer"></label>
+    <div data-md-component="skip">
+      
+        
+        <a href="#tensor-train-interpolation" class="md-skip">
+          Skip to content
+        </a>
+      
+    </div>
+    <div data-md-component="announce">
+      
+    </div>
+    
+    
+      
+
+  
+
+<header class="md-header md-header--shadow" data-md-component="header">
+  <nav class="md-header__inner md-grid" aria-label="Header">
+    <a href="../.." title="PyChebyshev" class="md-header__button md-logo" aria-label="PyChebyshev" data-md-component="logo">
+      
+  
+  <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24"><path d="M12 8a3 3 0 0 0 3-3 3 3 0 0 0-3-3 3 3 0 0 0-3 3 3 3 0 0 0 3 3m0 3.54C9.64 9.35 6.5 8 3 8v11c3.5 0 6.64 1.35 9 3.54 2.36-2.19 5.5-3.54 9-3.54V8c-3.5 0-6.64 1.35-9 3.54"/></svg>
+
+    </a>
+    <label class="md-header__button md-icon" for="__drawer">
+      
+      <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24"><path d="M3 6h18v2H3zm0 5h18v2H3zm0 5h18v2H3z"/></svg>
+    </label>
+    <div class="md-header__title" data-md-component="header-title">
+      <div class="md-header__ellipsis">
+        <div class="md-header__topic">
+          <span class="md-ellipsis">
+            PyChebyshev
+          </span>
+        </div>
+        <div class="md-header__topic" data-md-component="header-topic">
+          <span class="md-ellipsis">
+            
+              Tensor Train
+            
+          </span>
+        </div>
+      </div>
+    </div>
+    
+      
+        <form class="md-header__option" data-md-component="palette">
+  
+    
+    
+    
+    <input class="md-option" data-md-color-media="" data-md-color-scheme="default" data-md-color-primary="indigo" data-md-color-accent="indigo"  aria-hidden="true"  type="radio" name="__palette" id="__palette_0">
+    
+  
+</form>
+      
+    
+    
+      <script>var palette=__md_get("__palette");if(palette&&palette.color){if("(prefers-color-scheme)"===palette.color.media){var media=matchMedia("(prefers-color-scheme: light)"),input=document.querySelector(media.matches?"[data-md-color-media='(prefers-color-scheme: light)']":"[data-md-color-media='(prefers-color-scheme: dark)']");palette.color.media=input.getAttribute("data-md-color-media"),palette.color.scheme=input.getAttribute("data-md-color-scheme"),palette.color.primary=input.getAttribute("data-md-color-primary"),palette.color.accent=input.getAttribute("data-md-color-accent")}for(var[key,value]of Object.entries(palette.color))document.body.setAttribute("data-md-color-"+key,value)}</script>
+    
+    
+    
+      
+      
+        <label class="md-header__button md-icon" for="__search">
+          
+          <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24"><path d="M9.5 3A6.5 6.5 0 0 1 16 9.5c0 1.61-.59 3.09-1.56 4.23l.27.27h.79l5 5-1.5 1.5-5-5v-.79l-.27-.27A6.52 6.52 0 0 1 9.5 16 6.5 6.5 0 0 1 3 9.5 6.5 6.5 0 0 1 9.5 3m0 2C7 5 5 7 5 9.5S7 14 9.5 14 14 12 14 9.5 12 5 9.5 5"/></svg>
+        </label>
+        <div class="md-search" data-md-component="search" role="dialog">
+  <label class="md-search__overlay" for="__search"></label>
+  <div class="md-search__inner" role="search">
+    <form class="md-search__form" name="search">
+      <input type="text" class="md-search__input" name="query" aria-label="Search" placeholder="Search" autocapitalize="off" autocorrect="off" autocomplete="off" spellcheck="false" data-md-component="search-query" required>
+      <label class="md-search__icon md-icon" for="__search">
+        
+        <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24"><path d="M9.5 3A6.5 6.5 0 0 1 16 9.5c0 1.61-.59 3.09-1.56 4.23l.27.27h.79l5 5-1.5 1.5-5-5v-.79l-.27-.27A6.52 6.52 0 0 1 9.5 16 6.5 6.5 0 0 1 3 9.5 6.5 6.5 0 0 1 9.5 3m0 2C7 5 5 7 5 9.5S7 14 9.5 14 14 12 14 9.5 12 5 9.5 5"/></svg>
+        
+        <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24"><path d="M20 11v2H8l5.5 5.5-1.42 1.42L4.16 12l7.92-7.92L13.5 5.5 8 11z"/></svg>
+      </label>
+      <nav class="md-search__options" aria-label="Search">
+        
+        <button type="reset" class="md-search__icon md-icon" title="Clear" aria-label="Clear" tabindex="-1">
+          
+          <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24"><path d="M19 6.41 17.59 5 12 10.59 6.41 5 5 6.41 10.59 12 5 17.59 6.41 19 12 13.41 17.59 19 19 17.59 13.41 12z"/></svg>
+        </button>
+      </nav>
+      
+    </form>
+    <div class="md-search__output">
+      <div class="md-search__scrollwrap" tabindex="0" data-md-scrollfix>
+        <div class="md-search-result" data-md-component="search-result">
+          <div class="md-search-result__meta">
+            Initializing search
+          </div>
+          <ol class="md-search-result__list" role="presentation"></ol>
+        </div>
+      </div>
+    </div>
+  </div>
+</div>
+      
+    
+    
+      <div class="md-header__source">
+        <a href="https://github.com/0xC000005/PyChebyshev" title="Go to repository" class="md-source" data-md-component="source">
+  <div class="md-source__icon md-icon">
+    
+    <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 448 512"><!--! Font Awesome Free 7.1.0 by @fontawesome - https://fontawesome.com License - https://fontawesome.com/license/free (Icons: CC BY 4.0, Fonts: SIL OFL 1.1, Code: MIT License) Copyright 2025 Fonticons, Inc.--><path d="M439.6 236.1 244 40.5c-5.4-5.5-12.8-8.5-20.4-8.5s-15 3-20.4 8.4L162.5 81l51.5 51.5c27.1-9.1 52.7 16.8 43.4 43.7l49.7 49.7c34.2-11.8 61.2 31 35.5 56.7-26.5 26.5-70.2-2.9-56-37.3L240.3 199v121.9c25.3 12.5 22.3 41.8 9.1 55-6.4 6.4-15.2 10.1-24.3 10.1s-17.8-3.6-24.3-10.1c-17.6-17.6-11.1-46.9 11.2-56v-123c-20.8-8.5-24.6-30.7-18.6-45L142.6 101 8.5 235.1C3 240.6 0 247.9 0 255.5s3 15 8.5 20.4l195.6 195.7c5.4 5.4 12.7 8.4 20.4 8.4s15-3 20.4-8.4l194.7-194.7c5.4-5.4 8.4-12.8 8.4-20.4s-3-15-8.4-20.4"/></svg>
+  </div>
+  <div class="md-source__repository">
+    PyChebyshev
+  </div>
+</a>
+      </div>
+    
+  </nav>
+  
+</header>
+    
+    <div class="md-container" data-md-component="container">
+      
+      
+        
+          
+        
+      
+      <main class="md-main" data-md-component="main">
+        <div class="md-main__inner md-grid">
+          
+            
+              
+              <div class="md-sidebar md-sidebar--primary" data-md-component="sidebar" data-md-type="navigation" >
+                <div class="md-sidebar__scrollwrap">
+                  <div class="md-sidebar__inner">
+                    
+
+
+
+<nav class="md-nav md-nav--primary" aria-label="Navigation" data-md-level="0">
+  <label class="md-nav__title" for="__drawer">
+    <a href="../.." title="PyChebyshev" class="md-nav__button md-logo" aria-label="PyChebyshev" data-md-component="logo">
+      
+  
+  <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24"><path d="M12 8a3 3 0 0 0 3-3 3 3 0 0 0-3-3 3 3 0 0 0-3 3 3 3 0 0 0 3 3m0 3.54C9.64 9.35 6.5 8 3 8v11c3.5 0 6.64 1.35 9 3.54 2.36-2.19 5.5-3.54 9-3.54V8c-3.5 0-6.64 1.35-9 3.54"/></svg>
+
+    </a>
+    PyChebyshev
+  </label>
+  
+    <div class="md-nav__source">
+      <a href="https://github.com/0xC000005/PyChebyshev" title="Go to repository" class="md-source" data-md-component="source">
+  <div class="md-source__icon md-icon">
+    
+    <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 448 512"><!--! Font Awesome Free 7.1.0 by @fontawesome - https://fontawesome.com License - https://fontawesome.com/license/free (Icons: CC BY 4.0, Fonts: SIL OFL 1.1, Code: MIT License) Copyright 2025 Fonticons, Inc.--><path d="M439.6 236.1 244 40.5c-5.4-5.5-12.8-8.5-20.4-8.5s-15 3-20.4 8.4L162.5 81l51.5 51.5c27.1-9.1 52.7 16.8 43.4 43.7l49.7 49.7c34.2-11.8 61.2 31 35.5 56.7-26.5 26.5-70.2-2.9-56-37.3L240.3 199v121.9c25.3 12.5 22.3 41.8 9.1 55-6.4 6.4-15.2 10.1-24.3 10.1s-17.8-3.6-24.3-10.1c-17.6-17.6-11.1-46.9 11.2-56v-123c-20.8-8.5-24.6-30.7-18.6-45L142.6 101 8.5 235.1C3 240.6 0 247.9 0 255.5s3 15 8.5 20.4l195.6 195.7c5.4 5.4 12.7 8.4 20.4 8.4s15-3 20.4-8.4l194.7-194.7c5.4-5.4 8.4-12.8 8.4-20.4s-3-15-8.4-20.4"/></svg>
+  </div>
+  <div class="md-source__repository">
+    PyChebyshev
+  </div>
+</a>
+    </div>
+  
+  <ul class="md-nav__list" data-md-scrollfix>
+    
+      
+      
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../.." class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Home
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+    
+      
+      
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../getting-started/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Getting Started
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+    
+      
+      
+  
+  
+    
+  
+  
+  
+    
+    
+    
+    
+      
+        
+        
+      
+    
+    
+    <li class="md-nav__item md-nav__item--active md-nav__item--section md-nav__item--nested">
+      
+        
+        
+        <input class="md-nav__toggle md-toggle " type="checkbox" id="__nav_3" checked>
+        
+          
+          <label class="md-nav__link" for="__nav_3" id="__nav_3_label" tabindex="">
+            
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    User Guide
+  
+
+    
+  </span>
+  
+  
+
+            <span class="md-nav__icon md-icon"></span>
+          </label>
+        
+        <nav class="md-nav" data-md-level="1" aria-labelledby="__nav_3_label" aria-expanded="true">
+          <label class="md-nav__title" for="__nav_3">
+            <span class="md-nav__icon md-icon"></span>
+            
+  
+    User Guide
+  
+
+          </label>
+          <ul class="md-nav__list" data-md-scrollfix>
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../concepts/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Mathematical Concepts
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../usage/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Usage Patterns
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../serialization/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Saving & Loading
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../greeks/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Computing Greeks
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../sliding/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Sliding Technique
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+    
+  
+  
+  
+    <li class="md-nav__item md-nav__item--active">
+      
+      <input class="md-nav__toggle md-toggle" type="checkbox" id="__toc">
+      
+      
+        
+      
+      
+        <label class="md-nav__link md-nav__link--active" for="__toc">
+          
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Tensor Train
+  
+
+    
+  </span>
+  
+  
+
+          <span class="md-nav__icon md-icon"></span>
+        </label>
+      
+      <a href="./" class="md-nav__link md-nav__link--active">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Tensor Train
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+      
+        
+
+<nav class="md-nav md-nav--secondary" aria-label="Table of contents">
+  
+  
+  
+    
+  
+  
+    <label class="md-nav__title" for="__toc">
+      <span class="md-nav__icon md-icon"></span>
+      Table of contents
+    </label>
+    <ul class="md-nav__list" data-md-component="toc" data-md-scrollfix>
+      
+        <li class="md-nav__item">
+  <a href="#introduction" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Introduction
+      
+    </span>
+  </a>
+  
+    <nav class="md-nav" aria-label="Introduction">
+      <ul class="md-nav__list">
+        
+          <li class="md-nav__item">
+  <a href="#when-to-use-which-class" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        When to use which class
+      
+    </span>
+  </a>
+  
+</li>
+        
+      </ul>
+    </nav>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#quick-start" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Quick Start
+      
+    </span>
+  </a>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#how-it-works" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        How It Works
+      
+    </span>
+  </a>
+  
+    <nav class="md-nav" aria-label="How It Works">
+      <ul class="md-nav__list">
+        
+          <li class="md-nav__item">
+  <a href="#tt-format" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        TT format
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#tt-cross-build-algorithm" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        TT-Cross build algorithm
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#maxvol-algorithm" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Maxvol algorithm
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#coefficient-conversion" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Coefficient conversion
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#evaluation-via-tt-inner-product" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Evaluation via TT inner product
+      
+    </span>
+  </a>
+  
+</li>
+        
+      </ul>
+    </nav>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#optimizations" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Optimizations
+      
+    </span>
+  </a>
+  
+    <nav class="md-nav" aria-label="Optimizations">
+      <ul class="md-nav__list">
+        
+          <li class="md-nav__item">
+  <a href="#eval-caching" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Eval caching
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#per-mode-rank-caps" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Per-mode rank caps
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#svd-based-adaptive-rank" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        SVD-based adaptive rank
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#half-sweep-convergence" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Half-sweep convergence
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#best-cores-tracking" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Best-cores tracking
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#tt-svd-validation-build" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        TT-SVD (validation build)
+      
+    </span>
+  </a>
+  
+</li>
+        
+      </ul>
+    </nav>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#controlling-accuracy" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Controlling Accuracy
+      
+    </span>
+  </a>
+  
+    <nav class="md-nav" aria-label="Controlling Accuracy">
+      <ul class="md-nav__list">
+        
+          <li class="md-nav__item">
+  <a href="#max_rank" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        max_rank
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#tolerance" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        tolerance
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#max_sweeps" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        max_sweeps
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#build-method" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Build method
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#error-estimation" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Error estimation
+      
+    </span>
+  </a>
+  
+</li>
+        
+      </ul>
+    </nav>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#derivatives-via-finite-differences" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Derivatives via Finite Differences
+      
+    </span>
+  </a>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#batch-evaluation" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Batch Evaluation
+      
+    </span>
+  </a>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#performance-comparison" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Performance Comparison
+      
+    </span>
+  </a>
+  
+    <nav class="md-nav" aria-label="Performance Comparison">
+      <ul class="md-nav__list">
+        
+          <li class="md-nav__item">
+  <a href="#pychebyshev-vs-mocax-extend-tensor-train" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        PyChebyshev vs MoCaX Extend (Tensor Train)
+      
+    </span>
+  </a>
+  
+    <nav class="md-nav" aria-label="PyChebyshev vs MoCaX Extend (Tensor Train)">
+      <ul class="md-nav__list">
+        
+          <li class="md-nav__item">
+  <a href="#build-comparison" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Build comparison
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#accuracy-50-random-test-points" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Accuracy (50 random test points)
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#evaluation-speed-1000-random-points" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Evaluation speed (1000 random points)
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#greeks-accuracy-10-scenarios-vs-analytical" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Greeks accuracy (10 scenarios vs analytical)
+      
+    </span>
+  </a>
+  
+</li>
+        
+      </ul>
+    </nav>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#reproducing-the-comparison" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Reproducing the comparison
+      
+    </span>
+  </a>
+  
+</li>
+        
+      </ul>
+    </nav>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#comparison-with-other-pychebyshev-methods" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Comparison with Other PyChebyshev Methods
+      
+    </span>
+  </a>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#serialization" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Serialization
+      
+    </span>
+  </a>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#limitations" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Limitations
+      
+    </span>
+  </a>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#mathematical-reference" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Mathematical Reference
+      
+    </span>
+  </a>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#api-reference" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        API Reference
+      
+    </span>
+  </a>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#pychebyshev.tensor_train.ChebyshevTT" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        ChebyshevTT
+      
+    </span>
+  </a>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#pychebyshev.tensor_train.ChebyshevTT.tt_ranks" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        tt_ranks
+      
+    </span>
+  </a>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#pychebyshev.tensor_train.ChebyshevTT.compression_ratio" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        compression_ratio
+      
+    </span>
+  </a>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#pychebyshev.tensor_train.ChebyshevTT.total_build_evals" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        total_build_evals
+      
+    </span>
+  </a>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#pychebyshev.tensor_train.ChebyshevTT.build" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        build
+      
+    </span>
+  </a>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#pychebyshev.tensor_train.ChebyshevTT.eval" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        eval
+      
+    </span>
+  </a>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#pychebyshev.tensor_train.ChebyshevTT.eval_batch" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        eval_batch
+      
+    </span>
+  </a>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#pychebyshev.tensor_train.ChebyshevTT.eval_multi" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        eval_multi
+      
+    </span>
+  </a>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#pychebyshev.tensor_train.ChebyshevTT.error_estimate" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        error_estimate
+      
+    </span>
+  </a>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#pychebyshev.tensor_train.ChebyshevTT.__getstate__" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        __getstate__
+      
+    </span>
+  </a>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#pychebyshev.tensor_train.ChebyshevTT.__setstate__" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        __setstate__
+      
+    </span>
+  </a>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#pychebyshev.tensor_train.ChebyshevTT.save" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        save
+      
+    </span>
+  </a>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#pychebyshev.tensor_train.ChebyshevTT.load" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        load
+      
+    </span>
+  </a>
+  
+</li>
+      
+    </ul>
+  
+</nav>
+      
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../error-estimation/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Error Estimation
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+          </ul>
+        </nav>
+      
+    </li>
+  
+
+    
+      
+      
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../api/reference/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    API Reference
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+    
+      
+      
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../benchmarks/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Benchmarks
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+    
+  </ul>
+</nav>
+                  </div>
+                </div>
+              </div>
+            
+            
+              
+              <div class="md-sidebar md-sidebar--secondary" data-md-component="sidebar" data-md-type="toc" >
+                <div class="md-sidebar__scrollwrap">
+                  <div class="md-sidebar__inner">
+                    
+
+<nav class="md-nav md-nav--secondary" aria-label="Table of contents">
+  
+  
+  
+    
+  
+  
+    <label class="md-nav__title" for="__toc">
+      <span class="md-nav__icon md-icon"></span>
+      Table of contents
+    </label>
+    <ul class="md-nav__list" data-md-component="toc" data-md-scrollfix>
+      
+        <li class="md-nav__item">
+  <a href="#introduction" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Introduction
+      
+    </span>
+  </a>
+  
+    <nav class="md-nav" aria-label="Introduction">
+      <ul class="md-nav__list">
+        
+          <li class="md-nav__item">
+  <a href="#when-to-use-which-class" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        When to use which class
+      
+    </span>
+  </a>
+  
+</li>
+        
+      </ul>
+    </nav>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#quick-start" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Quick Start
+      
+    </span>
+  </a>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#how-it-works" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        How It Works
+      
+    </span>
+  </a>
+  
+    <nav class="md-nav" aria-label="How It Works">
+      <ul class="md-nav__list">
+        
+          <li class="md-nav__item">
+  <a href="#tt-format" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        TT format
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#tt-cross-build-algorithm" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        TT-Cross build algorithm
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#maxvol-algorithm" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Maxvol algorithm
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#coefficient-conversion" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Coefficient conversion
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#evaluation-via-tt-inner-product" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Evaluation via TT inner product
+      
+    </span>
+  </a>
+  
+</li>
+        
+      </ul>
+    </nav>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#optimizations" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Optimizations
+      
+    </span>
+  </a>
+  
+    <nav class="md-nav" aria-label="Optimizations">
+      <ul class="md-nav__list">
+        
+          <li class="md-nav__item">
+  <a href="#eval-caching" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Eval caching
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#per-mode-rank-caps" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Per-mode rank caps
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#svd-based-adaptive-rank" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        SVD-based adaptive rank
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#half-sweep-convergence" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Half-sweep convergence
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#best-cores-tracking" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Best-cores tracking
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#tt-svd-validation-build" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        TT-SVD (validation build)
+      
+    </span>
+  </a>
+  
+</li>
+        
+      </ul>
+    </nav>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#controlling-accuracy" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Controlling Accuracy
+      
+    </span>
+  </a>
+  
+    <nav class="md-nav" aria-label="Controlling Accuracy">
+      <ul class="md-nav__list">
+        
+          <li class="md-nav__item">
+  <a href="#max_rank" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        max_rank
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#tolerance" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        tolerance
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#max_sweeps" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        max_sweeps
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#build-method" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Build method
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#error-estimation" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Error estimation
+      
+    </span>
+  </a>
+  
+</li>
+        
+      </ul>
+    </nav>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#derivatives-via-finite-differences" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Derivatives via Finite Differences
+      
+    </span>
+  </a>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#batch-evaluation" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Batch Evaluation
+      
+    </span>
+  </a>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#performance-comparison" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Performance Comparison
+      
+    </span>
+  </a>
+  
+    <nav class="md-nav" aria-label="Performance Comparison">
+      <ul class="md-nav__list">
+        
+          <li class="md-nav__item">
+  <a href="#pychebyshev-vs-mocax-extend-tensor-train" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        PyChebyshev vs MoCaX Extend (Tensor Train)
+      
+    </span>
+  </a>
+  
+    <nav class="md-nav" aria-label="PyChebyshev vs MoCaX Extend (Tensor Train)">
+      <ul class="md-nav__list">
+        
+          <li class="md-nav__item">
+  <a href="#build-comparison" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Build comparison
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#accuracy-50-random-test-points" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Accuracy (50 random test points)
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#evaluation-speed-1000-random-points" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Evaluation speed (1000 random points)
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#greeks-accuracy-10-scenarios-vs-analytical" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Greeks accuracy (10 scenarios vs analytical)
+      
+    </span>
+  </a>
+  
+</li>
+        
+      </ul>
+    </nav>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#reproducing-the-comparison" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Reproducing the comparison
+      
+    </span>
+  </a>
+  
+</li>
+        
+      </ul>
+    </nav>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#comparison-with-other-pychebyshev-methods" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Comparison with Other PyChebyshev Methods
+      
+    </span>
+  </a>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#serialization" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Serialization
+      
+    </span>
+  </a>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#limitations" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Limitations
+      
+    </span>
+  </a>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#mathematical-reference" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Mathematical Reference
+      
+    </span>
+  </a>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#api-reference" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        API Reference
+      
+    </span>
+  </a>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#pychebyshev.tensor_train.ChebyshevTT" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        ChebyshevTT
+      
+    </span>
+  </a>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#pychebyshev.tensor_train.ChebyshevTT.tt_ranks" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        tt_ranks
+      
+    </span>
+  </a>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#pychebyshev.tensor_train.ChebyshevTT.compression_ratio" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        compression_ratio
+      
+    </span>
+  </a>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#pychebyshev.tensor_train.ChebyshevTT.total_build_evals" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        total_build_evals
+      
+    </span>
+  </a>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#pychebyshev.tensor_train.ChebyshevTT.build" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        build
+      
+    </span>
+  </a>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#pychebyshev.tensor_train.ChebyshevTT.eval" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        eval
+      
+    </span>
+  </a>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#pychebyshev.tensor_train.ChebyshevTT.eval_batch" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        eval_batch
+      
+    </span>
+  </a>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#pychebyshev.tensor_train.ChebyshevTT.eval_multi" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        eval_multi
+      
+    </span>
+  </a>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#pychebyshev.tensor_train.ChebyshevTT.error_estimate" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        error_estimate
+      
+    </span>
+  </a>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#pychebyshev.tensor_train.ChebyshevTT.__getstate__" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        __getstate__
+      
+    </span>
+  </a>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#pychebyshev.tensor_train.ChebyshevTT.__setstate__" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        __setstate__
+      
+    </span>
+  </a>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#pychebyshev.tensor_train.ChebyshevTT.save" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        save
+      
+    </span>
+  </a>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#pychebyshev.tensor_train.ChebyshevTT.load" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        load
+      
+    </span>
+  </a>
+  
+</li>
+      
+    </ul>
+  
+</nav>
+                  </div>
+                </div>
+              </div>
+            
+          
+          
+            <div class="md-content" data-md-component="content">
+              
+              <article class="md-content__inner md-typeset">
+                
+                  
+
+
+  
+  
+
+
+<h1 id="tensor-train-interpolation">Tensor Train Interpolation<a class="headerlink" href="#tensor-train-interpolation" title="Permanent link">&para;</a></h1>
+<h2 id="introduction">Introduction<a class="headerlink" href="#introduction" title="Permanent link">&para;</a></h2>
+<p>The <strong>Tensor Train (TT)</strong> format enables Chebyshev interpolation of functions with
+5 or more dimensions by decomposing the full coefficient tensor into a chain of
+small 3D cores. Instead of storing and building the full <span class="arithmatex">\(n^d\)</span> tensor (infeasible
+for <span class="arithmatex">\(d \geq 6\)</span>), TT stores <span class="arithmatex">\(O(d \cdot n \cdot r^2)\)</span> elements, where <span class="arithmatex">\(r\)</span> is the
+<strong>TT rank</strong> -- a measure of the function's internal complexity.</p>
+<h3 id="when-to-use-which-class">When to use which class<a class="headerlink" href="#when-to-use-which-class" title="Permanent link">&para;</a></h3>
+<table>
+<thead>
+<tr>
+<th>Scenario</th>
+<th>Class</th>
+<th>Why</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td><span class="arithmatex">\(d \leq 5\)</span></td>
+<td><code>ChebyshevApproximation</code></td>
+<td>Full tensor is feasible; analytical derivatives</td>
+</tr>
+<tr>
+<td><span class="arithmatex">\(d \geq 5\)</span>, general function</td>
+<td><code>ChebyshevTT</code></td>
+<td>TT-Cross builds from <span class="arithmatex">\(O(d \cdot n \cdot r^2)\)</span> evaluations</td>
+</tr>
+<tr>
+<td><span class="arithmatex">\(d \gg 5\)</span>, separable function</td>
+<td><code>ChebyshevSlider</code></td>
+<td>Additive decomposition; cheapest build, but loses cross-group coupling</td>
+</tr>
+</tbody>
+</table>
+<p><code>ChebyshevTT</code> fills the gap between the full tensor approach (limited to low
+dimensions) and the sliding technique (limited to separable functions). It handles
+general functions -- including those with strong multiplicative coupling like
+Black-Scholes -- at a fraction of the full tensor cost.</p>
+<h2 id="quick-start">Quick Start<a class="headerlink" href="#quick-start" title="Permanent link">&para;</a></h2>
+<div class="highlight"><pre><span></span><code><a id="__codelineno-0-1" name="__codelineno-0-1" href="#__codelineno-0-1"></a><span class="kn">import</span><span class="w"> </span><span class="nn">math</span>
+<a id="__codelineno-0-2" name="__codelineno-0-2" href="#__codelineno-0-2"></a><span class="kn">from</span><span class="w"> </span><span class="nn">scipy.stats</span><span class="w"> </span><span class="kn">import</span> <span class="n">norm</span>
+<a id="__codelineno-0-3" name="__codelineno-0-3" href="#__codelineno-0-3"></a><span class="kn">from</span><span class="w"> </span><span class="nn">pychebyshev</span><span class="w"> </span><span class="kn">import</span> <span class="n">ChebyshevTT</span>
+<a id="__codelineno-0-4" name="__codelineno-0-4" href="#__codelineno-0-4"></a>
+<a id="__codelineno-0-5" name="__codelineno-0-5" href="#__codelineno-0-5"></a><span class="k">def</span><span class="w"> </span><span class="nf">black_scholes_5d</span><span class="p">(</span><span class="n">x</span><span class="p">,</span> <span class="n">_</span><span class="p">):</span>
+<a id="__codelineno-0-6" name="__codelineno-0-6" href="#__codelineno-0-6"></a><span class="w">    </span><span class="sd">&quot;&quot;&quot;European call price: V(S, K, T, sigma, r).&quot;&quot;&quot;</span>
+<a id="__codelineno-0-7" name="__codelineno-0-7" href="#__codelineno-0-7"></a>    <span class="n">S</span><span class="p">,</span> <span class="n">K</span><span class="p">,</span> <span class="n">T</span><span class="p">,</span> <span class="n">sigma</span><span class="p">,</span> <span class="n">r</span> <span class="o">=</span> <span class="n">x</span>
+<a id="__codelineno-0-8" name="__codelineno-0-8" href="#__codelineno-0-8"></a>    <span class="n">d1</span> <span class="o">=</span> <span class="p">(</span><span class="n">math</span><span class="o">.</span><span class="n">log</span><span class="p">(</span><span class="n">S</span> <span class="o">/</span> <span class="n">K</span><span class="p">)</span> <span class="o">+</span> <span class="p">(</span><span class="n">r</span> <span class="o">+</span> <span class="mf">0.5</span> <span class="o">*</span> <span class="n">sigma</span><span class="o">**</span><span class="mi">2</span><span class="p">)</span> <span class="o">*</span> <span class="n">T</span><span class="p">)</span> <span class="o">/</span> <span class="p">(</span><span class="n">sigma</span> <span class="o">*</span> <span class="n">math</span><span class="o">.</span><span class="n">sqrt</span><span class="p">(</span><span class="n">T</span><span class="p">))</span>
+<a id="__codelineno-0-9" name="__codelineno-0-9" href="#__codelineno-0-9"></a>    <span class="n">d2</span> <span class="o">=</span> <span class="n">d1</span> <span class="o">-</span> <span class="n">sigma</span> <span class="o">*</span> <span class="n">math</span><span class="o">.</span><span class="n">sqrt</span><span class="p">(</span><span class="n">T</span><span class="p">)</span>
+<a id="__codelineno-0-10" name="__codelineno-0-10" href="#__codelineno-0-10"></a>    <span class="k">return</span> <span class="n">S</span> <span class="o">*</span> <span class="n">norm</span><span class="o">.</span><span class="n">cdf</span><span class="p">(</span><span class="n">d1</span><span class="p">)</span> <span class="o">-</span> <span class="n">K</span> <span class="o">*</span> <span class="n">math</span><span class="o">.</span><span class="n">exp</span><span class="p">(</span><span class="o">-</span><span class="n">r</span> <span class="o">*</span> <span class="n">T</span><span class="p">)</span> <span class="o">*</span> <span class="n">norm</span><span class="o">.</span><span class="n">cdf</span><span class="p">(</span><span class="n">d2</span><span class="p">)</span>
+<a id="__codelineno-0-11" name="__codelineno-0-11" href="#__codelineno-0-11"></a>
+<a id="__codelineno-0-12" name="__codelineno-0-12" href="#__codelineno-0-12"></a><span class="n">tt</span> <span class="o">=</span> <span class="n">ChebyshevTT</span><span class="p">(</span>
+<a id="__codelineno-0-13" name="__codelineno-0-13" href="#__codelineno-0-13"></a>    <span class="n">black_scholes_5d</span><span class="p">,</span> <span class="mi">5</span><span class="p">,</span>
+<a id="__codelineno-0-14" name="__codelineno-0-14" href="#__codelineno-0-14"></a>    <span class="n">domain</span><span class="o">=</span><span class="p">[[</span><span class="mi">80</span><span class="p">,</span> <span class="mi">120</span><span class="p">],</span> <span class="p">[</span><span class="mi">90</span><span class="p">,</span> <span class="mi">110</span><span class="p">],</span> <span class="p">[</span><span class="mf">0.25</span><span class="p">,</span> <span class="mf">1.0</span><span class="p">],</span> <span class="p">[</span><span class="mf">0.15</span><span class="p">,</span> <span class="mf">0.35</span><span class="p">],</span> <span class="p">[</span><span class="mf">0.01</span><span class="p">,</span> <span class="mf">0.08</span><span class="p">]],</span>
+<a id="__codelineno-0-15" name="__codelineno-0-15" href="#__codelineno-0-15"></a>    <span class="n">n_nodes</span><span class="o">=</span><span class="p">[</span><span class="mi">11</span><span class="p">,</span> <span class="mi">11</span><span class="p">,</span> <span class="mi">11</span><span class="p">,</span> <span class="mi">11</span><span class="p">,</span> <span class="mi">11</span><span class="p">],</span>
+<a id="__codelineno-0-16" name="__codelineno-0-16" href="#__codelineno-0-16"></a>    <span class="n">max_rank</span><span class="o">=</span><span class="mi">15</span><span class="p">,</span>
+<a id="__codelineno-0-17" name="__codelineno-0-17" href="#__codelineno-0-17"></a><span class="p">)</span>
+<a id="__codelineno-0-18" name="__codelineno-0-18" href="#__codelineno-0-18"></a><span class="n">tt</span><span class="o">.</span><span class="n">build</span><span class="p">()</span>
+<a id="__codelineno-0-19" name="__codelineno-0-19" href="#__codelineno-0-19"></a><span class="n">price</span> <span class="o">=</span> <span class="n">tt</span><span class="o">.</span><span class="n">eval</span><span class="p">([</span><span class="mi">100</span><span class="p">,</span> <span class="mi">100</span><span class="p">,</span> <span class="mf">1.0</span><span class="p">,</span> <span class="mf">0.25</span><span class="p">,</span> <span class="mf">0.05</span><span class="p">])</span>
+<a id="__codelineno-0-20" name="__codelineno-0-20" href="#__codelineno-0-20"></a><span class="nb">print</span><span class="p">(</span><span class="sa">f</span><span class="s2">&quot;TT price: </span><span class="si">{</span><span class="n">price</span><span class="si">:</span><span class="s2">.6f</span><span class="si">}</span><span class="s2">&quot;</span><span class="p">)</span>
+</code></pre></div>
+<p>After building, <code>print(tt)</code> shows a summary including TT ranks and compression ratio:</p>
+<div class="highlight"><pre><span></span><code><a id="__codelineno-1-1" name="__codelineno-1-1" href="#__codelineno-1-1"></a>ChebyshevTT (5D, built)
+<a id="__codelineno-1-2" name="__codelineno-1-2" href="#__codelineno-1-2"></a>  Nodes:       [11, 11, 11, 11, 11]
+<a id="__codelineno-1-3" name="__codelineno-1-3" href="#__codelineno-1-3"></a>  TT ranks:    [1, 11, 11, 11, 7, 1]
+<a id="__codelineno-1-4" name="__codelineno-1-4" href="#__codelineno-1-4"></a>  Compression: 161,051 -&gt; 3,707 elements (43.4x)
+<a id="__codelineno-1-5" name="__codelineno-1-5" href="#__codelineno-1-5"></a>  Build:       0.351s (7,419 function evals)
+<a id="__codelineno-1-6" name="__codelineno-1-6" href="#__codelineno-1-6"></a>  Domain:      [80, 120] x [90, 110] x [0.25, 1.0] x [0.15, 0.35] x [0.01, 0.08]
+<a id="__codelineno-1-7" name="__codelineno-1-7" href="#__codelineno-1-7"></a>  Error est:   1.23e-06
+</code></pre></div>
+<h2 id="how-it-works">How It Works<a class="headerlink" href="#how-it-works" title="Permanent link">&para;</a></h2>
+<h3 id="tt-format">TT format<a class="headerlink" href="#tt-format" title="Permanent link">&para;</a></h3>
+<p>A <span class="arithmatex">\(d\)</span>-dimensional tensor <span class="arithmatex">\(\mathcal{A}\)</span> with indices <span class="arithmatex">\(j_1, \ldots, j_d\)</span> is
+represented as a chain of 3D cores:</p>
+<div class="arithmatex">\[\mathcal{A}(j_1, \ldots, j_d) = G_1(j_1) \cdot G_2(j_2) \cdots G_d(j_d)\]</div>
+<p>Each core <span class="arithmatex">\(G_k\)</span> is a 3D array of shape <span class="arithmatex">\((r_{k-1}, n_k, r_k)\)</span>, and for a fixed
+index <span class="arithmatex">\(j_k\)</span> the slice <span class="arithmatex">\(G_k(j_k)\)</span> is an <span class="arithmatex">\(r_{k-1} \times r_k\)</span> matrix. The product
+of these matrices yields the tensor element. The boundary ranks are <span class="arithmatex">\(r_0 = r_d = 1\)</span>,
+so the result is a scalar.</p>
+<p><strong>Storage</strong>: The full tensor has <span class="arithmatex">\(\prod_k n_k\)</span> elements. The TT format stores
+<span class="arithmatex">\(\sum_k r_{k-1} \cdot n_k \cdot r_k\)</span> elements -- exponentially smaller when ranks
+are moderate.</p>
+<h3 id="tt-cross-build-algorithm">TT-Cross build algorithm<a class="headerlink" href="#tt-cross-build-algorithm" title="Permanent link">&para;</a></h3>
+<p>The key advantage of <code>ChebyshevTT</code> over full tensor interpolation is how it is
+<strong>built</strong>. Instead of evaluating the function at every node combination (<span class="arithmatex">\(n^d\)</span>
+points), the TT-Cross algorithm (Oseledets &amp; Tyrtyshnikov 2010) evaluates at
+strategically selected grid points. For 5D with <span class="arithmatex">\(n = 11\)</span> and <code>max_rank=15</code>:</p>
+<ul>
+<li>Full tensor: <strong>161,051</strong> evaluations</li>
+<li>TT-Cross: <strong>~7,400</strong> unique evaluations (<strong>21.7x fewer</strong>)</li>
+</ul>
+<p>The algorithm performs alternating sweeps:</p>
+<p><strong>1. Initialize.</strong> Randomly select multi-index sets <span class="arithmatex">\(J_{\text{right}}[k]\)</span> for each
+dimension, each containing <span class="arithmatex">\(r_k\)</span> multi-indices into the "right" dimensions <span class="arithmatex">\(k+1, \ldots, d-1\)</span>.</p>
+<p><strong>2. Left-to-right sweep.</strong> For each dimension <span class="arithmatex">\(k = 0, \ldots, d-2\)</span>:</p>
+<ul>
+<li>
+<p><strong>Build a cross matrix</strong> <span class="arithmatex">\(C\)</span> of shape <span class="arithmatex">\((r_{k-1} \cdot n_k, r_k)\)</span>.
+  Each row corresponds to a (left multi-index, node index) pair, and each
+  column to a right multi-index. Each entry is a function evaluation at
+  the combined grid point. This is the most expensive step -- it evaluates
+  the function at <span class="arithmatex">\(r_{k-1} \cdot n_k \cdot r_k\)</span> grid points (with caching,
+  many of these are free on subsequent sweeps).</p>
+</li>
+<li>
+<p><strong>SVD for rank selection.</strong> Compute <span class="arithmatex">\(C = U \Sigma V^T\)</span> and determine the
+  effective rank by counting singular values above a tight threshold
+  (<span class="arithmatex">\(10^{-12} \cdot \sigma_{\max}\)</span>). This is further capped by the per-mode
+  rank bound (see <a href="#optimizations">Optimizations</a> below).</p>
+</li>
+<li>
+<p><strong>Maxvol pivot selection.</strong> Apply the maxvol algorithm to the left
+  singular vectors <span class="arithmatex">\(U\)</span> to select the <span class="arithmatex">\(r\)</span> rows whose submatrix has
+  approximately maximal determinant. These pivots identify the most
+  "informative" (left, node) index pairs.</p>
+</li>
+<li>
+<p><strong>Form the TT core</strong> via cross interpolation:
+  <span class="arithmatex">\(\hat{C} = U \cdot U[\text{pivots}]^{-1}\)</span>, then reshape to
+  <span class="arithmatex">\((r_{k-1}, n_k, r_k)\)</span>. The identity <span class="arithmatex">\(\hat{C}[\text{pivots}] = I\)</span>
+  ensures exact interpolation at the selected cross points.</p>
+</li>
+<li>
+<p><strong>Update left index set</strong> for dimension <span class="arithmatex">\(k+1\)</span> by expanding each
+  pivot into its constituent (left multi-index, node index) pair.</p>
+</li>
+</ul>
+<p><strong>3. Convergence check.</strong> After completing the L<span class="arithmatex">\(\to\)</span>R sweep, evaluate the
+TT at 20 random grid points and compare against exact function values.
+If the relative error is below <code>tolerance</code>, stop immediately (skipping the
+R<span class="arithmatex">\(\to\)</span>L sweep).</p>
+<p><strong>4. Right-to-left sweep.</strong> Analogous to L<span class="arithmatex">\(\to\)</span>R but processes dimensions
+from <span class="arithmatex">\(d-1\)</span> down to 1. The transposed cross matrix <span class="arithmatex">\(C^T\)</span> is used, and
+the maxvol pivots update the right index sets.</p>
+<p><strong>5. Convergence and plateau check.</strong> After the R<span class="arithmatex">\(\to\)</span>L sweep, evaluate error
+again. The algorithm tracks the best cores seen across all checks (see
+<a href="#best-cores-tracking">Best-cores tracking</a>) and stops if no improvement
+has been observed for 3 consecutive checks.</p>
+<p><strong>6. Repeat</strong> sweeps until converged, stale, or <code>max_sweeps</code> is reached.</p>
+<h3 id="maxvol-algorithm">Maxvol algorithm<a class="headerlink" href="#maxvol-algorithm" title="Permanent link">&para;</a></h3>
+<p>The <strong>maximum-volume</strong> (maxvol) algorithm is a key subroutine within TT-Cross.
+Given a tall matrix <span class="arithmatex">\(A\)</span> of shape <span class="arithmatex">\((m, r)\)</span> with <span class="arithmatex">\(m \geq r\)</span>, it finds <span class="arithmatex">\(r\)</span> row
+indices such that the submatrix <span class="arithmatex">\(A[\text{idx}]\)</span> has approximately maximal
+<span class="arithmatex">\(|\det|\)</span>.</p>
+<p><strong>Why it matters:</strong> In TT-Cross, maxvol selects which cross points to use for
+the next dimension. Points with maximal volume correspond to the most linearly
+independent function samples, giving the best cross interpolation.</p>
+<p>The implementation uses two phases:</p>
+<ol>
+<li>
+<p><strong>Initialization via column-pivoted QR.</strong> Compute
+   <code>Q, R, piv = qr(A.T, pivoting=True)</code>. The first <span class="arithmatex">\(r\)</span> pivot indices
+   identify the <span class="arithmatex">\(r\)</span> most linearly independent rows of <span class="arithmatex">\(A\)</span> -- a good
+   starting point.</p>
+</li>
+<li>
+<p><strong>Iterative refinement.</strong> Compute the coefficient matrix
+   <span class="arithmatex">\(B = A \cdot A[\text{idx}]^{-1}\)</span> (shape <span class="arithmatex">\(m \times r\)</span>). While
+   <span class="arithmatex">\(\max|B_{ij}| &gt; 1.05\)</span>:</p>
+<ul>
+<li>Find the entry <span class="arithmatex">\((i, j)\)</span> with largest <span class="arithmatex">\(|B_{ij}|\)</span>.</li>
+<li>Swap: replace row <span class="arithmatex">\(j\)</span> in the index set with row <span class="arithmatex">\(i\)</span>.</li>
+<li>Rank-1 update of <span class="arithmatex">\(B\)</span> (avoids re-inverting the full matrix).</li>
+</ul>
+</li>
+</ol>
+<p>Each swap strictly increases <span class="arithmatex">\(|\det(A[\text{idx}])|\)</span>, and the algorithm
+converges in <span class="arithmatex">\(O(r^2)\)</span> iterations in practice.</p>
+<h3 id="coefficient-conversion">Coefficient conversion<a class="headerlink" href="#coefficient-conversion" title="Permanent link">&para;</a></h3>
+<p>After TT-Cross produces cores containing function values at Chebyshev nodes, a
+<strong>DCT-II</strong> is applied along the middle axis of each core to convert from function
+values to Chebyshev expansion coefficients:</p>
+<div class="highlight"><pre><span></span><code><a id="__codelineno-2-1" name="__codelineno-2-1" href="#__codelineno-2-1"></a><span class="kn">from</span><span class="w"> </span><span class="nn">scipy.fft</span><span class="w"> </span><span class="kn">import</span> <span class="n">dct</span>
+<a id="__codelineno-2-2" name="__codelineno-2-2" href="#__codelineno-2-2"></a>
+<a id="__codelineno-2-3" name="__codelineno-2-3" href="#__codelineno-2-3"></a><span class="c1"># core shape: (r_{k-1}, n_k, r_k)</span>
+<a id="__codelineno-2-4" name="__codelineno-2-4" href="#__codelineno-2-4"></a><span class="n">coeff_core</span> <span class="o">=</span> <span class="n">dct</span><span class="p">(</span><span class="n">core</span><span class="p">[:,</span> <span class="p">::</span><span class="o">-</span><span class="mi">1</span><span class="p">,</span> <span class="p">:],</span> <span class="nb">type</span><span class="o">=</span><span class="mi">2</span><span class="p">,</span> <span class="n">axis</span><span class="o">=</span><span class="mi">1</span><span class="p">)</span> <span class="o">/</span> <span class="n">n_k</span>
+<a id="__codelineno-2-5" name="__codelineno-2-5" href="#__codelineno-2-5"></a><span class="n">coeff_core</span><span class="p">[:,</span> <span class="mi">0</span><span class="p">,</span> <span class="p">:]</span> <span class="o">/=</span> <span class="mi">2</span>
+</code></pre></div>
+<p>The reversal (<code>::-1</code>) accounts for the ordering of Chebyshev Type I nodes.
+This is the same transform used by <code>ChebyshevApproximation</code> (see
+<a href="../error-estimation/">Error Estimation</a> for details on the DCT), extended to
+3D cores.</p>
+<h3 id="evaluation-via-tt-inner-product">Evaluation via TT inner product<a class="headerlink" href="#evaluation-via-tt-inner-product" title="Permanent link">&para;</a></h3>
+<p>Given the pre-computed coefficient cores <span class="arithmatex">\(\mathcal{C}\)</span> and a query point <span class="arithmatex">\(p\)</span>,
+evaluation computes the inner product:</p>
+<div class="arithmatex">\[I(p) = \langle \mathcal{C},\, \mathcal{T}_p \rangle\]</div>
+<p>where <span class="arithmatex">\(\mathcal{T}_p\)</span> is a rank-1 tensor whose entries are Chebyshev polynomial
+values <span class="arithmatex">\([T_0(\tilde{x}_k), T_1(\tilde{x}_k), \ldots, T_{n_k-1}(\tilde{x}_k)]\)</span>
+at the scaled query coordinate <span class="arithmatex">\(\tilde{x}_k\)</span> in each dimension <span class="arithmatex">\(k\)</span>.</p>
+<p>In practice, this inner product is computed as a chain of matrix contractions:</p>
+<div class="highlight"><pre><span></span><code><a id="__codelineno-3-1" name="__codelineno-3-1" href="#__codelineno-3-1"></a><span class="n">result</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">ones</span><span class="p">((</span><span class="mi">1</span><span class="p">,</span> <span class="mi">1</span><span class="p">))</span>
+<a id="__codelineno-3-2" name="__codelineno-3-2" href="#__codelineno-3-2"></a><span class="k">for</span> <span class="n">k</span> <span class="ow">in</span> <span class="nb">range</span><span class="p">(</span><span class="n">num_dims</span><span class="p">):</span>
+<a id="__codelineno-3-3" name="__codelineno-3-3" href="#__codelineno-3-3"></a>    <span class="n">q</span> <span class="o">=</span> <span class="n">chebyshev_polynomials</span><span class="p">(</span><span class="n">scaled_x</span><span class="p">[</span><span class="n">k</span><span class="p">],</span> <span class="n">n_nodes</span><span class="p">[</span><span class="n">k</span><span class="p">])</span>   <span class="c1"># (n_k,)</span>
+<a id="__codelineno-3-4" name="__codelineno-3-4" href="#__codelineno-3-4"></a>    <span class="n">v</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">einsum</span><span class="p">(</span><span class="s1">&#39;j,ijk-&gt;ik&#39;</span><span class="p">,</span> <span class="n">q</span><span class="p">,</span> <span class="n">coeff_cores</span><span class="p">[</span><span class="n">k</span><span class="p">])</span>        <span class="c1"># (r_{k-1}, r_k)</span>
+<a id="__codelineno-3-5" name="__codelineno-3-5" href="#__codelineno-3-5"></a>    <span class="n">result</span> <span class="o">=</span> <span class="n">result</span> <span class="o">@</span> <span class="n">v</span>
+<a id="__codelineno-3-6" name="__codelineno-3-6" href="#__codelineno-3-6"></a><span class="n">value</span> <span class="o">=</span> <span class="n">result</span><span class="p">[</span><span class="mi">0</span><span class="p">,</span> <span class="mi">0</span><span class="p">]</span>
+</code></pre></div>
+<p>Each step contracts one dimension, reducing the chain until a scalar remains.
+The cost is <span class="arithmatex">\(O(d \cdot n \cdot r^2)\)</span> per point.</p>
+<h2 id="optimizations">Optimizations<a class="headerlink" href="#optimizations" title="Permanent link">&para;</a></h2>
+<p>PyChebyshev's TT-Cross implementation includes several optimizations that
+reduce function evaluations by <strong>10--20x</strong> compared to a naive implementation.</p>
+<h3 id="eval-caching">Eval caching<a class="headerlink" href="#eval-caching" title="Permanent link">&para;</a></h3>
+<p>Function evaluations are cached in a dictionary keyed by the grid index tuple.
+When the same grid point is needed again -- whether during the R<span class="arithmatex">\(\to\)</span>L sweep
+of the same iteration, or in subsequent sweeps -- the cached value is returned
+instantly. This is the single largest optimization: for 5D Black-Scholes with
+<code>max_rank=15</code>, caching reduces evaluations from ~85,000 to ~7,400.</p>
+<h3 id="per-mode-rank-caps">Per-mode rank caps<a class="headerlink" href="#per-mode-rank-caps" title="Permanent link">&para;</a></h3>
+<p>At bond <span class="arithmatex">\(k\)</span>, the theoretical maximum TT rank is
+<span class="arithmatex">\(\min(\prod_{i&lt;k} n_i,\; \prod_{i \geq k} n_i)\)</span>. For example, with 5 dimensions
+of 11 nodes each, the first bond can have rank at most <span class="arithmatex">\(\min(11, 14641) = 11\)</span>.
+PyChebyshev automatically caps the rank at each bond to this theoretical limit,
+preventing the algorithm from attempting ranks that are mathematically impossible.</p>
+<h3 id="svd-based-adaptive-rank">SVD-based adaptive rank<a class="headerlink" href="#svd-based-adaptive-rank" title="Permanent link">&para;</a></h3>
+<p>Instead of always using <code>max_rank</code> columns from a QR decomposition, the cross
+matrix is decomposed via SVD. Singular values below <span class="arithmatex">\(10^{-12} \cdot \sigma_{\max}\)</span>
+are dropped, so dimensions where the function has low effective rank naturally
+get smaller cores. For the 5D Black-Scholes example, this produces adaptive ranks
+<code>[1, 11, 11, 11, 7, 1]</code> instead of a uniform <code>[1, 11, 11, 11, 11, 1]</code> -- the
+last bond only needs rank 7 because the interest rate dimension has simpler
+structure.</p>
+<h3 id="half-sweep-convergence">Half-sweep convergence<a class="headerlink" href="#half-sweep-convergence" title="Permanent link">&para;</a></h3>
+<p>Error is checked after the L<span class="arithmatex">\(\to\)</span>R half-sweep. If the TT already reproduces
+the function to within <code>tolerance</code> at random test points, the R<span class="arithmatex">\(\to\)</span>L sweep
+is skipped entirely. For separable functions like <span class="arithmatex">\(\sin(x) + \sin(y) + \sin(z)\)</span>,
+this means convergence in a single L<span class="arithmatex">\(\to\)</span>R pass with only 159 evaluations.</p>
+<h3 id="best-cores-tracking">Best-cores tracking<a class="headerlink" href="#best-cores-tracking" title="Permanent link">&para;</a></h3>
+<p>TT-Cross error can oscillate between L<span class="arithmatex">\(\to\)</span>R and R<span class="arithmatex">\(\to\)</span>L sweeps -- a good
+L<span class="arithmatex">\(\to\)</span>R result may be partially degraded by R<span class="arithmatex">\(\to\)</span>L rebalancing. PyChebyshev
+keeps a copy of the best cores (lowest error) seen across all convergence
+checks, and returns those when the algorithm stops. This prevents the final
+result from being worse than an intermediate result.</p>
+<p>The algorithm also counts "stale checks" -- consecutive convergence checks
+that fail to improve the best error by at least 10%. After 3 stale checks
+(and best error below <span class="arithmatex">\(10^{-3}\)</span>), the algorithm stops early, returning the
+best cores found.</p>
+<h3 id="tt-svd-validation-build">TT-SVD (validation build)<a class="headerlink" href="#tt-svd-validation-build" title="Permanent link">&para;</a></h3>
+<p>For moderate dimensions (<span class="arithmatex">\(d \leq 6\)</span>), the <code>method='svd'</code> option builds the
+full tensor and decomposes it via sequential truncated SVD. This produces
+<strong>optimal</strong> TT ranks (up to the SVD truncation tolerance) and is useful for:</p>
+<ul>
+<li>Validating TT-Cross accuracy against the best possible TT decomposition.</li>
+<li>Confirming that the function's intrinsic TT rank structure matches
+  expectations.</li>
+<li>Problems where the function is cheap to evaluate and a full tensor build
+  is acceptable.</li>
+</ul>
+<div class="highlight"><pre><span></span><code><a id="__codelineno-4-1" name="__codelineno-4-1" href="#__codelineno-4-1"></a><span class="c1"># TT-SVD — for validation or moderate dimensions</span>
+<a id="__codelineno-4-2" name="__codelineno-4-2" href="#__codelineno-4-2"></a><span class="n">tt</span><span class="o">.</span><span class="n">build</span><span class="p">(</span><span class="n">method</span><span class="o">=</span><span class="s2">&quot;svd&quot;</span><span class="p">)</span>
+</code></pre></div>
+<p>In TT-SVD, singular values below <code>tolerance * sigma_max</code> are discarded at each
+unfolding. For a separable function like <span class="arithmatex">\(\sin(x) + \sin(y) + \sin(z)\)</span>, TT-SVD
+finds exact rank <code>[1, 2, 2, 1]</code>.</p>
+<h2 id="controlling-accuracy">Controlling Accuracy<a class="headerlink" href="#controlling-accuracy" title="Permanent link">&para;</a></h2>
+<h3 id="max_rank"><code>max_rank</code><a class="headerlink" href="#max_rank" title="Permanent link">&para;</a></h3>
+<p>The TT rank controls how much "coupling" between dimensions the approximation can
+capture. Higher rank means more accurate, but more expensive to build and store.</p>
+<table>
+<thead>
+<tr>
+<th><code>max_rank</code></th>
+<th>Typical use</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>5--10</td>
+<td>Smooth, nearly separable functions</td>
+</tr>
+<tr>
+<td>10--15</td>
+<td>General smooth functions (e.g., Black-Scholes)</td>
+</tr>
+<tr>
+<td>20--30</td>
+<td>Functions with strong nonlinear coupling</td>
+</tr>
+</tbody>
+</table>
+<div class="admonition tip">
+<p class="admonition-title">Start low, increase if needed</p>
+<p>Begin with <code>max_rank=10</code> and check <code>error_estimate()</code>. If the error is too
+large, increase to 15 or 20. Smooth functions like Black-Scholes options
+typically converge well with ranks of 5--15.</p>
+</div>
+<p>The table below shows how <code>max_rank</code> affects the 5D Black-Scholes approximation
+(11 nodes per dimension, <code>seed=42</code>):</p>
+<table>
+<thead>
+<tr>
+<th><code>max_rank</code></th>
+<th>Unique evals</th>
+<th>Max price error</th>
+<th>TT ranks</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>8</td>
+<td>~4,500</td>
+<td>0.58%</td>
+<td>[1, 8, 8, 8, 6, 1]</td>
+</tr>
+<tr>
+<td>10</td>
+<td>~7,500</td>
+<td>0.09%</td>
+<td>[1, 10, 10, 10, 7, 1]</td>
+</tr>
+<tr>
+<td>15</td>
+<td>~7,400</td>
+<td>0.19%</td>
+<td>[1, 11, 11, 11, 7, 1]</td>
+</tr>
+</tbody>
+</table>
+<p>Note that <code>max_rank=15</code> and <code>max_rank=10</code> use a similar number of evaluations
+because per-mode rank caps limit interior ranks to at most <span class="arithmatex">\(n = 11\)</span>.</p>
+<h3 id="tolerance"><code>tolerance</code><a class="headerlink" href="#tolerance" title="Permanent link">&para;</a></h3>
+<p>The convergence tolerance for TT-Cross. The algorithm checks relative error
+at random grid points after each half-sweep. When the error drops below this
+threshold, iteration stops. The default <code>1e-6</code> is appropriate for most problems.</p>
+<div class="admonition note">
+<p class="admonition-title">Tolerance does not control SVD truncation</p>
+<p>The <code>tolerance</code> parameter only controls when the sweep loop stops. Rank
+selection within each mode uses a fixed threshold of <span class="arithmatex">\(10^{-12}\)</span> to drop
+only numerically zero singular values. Rank is primarily controlled by
+<code>max_rank</code> and the per-mode caps.</p>
+</div>
+<h3 id="max_sweeps"><code>max_sweeps</code><a class="headerlink" href="#max_sweeps" title="Permanent link">&para;</a></h3>
+<p>The maximum number of alternating left-right sweeps. The default of 10 is
+sufficient for most well-behaved functions. In practice, the best-cores tracking
+and stale-check stopping mean the algorithm often finishes in 2--3 sweeps.</p>
+<h3 id="build-method">Build method<a class="headerlink" href="#build-method" title="Permanent link">&para;</a></h3>
+<p>The <code>build()</code> method accepts a <code>method</code> parameter:</p>
+<ul>
+<li><code>method='cross'</code> (default): TT-Cross algorithm -- evaluates only
+  <span class="arithmatex">\(O(d \cdot n \cdot r^2)\)</span> points. Use for high-dimensional problems.</li>
+<li><code>method='svd'</code>: Builds the full tensor and decomposes via truncated SVD.
+  Only feasible for moderate dimensions (<span class="arithmatex">\(d \leq 6\)</span>), but produces optimal
+  ranks and is useful for validation.</li>
+</ul>
+<div class="highlight"><pre><span></span><code><a id="__codelineno-5-1" name="__codelineno-5-1" href="#__codelineno-5-1"></a><span class="c1"># TT-Cross (default) — efficient for high dimensions</span>
+<a id="__codelineno-5-2" name="__codelineno-5-2" href="#__codelineno-5-2"></a><span class="n">tt</span><span class="o">.</span><span class="n">build</span><span class="p">(</span><span class="n">method</span><span class="o">=</span><span class="s2">&quot;cross&quot;</span><span class="p">,</span> <span class="n">seed</span><span class="o">=</span><span class="mi">42</span><span class="p">)</span>
+<a id="__codelineno-5-3" name="__codelineno-5-3" href="#__codelineno-5-3"></a>
+<a id="__codelineno-5-4" name="__codelineno-5-4" href="#__codelineno-5-4"></a><span class="c1"># TT-SVD — for validation or moderate dimensions</span>
+<a id="__codelineno-5-5" name="__codelineno-5-5" href="#__codelineno-5-5"></a><span class="n">tt</span><span class="o">.</span><span class="n">build</span><span class="p">(</span><span class="n">method</span><span class="o">=</span><span class="s2">&quot;svd&quot;</span><span class="p">)</span>
+</code></pre></div>
+<h3 id="error-estimation">Error estimation<a class="headerlink" href="#error-estimation" title="Permanent link">&para;</a></h3>
+<p>Like <code>ChebyshevApproximation</code>, the TT class supports ex ante error estimation from
+its coefficient cores:</p>
+<div class="highlight"><pre><span></span><code><a id="__codelineno-6-1" name="__codelineno-6-1" href="#__codelineno-6-1"></a><span class="n">tt</span><span class="o">.</span><span class="n">build</span><span class="p">()</span>
+<a id="__codelineno-6-2" name="__codelineno-6-2" href="#__codelineno-6-2"></a><span class="nb">print</span><span class="p">(</span><span class="sa">f</span><span class="s2">&quot;Estimated error: </span><span class="si">{</span><span class="n">tt</span><span class="o">.</span><span class="n">error_estimate</span><span class="p">()</span><span class="si">:</span><span class="s2">.2e</span><span class="si">}</span><span class="s2">&quot;</span><span class="p">)</span>
+</code></pre></div>
+<div class="admonition warning">
+<p class="admonition-title">Approximate for TT</p>
+<p>The TT error estimate is based on the trailing Chebyshev coefficients within
+each core. It captures <strong>per-core truncation error</strong> but does not account for
+rank truncation error. The true error may be somewhat larger than the estimate,
+especially at low ranks.</p>
+</div>
+<h2 id="derivatives-via-finite-differences">Derivatives via Finite Differences<a class="headerlink" href="#derivatives-via-finite-differences" title="Permanent link">&para;</a></h2>
+<p>The TT format does not support analytical derivatives (the spectral differentiation
+matrix approach used by <code>ChebyshevApproximation</code> requires the full tensor). Instead,
+<code>ChebyshevTT</code> computes derivatives via <strong>central finite differences</strong>:</p>
+<div class="arithmatex">\[\frac{\partial f}{\partial x_k} \approx \frac{f(x + h\, e_k) - f(x - h\, e_k)}{2h}\]</div>
+<p>The <code>eval_multi()</code> method computes price and Greeks in a single call:</p>
+<div class="highlight"><pre><span></span><code><a id="__codelineno-7-1" name="__codelineno-7-1" href="#__codelineno-7-1"></a><span class="n">point</span> <span class="o">=</span> <span class="p">[</span><span class="mi">100</span><span class="p">,</span> <span class="mi">100</span><span class="p">,</span> <span class="mf">1.0</span><span class="p">,</span> <span class="mf">0.25</span><span class="p">,</span> <span class="mf">0.05</span><span class="p">]</span>
+<a id="__codelineno-7-2" name="__codelineno-7-2" href="#__codelineno-7-2"></a>
+<a id="__codelineno-7-3" name="__codelineno-7-3" href="#__codelineno-7-3"></a><span class="n">results</span> <span class="o">=</span> <span class="n">tt</span><span class="o">.</span><span class="n">eval_multi</span><span class="p">(</span><span class="n">point</span><span class="p">,</span> <span class="p">[</span>
+<a id="__codelineno-7-4" name="__codelineno-7-4" href="#__codelineno-7-4"></a>    <span class="p">[</span><span class="mi">0</span><span class="p">,</span> <span class="mi">0</span><span class="p">,</span> <span class="mi">0</span><span class="p">,</span> <span class="mi">0</span><span class="p">,</span> <span class="mi">0</span><span class="p">],</span>  <span class="c1"># price</span>
+<a id="__codelineno-7-5" name="__codelineno-7-5" href="#__codelineno-7-5"></a>    <span class="p">[</span><span class="mi">1</span><span class="p">,</span> <span class="mi">0</span><span class="p">,</span> <span class="mi">0</span><span class="p">,</span> <span class="mi">0</span><span class="p">,</span> <span class="mi">0</span><span class="p">],</span>  <span class="c1"># Delta (dV/dS)</span>
+<a id="__codelineno-7-6" name="__codelineno-7-6" href="#__codelineno-7-6"></a>    <span class="p">[</span><span class="mi">2</span><span class="p">,</span> <span class="mi">0</span><span class="p">,</span> <span class="mi">0</span><span class="p">,</span> <span class="mi">0</span><span class="p">,</span> <span class="mi">0</span><span class="p">],</span>  <span class="c1"># Gamma (d²V/dS²)</span>
+<a id="__codelineno-7-7" name="__codelineno-7-7" href="#__codelineno-7-7"></a>    <span class="p">[</span><span class="mi">0</span><span class="p">,</span> <span class="mi">0</span><span class="p">,</span> <span class="mi">0</span><span class="p">,</span> <span class="mi">1</span><span class="p">,</span> <span class="mi">0</span><span class="p">],</span>  <span class="c1"># Vega  (dV/dsigma)</span>
+<a id="__codelineno-7-8" name="__codelineno-7-8" href="#__codelineno-7-8"></a>    <span class="p">[</span><span class="mi">0</span><span class="p">,</span> <span class="mi">0</span><span class="p">,</span> <span class="mi">0</span><span class="p">,</span> <span class="mi">0</span><span class="p">,</span> <span class="mi">1</span><span class="p">],</span>  <span class="c1"># Rho   (dV/dr)</span>
+<a id="__codelineno-7-9" name="__codelineno-7-9" href="#__codelineno-7-9"></a><span class="p">])</span>
+<a id="__codelineno-7-10" name="__codelineno-7-10" href="#__codelineno-7-10"></a><span class="n">price</span><span class="p">,</span> <span class="n">delta</span><span class="p">,</span> <span class="n">gamma</span><span class="p">,</span> <span class="n">vega</span><span class="p">,</span> <span class="n">rho</span> <span class="o">=</span> <span class="n">results</span>
+</code></pre></div>
+<p>The step size <span class="arithmatex">\(h\)</span> is chosen automatically as <span class="arithmatex">\(10^{-4}\)</span> times the domain width
+in each dimension. Points near domain boundaries are nudged inward to ensure
+the FD stencil stays inside the domain.</p>
+<div class="admonition note">
+<p class="admonition-title">FD accuracy</p>
+<p>For first-order derivatives, accuracy is typically within a few hundredths
+of a percent of the analytical value. Second-order derivatives (e.g., Gamma)
+are less precise due to the inherent amplification of noise in central
+second differences.</p>
+</div>
+<h2 id="batch-evaluation">Batch Evaluation<a class="headerlink" href="#batch-evaluation" title="Permanent link">&para;</a></h2>
+<p>For evaluating many points at once -- common in portfolio pricing -- use
+<code>eval_batch()</code>:</p>
+<div class="highlight"><pre><span></span><code><a id="__codelineno-8-1" name="__codelineno-8-1" href="#__codelineno-8-1"></a><span class="kn">import</span><span class="w"> </span><span class="nn">numpy</span><span class="w"> </span><span class="k">as</span><span class="w"> </span><span class="nn">np</span>
+<a id="__codelineno-8-2" name="__codelineno-8-2" href="#__codelineno-8-2"></a>
+<a id="__codelineno-8-3" name="__codelineno-8-3" href="#__codelineno-8-3"></a><span class="c1"># 1000 random points in the domain</span>
+<a id="__codelineno-8-4" name="__codelineno-8-4" href="#__codelineno-8-4"></a><span class="n">points</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">column_stack</span><span class="p">([</span>
+<a id="__codelineno-8-5" name="__codelineno-8-5" href="#__codelineno-8-5"></a>    <span class="n">np</span><span class="o">.</span><span class="n">random</span><span class="o">.</span><span class="n">uniform</span><span class="p">(</span><span class="mi">80</span><span class="p">,</span> <span class="mi">120</span><span class="p">,</span> <span class="mi">1000</span><span class="p">),</span>    <span class="c1"># S</span>
+<a id="__codelineno-8-6" name="__codelineno-8-6" href="#__codelineno-8-6"></a>    <span class="n">np</span><span class="o">.</span><span class="n">random</span><span class="o">.</span><span class="n">uniform</span><span class="p">(</span><span class="mi">90</span><span class="p">,</span> <span class="mi">110</span><span class="p">,</span> <span class="mi">1000</span><span class="p">),</span>    <span class="c1"># K</span>
+<a id="__codelineno-8-7" name="__codelineno-8-7" href="#__codelineno-8-7"></a>    <span class="n">np</span><span class="o">.</span><span class="n">random</span><span class="o">.</span><span class="n">uniform</span><span class="p">(</span><span class="mf">0.25</span><span class="p">,</span> <span class="mf">1.0</span><span class="p">,</span> <span class="mi">1000</span><span class="p">),</span>  <span class="c1"># T</span>
+<a id="__codelineno-8-8" name="__codelineno-8-8" href="#__codelineno-8-8"></a>    <span class="n">np</span><span class="o">.</span><span class="n">random</span><span class="o">.</span><span class="n">uniform</span><span class="p">(</span><span class="mf">0.15</span><span class="p">,</span> <span class="mf">0.35</span><span class="p">,</span> <span class="mi">1000</span><span class="p">),</span> <span class="c1"># sigma</span>
+<a id="__codelineno-8-9" name="__codelineno-8-9" href="#__codelineno-8-9"></a>    <span class="n">np</span><span class="o">.</span><span class="n">random</span><span class="o">.</span><span class="n">uniform</span><span class="p">(</span><span class="mf">0.01</span><span class="p">,</span> <span class="mf">0.08</span><span class="p">,</span> <span class="mi">1000</span><span class="p">),</span> <span class="c1"># r</span>
+<a id="__codelineno-8-10" name="__codelineno-8-10" href="#__codelineno-8-10"></a><span class="p">])</span>
+<a id="__codelineno-8-11" name="__codelineno-8-11" href="#__codelineno-8-11"></a>
+<a id="__codelineno-8-12" name="__codelineno-8-12" href="#__codelineno-8-12"></a><span class="n">prices</span> <span class="o">=</span> <span class="n">tt</span><span class="o">.</span><span class="n">eval_batch</span><span class="p">(</span><span class="n">points</span><span class="p">)</span>  <span class="c1"># (1000,) array</span>
+</code></pre></div>
+<p><code>eval_batch()</code> vectorizes the TT inner product over all points simultaneously
+using <code>np.einsum</code> for batched matrix contractions, which is significantly
+faster than calling <code>eval()</code> in a loop. Typical speedup is 15--20x.</p>
+<h2 id="performance-comparison">Performance Comparison<a class="headerlink" href="#performance-comparison" title="Permanent link">&para;</a></h2>
+<h3 id="pychebyshev-vs-mocax-extend-tensor-train">PyChebyshev vs MoCaX Extend (Tensor Train)<a class="headerlink" href="#pychebyshev-vs-mocax-extend-tensor-train" title="Permanent link">&para;</a></h3>
+<p>Both PyChebyshev <code>ChebyshevTT</code> and MoCaX <code>MocaxExtend</code> build Chebyshev
+interpolants in Tensor Train format. They differ in <strong>how</strong> the TT is
+constructed:</p>
+<table>
+<thead>
+<tr>
+<th></th>
+<th>PyChebyshev <code>ChebyshevTT</code></th>
+<th>MoCaX <code>MocaxExtend</code></th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td><strong>Build algorithm</strong></td>
+<td>TT-Cross (maxvol pivoting)</td>
+<td>Rank-adaptive ALS on random subgrid</td>
+</tr>
+<tr>
+<td><strong>Point selection</strong></td>
+<td>Adaptive via cross interpolation</td>
+<td>Random subset of full Chebyshev grid</td>
+</tr>
+<tr>
+<td><strong>Eval implementation</strong></td>
+<td>Vectorized NumPy (einsum, BLAS)</td>
+<td>Python loops + deep copies</td>
+</tr>
+<tr>
+<td><strong>Coefficient cores</strong></td>
+<td>Pre-computed via DCT-II</td>
+<td>Recomputed on every eval call</td>
+</tr>
+</tbody>
+</table>
+<p>The following benchmarks are from 5D Black-Scholes <span class="arithmatex">\(V(S, K, T, \sigma, r)\)</span> with
+11 Chebyshev nodes per dimension, dividend yield <span class="arithmatex">\(q = 0.02\)</span>.</p>
+<h4 id="build-comparison">Build comparison<a class="headerlink" href="#build-comparison" title="Permanent link">&para;</a></h4>
+<table>
+<thead>
+<tr>
+<th>Metric</th>
+<th>PyChebyshev</th>
+<th>MoCaX</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>Build time</td>
+<td>0.35s</td>
+<td>5.73s</td>
+</tr>
+<tr>
+<td>Function evaluations</td>
+<td>7,419</td>
+<td>8,000</td>
+</tr>
+</tbody>
+</table>
+<p>PyChebyshev uses slightly fewer evaluations (TT-Cross adaptively selects the
+most informative points) and builds <strong>16x faster</strong> (no Python-level ALS
+optimization loop).</p>
+<h4 id="accuracy-50-random-test-points">Accuracy (50 random test points)<a class="headerlink" href="#accuracy-50-random-test-points" title="Permanent link">&para;</a></h4>
+<table>
+<thead>
+<tr>
+<th>Metric</th>
+<th>PyChebyshev</th>
+<th>MoCaX</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>Mean price error</td>
+<td>0.002%</td>
+<td>0.093%</td>
+</tr>
+<tr>
+<td>Max price error</td>
+<td>0.014%</td>
+<td>0.712%</td>
+</tr>
+<tr>
+<td>Median price error</td>
+<td>0.001%</td>
+<td>0.045%</td>
+</tr>
+</tbody>
+</table>
+<p>PyChebyshev is <strong>40--50x more accurate</strong> at comparable evaluation budgets.</p>
+<h4 id="evaluation-speed-1000-random-points">Evaluation speed (1000 random points)<a class="headerlink" href="#evaluation-speed-1000-random-points" title="Permanent link">&para;</a></h4>
+<table>
+<thead>
+<tr>
+<th>Method</th>
+<th>PyChebyshev</th>
+<th>MoCaX</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>Single eval</td>
+<td>0.065 ms/query</td>
+<td>--</td>
+</tr>
+<tr>
+<td>Batch eval</td>
+<td>0.004 ms/query</td>
+<td>0.246 ms/query</td>
+</tr>
+</tbody>
+</table>
+<p>PyChebyshev batch evaluation is <strong>58x faster</strong> than MoCaX.</p>
+<h4 id="greeks-accuracy-10-scenarios-vs-analytical">Greeks accuracy (10 scenarios vs analytical)<a class="headerlink" href="#greeks-accuracy-10-scenarios-vs-analytical" title="Permanent link">&para;</a></h4>
+<table>
+<thead>
+<tr>
+<th>Greek</th>
+<th>PyChebyshev avg error</th>
+<th>MoCaX avg error</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>Delta</td>
+<td>0.029%</td>
+<td>0.379%</td>
+</tr>
+<tr>
+<td>Gamma</td>
+<td>0.019%</td>
+<td>1.604%</td>
+</tr>
+</tbody>
+</table>
+<p>Both use central finite differences. PyChebyshev's advantage comes from its
+more accurate underlying interpolant.</p>
+<h3 id="reproducing-the-comparison">Reproducing the comparison<a class="headerlink" href="#reproducing-the-comparison" title="Permanent link">&para;</a></h3>
+<p>The comparison script <code>compare_tensor_train.py</code> in the repository root runs
+all the benchmarks above. It requires the MoCaX C++ library (not publicly
+available); PyChebyshev results are shown regardless.</p>
+<div class="highlight"><pre><span></span><code><a id="__codelineno-9-1" name="__codelineno-9-1" href="#__codelineno-9-1"></a><span class="c1"># Run the comparison (MoCaX portion is skipped if unavailable)</span>
+<a id="__codelineno-9-2" name="__codelineno-9-2" href="#__codelineno-9-2"></a>uv<span class="w"> </span>run<span class="w"> </span>--with<span class="w"> </span>tqdm<span class="w"> </span>--with<span class="w"> </span>blackscholes<span class="w"> </span>python<span class="w"> </span>compare_tensor_train.py
+</code></pre></div>
+<p>If you have MoCaX installed, ensure the <code>mocaxextend_lib/</code> directory with
+<code>shared_libs/</code> (containing <code>libtensorvals.so</code> and <code>libhommat.so</code>) is in the
+repository root.</p>
+<div class="admonition note">
+<p class="admonition-title">MoCaX results are nondeterministic</p>
+<p>MoCaX uses a random subgrid for its ALS optimization, so its accuracy
+varies between runs. The numbers above are representative of typical runs.</p>
+</div>
+<h2 id="comparison-with-other-pychebyshev-methods">Comparison with Other PyChebyshev Methods<a class="headerlink" href="#comparison-with-other-pychebyshev-methods" title="Permanent link">&para;</a></h2>
+<table>
+<thead>
+<tr>
+<th></th>
+<th><code>ChebyshevApproximation</code></th>
+<th><code>ChebyshevTT</code></th>
+<th><code>ChebyshevSlider</code></th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td><strong>Dimensions</strong></td>
+<td><span class="arithmatex">\(\leq 5\)</span> (practical)</td>
+<td><span class="arithmatex">\(5+\)</span></td>
+<td>Any (with caveats)</td>
+</tr>
+<tr>
+<td><strong>Build cost</strong></td>
+<td><span class="arithmatex">\(O(n^d)\)</span> evaluations</td>
+<td><span class="arithmatex">\(O(d \cdot n \cdot r^2)\)</span> evaluations</td>
+<td>$\sum_i O(n_{g_i}^{</td>
+</tr>
+<tr>
+<td><strong>Eval cost</strong></td>
+<td><span class="arithmatex">\(O(d \cdot n)\)</span> via BLAS GEMV</td>
+<td><span class="arithmatex">\(O(d \cdot n \cdot r^2)\)</span> via einsum</td>
+<td><span class="arithmatex">\(O(k \cdot d_g \cdot n)\)</span> per slide</td>
+</tr>
+<tr>
+<td><strong>Derivatives</strong></td>
+<td>Analytical (spectral)</td>
+<td>Finite differences</td>
+<td>Analytical (per-slide)</td>
+</tr>
+<tr>
+<td><strong>Accuracy</strong></td>
+<td>Spectral convergence</td>
+<td>Rank-dependent</td>
+<td>Depends on separability</td>
+</tr>
+<tr>
+<td><strong>Best for</strong></td>
+<td>Low-<span class="arithmatex">\(d\)</span>, high-accuracy Greeks</td>
+<td>Moderate-<span class="arithmatex">\(d\)</span>, general functions</td>
+<td>High-<span class="arithmatex">\(d\)</span>, separable functions</td>
+</tr>
+</tbody>
+</table>
+<h2 id="serialization">Serialization<a class="headerlink" href="#serialization" title="Permanent link">&para;</a></h2>
+<p><code>ChebyshevTT</code> supports saving and loading via pickle, following the same pattern
+as the other PyChebyshev classes:</p>
+<div class="highlight"><pre><span></span><code><a id="__codelineno-10-1" name="__codelineno-10-1" href="#__codelineno-10-1"></a><span class="c1"># Save after building</span>
+<a id="__codelineno-10-2" name="__codelineno-10-2" href="#__codelineno-10-2"></a><span class="n">tt</span><span class="o">.</span><span class="n">save</span><span class="p">(</span><span class="s2">&quot;bs_5d_tt.pkl&quot;</span><span class="p">)</span>
+<a id="__codelineno-10-3" name="__codelineno-10-3" href="#__codelineno-10-3"></a>
+<a id="__codelineno-10-4" name="__codelineno-10-4" href="#__codelineno-10-4"></a><span class="c1"># Load later (no rebuild needed)</span>
+<a id="__codelineno-10-5" name="__codelineno-10-5" href="#__codelineno-10-5"></a><span class="kn">from</span><span class="w"> </span><span class="nn">pychebyshev</span><span class="w"> </span><span class="kn">import</span> <span class="n">ChebyshevTT</span>
+<a id="__codelineno-10-6" name="__codelineno-10-6" href="#__codelineno-10-6"></a><span class="n">tt_loaded</span> <span class="o">=</span> <span class="n">ChebyshevTT</span><span class="o">.</span><span class="n">load</span><span class="p">(</span><span class="s2">&quot;bs_5d_tt.pkl&quot;</span><span class="p">)</span>
+<a id="__codelineno-10-7" name="__codelineno-10-7" href="#__codelineno-10-7"></a><span class="n">price</span> <span class="o">=</span> <span class="n">tt_loaded</span><span class="o">.</span><span class="n">eval</span><span class="p">([</span><span class="mi">100</span><span class="p">,</span> <span class="mi">100</span><span class="p">,</span> <span class="mf">1.0</span><span class="p">,</span> <span class="mf">0.25</span><span class="p">,</span> <span class="mf">0.05</span><span class="p">])</span>
+</code></pre></div>
+<div class="admonition note">
+<p class="admonition-title">Note</p>
+<p>The original function is <strong>not</strong> saved -- only the pre-computed coefficient
+cores and metadata. After loading, <code>eval()</code>, <code>eval_batch()</code>, and <code>eval_multi()</code>
+work normally, but <code>build()</code> cannot be called again without re-supplying the
+function.</p>
+</div>
+<h2 id="limitations">Limitations<a class="headerlink" href="#limitations" title="Permanent link">&para;</a></h2>
+<ul>
+<li><strong>No analytical derivatives.</strong> The TT format does not support spectral
+  differentiation matrices. Derivatives are computed via finite differences, which
+  are less accurate (especially for second-order derivatives like Gamma).</li>
+<li><strong>Error estimates are approximate.</strong> The <code>error_estimate()</code> method captures
+  per-core coefficient truncation but not rank truncation error. Always validate
+  against known solutions when possible.</li>
+<li><strong>Convergence depends on function structure.</strong> TT-Cross works best for functions
+  with low-rank structure (smooth, with moderate coupling between variables). Not
+  all functions have good low-rank TT approximations -- highly oscillatory or
+  discontinuous functions may require very high ranks.</li>
+<li><strong>Build cost grows with rank.</strong> While <span class="arithmatex">\(O(d \cdot n \cdot r^2)\)</span> is much better
+  than <span class="arithmatex">\(O(n^d)\)</span>, a large <code>max_rank</code> (say, 50+) can still be expensive for costly
+  functions.</li>
+</ul>
+<h2 id="mathematical-reference">Mathematical Reference<a class="headerlink" href="#mathematical-reference" title="Permanent link">&para;</a></h2>
+<p>The TT interpolation approach implemented here follows:</p>
+<ul>
+<li><strong>Ruiz &amp; Zeron (2021)</strong>, <em>Machine Learning for Risk Calculations</em>, Wiley Finance,
+  Chapter 6: Tensor Train decomposition for Chebyshev interpolation.</li>
+<li><strong>Oseledets &amp; Tyrtyshnikov (2010)</strong>, "TT-Cross approximation for multidimensional
+  arrays" -- the cross approximation algorithm used to build TT cores from function
+  evaluations.</li>
+<li><strong>Goreinov, Tyrtyshnikov &amp; Zamarashkin (1997)</strong> -- maxvol algorithm for pivot
+  selection within TT-Cross.</li>
+</ul>
+<h2 id="api-reference">API Reference<a class="headerlink" href="#api-reference" title="Permanent link">&para;</a></h2>
+
+
+<div class="doc doc-object doc-class">
+
+
+
+<a id="pychebyshev.tensor_train.ChebyshevTT"></a>
+    <div class="doc doc-contents first">
+
+
+
+        <p>Chebyshev interpolation in Tensor Train format.</p>
+<p>For functions of 5+ dimensions where full tensor interpolation
+is infeasible. Uses TT-Cross to build from O(d * n * r^2) function
+evaluations instead of O(n^d), then evaluates via TT inner product.</p>
+
+
+<p><span class="doc-section-title">Parameters:</span></p>
+    <table>
+      <thead>
+        <tr>
+          <th>Name</th>
+          <th>Type</th>
+          <th>Description</th>
+          <th>Default</th>
+        </tr>
+      </thead>
+      <tbody>
+          <tr class="doc-section-item">
+            <td>
+                <code>function</code>
+            </td>
+            <td>
+                  <code><span title="callable">callable</span></code>
+            </td>
+            <td>
+              <div class="doc-md-description">
+                <p>Function to approximate. Signature: <code>f(point, data) -&gt; float</code>
+where <code>point</code> is a list of floats and <code>data</code> is arbitrary
+additional data (can be None).</p>
+              </div>
+            </td>
+            <td>
+                <em>required</em>
+            </td>
+          </tr>
+          <tr class="doc-section-item">
+            <td>
+                <code>num_dimensions</code>
+            </td>
+            <td>
+                  <code><span title="int">int</span></code>
+            </td>
+            <td>
+              <div class="doc-md-description">
+                <p>Number of input dimensions.</p>
+              </div>
+            </td>
+            <td>
+                <em>required</em>
+            </td>
+          </tr>
+          <tr class="doc-section-item">
+            <td>
+                <code>domain</code>
+            </td>
+            <td>
+                  <code>list of (float, float)</code>
+            </td>
+            <td>
+              <div class="doc-md-description">
+                <p>Bounds [(lo, hi), ...] for each dimension.</p>
+              </div>
+            </td>
+            <td>
+                <em>required</em>
+            </td>
+          </tr>
+          <tr class="doc-section-item">
+            <td>
+                <code>n_nodes</code>
+            </td>
+            <td>
+                  <code>list of int</code>
+            </td>
+            <td>
+              <div class="doc-md-description">
+                <p>Number of Chebyshev nodes per dimension.</p>
+              </div>
+            </td>
+            <td>
+                <em>required</em>
+            </td>
+          </tr>
+          <tr class="doc-section-item">
+            <td>
+                <code>max_rank</code>
+            </td>
+            <td>
+                  <code><span title="int">int</span></code>
+            </td>
+            <td>
+              <div class="doc-md-description">
+                <p>Maximum TT rank. Higher = more accurate, more expensive.
+Default is 10.</p>
+              </div>
+            </td>
+            <td>
+                  <code>10</code>
+            </td>
+          </tr>
+          <tr class="doc-section-item">
+            <td>
+                <code>tolerance</code>
+            </td>
+            <td>
+                  <code><span title="float">float</span></code>
+            </td>
+            <td>
+              <div class="doc-md-description">
+                <p>Convergence tolerance for TT-Cross. Default is 1e-6.</p>
+              </div>
+            </td>
+            <td>
+                  <code>1e-06</code>
+            </td>
+          </tr>
+          <tr class="doc-section-item">
+            <td>
+                <code>max_sweeps</code>
+            </td>
+            <td>
+                  <code><span title="int">int</span></code>
+            </td>
+            <td>
+              <div class="doc-md-description">
+                <p>Maximum number of TT-Cross sweeps. Default is 10.</p>
+              </div>
+            </td>
+            <td>
+                  <code>10</code>
+            </td>
+          </tr>
+      </tbody>
+    </table>
+
+
+<p><span class="doc-section-title">Examples:</span></p>
+    <div class="highlight"><pre><span></span><code><a id="__codelineno-0-1" name="__codelineno-0-1" href="#__codelineno-0-1"></a><span class="gp">&gt;&gt;&gt; </span><span class="kn">import</span><span class="w"> </span><span class="nn">math</span>
+<a id="__codelineno-0-2" name="__codelineno-0-2" href="#__codelineno-0-2"></a><span class="gp">&gt;&gt;&gt; </span><span class="k">def</span><span class="w"> </span><span class="nf">f</span><span class="p">(</span><span class="n">x</span><span class="p">,</span> <span class="n">_</span><span class="p">):</span>
+<a id="__codelineno-0-3" name="__codelineno-0-3" href="#__codelineno-0-3"></a><span class="gp">... </span>    <span class="k">return</span> <span class="n">math</span><span class="o">.</span><span class="n">sin</span><span class="p">(</span><span class="n">x</span><span class="p">[</span><span class="mi">0</span><span class="p">])</span> <span class="o">+</span> <span class="n">math</span><span class="o">.</span><span class="n">sin</span><span class="p">(</span><span class="n">x</span><span class="p">[</span><span class="mi">1</span><span class="p">])</span> <span class="o">+</span> <span class="n">math</span><span class="o">.</span><span class="n">sin</span><span class="p">(</span><span class="n">x</span><span class="p">[</span><span class="mi">2</span><span class="p">])</span>
+<a id="__codelineno-0-4" name="__codelineno-0-4" href="#__codelineno-0-4"></a><span class="gp">&gt;&gt;&gt; </span><span class="n">tt</span> <span class="o">=</span> <span class="n">ChebyshevTT</span><span class="p">(</span><span class="n">f</span><span class="p">,</span> <span class="mi">3</span><span class="p">,</span> <span class="p">[[</span><span class="o">-</span><span class="mi">1</span><span class="p">,</span> <span class="mi">1</span><span class="p">],</span> <span class="p">[</span><span class="o">-</span><span class="mi">1</span><span class="p">,</span> <span class="mi">1</span><span class="p">],</span> <span class="p">[</span><span class="o">-</span><span class="mi">1</span><span class="p">,</span> <span class="mi">1</span><span class="p">]],</span> <span class="p">[</span><span class="mi">11</span><span class="p">,</span> <span class="mi">11</span><span class="p">,</span> <span class="mi">11</span><span class="p">])</span>
+<a id="__codelineno-0-5" name="__codelineno-0-5" href="#__codelineno-0-5"></a><span class="gp">&gt;&gt;&gt; </span><span class="n">tt</span><span class="o">.</span><span class="n">build</span><span class="p">(</span><span class="n">verbose</span><span class="o">=</span><span class="kc">False</span><span class="p">)</span>
+<a id="__codelineno-0-6" name="__codelineno-0-6" href="#__codelineno-0-6"></a><span class="gp">&gt;&gt;&gt; </span><span class="n">tt</span><span class="o">.</span><span class="n">eval</span><span class="p">([</span><span class="mf">0.5</span><span class="p">,</span> <span class="mf">0.3</span><span class="p">,</span> <span class="mf">0.1</span><span class="p">])</span>
+<a id="__codelineno-0-7" name="__codelineno-0-7" href="#__codelineno-0-7"></a><span class="go">0.8764...</span>
+</code></pre></div>
+
+
+
+
+
+
+
+
+
+
+
+<div class="doc doc-children">
+
+
+
+
+
+
+
+<div class="doc doc-object doc-attribute">
+
+
+
+<h2 id="pychebyshev.tensor_train.ChebyshevTT.tt_ranks" class="doc doc-heading">
+            <code class="highlight language-python"><span class="n">tt_ranks</span></code>
+
+  <span class="doc doc-labels">
+      <small class="doc doc-label doc-label-property"><code>property</code></small>
+  </span>
+
+<a href="#pychebyshev.tensor_train.ChebyshevTT.tt_ranks" class="headerlink" title="Permanent link">&para;</a></h2>
+
+
+    <div class="doc doc-contents ">
+
+        <p>TT ranks [1, r_1, r_2, ..., r_{d-1}, 1].</p>
+
+
+    <p><span class="doc-section-title">Returns:</span></p>
+    <table>
+      <thead>
+        <tr>
+          <th>Type</th>
+          <th>Description</th>
+        </tr>
+      </thead>
+      <tbody>
+          <tr class="doc-section-item">
+            <td>
+                  <code>list of int</code>
+            </td>
+            <td>
+              <div class="doc-md-description">
+                <p>The TT rank vector. Only available after :meth:<code>build</code>.</p>
+              </div>
+            </td>
+          </tr>
+      </tbody>
+    </table>
+
+
+<p><span class="doc-section-title">Raises:</span></p>
+    <table>
+      <thead>
+        <tr>
+          <th>Type</th>
+          <th>Description</th>
+        </tr>
+      </thead>
+      <tbody>
+          <tr class="doc-section-item">
+            <td>
+                  <code><span title="RuntimeError">RuntimeError</span></code>
+            </td>
+            <td>
+              <div class="doc-md-description">
+                <p>If <code>build()</code> has not been called.</p>
+              </div>
+            </td>
+          </tr>
+      </tbody>
+    </table>
+
+    </div>
+
+</div>
+
+<div class="doc doc-object doc-attribute">
+
+
+
+<h2 id="pychebyshev.tensor_train.ChebyshevTT.compression_ratio" class="doc doc-heading">
+            <code class="highlight language-python"><span class="n">compression_ratio</span></code>
+
+  <span class="doc doc-labels">
+      <small class="doc doc-label doc-label-property"><code>property</code></small>
+  </span>
+
+<a href="#pychebyshev.tensor_train.ChebyshevTT.compression_ratio" class="headerlink" title="Permanent link">&para;</a></h2>
+
+
+    <div class="doc doc-contents ">
+
+        <p>Ratio of full tensor elements to TT storage elements.</p>
+
+
+    <p><span class="doc-section-title">Returns:</span></p>
+    <table>
+      <thead>
+        <tr>
+          <th>Type</th>
+          <th>Description</th>
+        </tr>
+      </thead>
+      <tbody>
+          <tr class="doc-section-item">
+            <td>
+                  <code><span title="float">float</span></code>
+            </td>
+            <td>
+              <div class="doc-md-description">
+                <p>Compression ratio (&gt; 1 means TT is more compact).</p>
+              </div>
+            </td>
+          </tr>
+      </tbody>
+    </table>
+
+
+<p><span class="doc-section-title">Raises:</span></p>
+    <table>
+      <thead>
+        <tr>
+          <th>Type</th>
+          <th>Description</th>
+        </tr>
+      </thead>
+      <tbody>
+          <tr class="doc-section-item">
+            <td>
+                  <code><span title="RuntimeError">RuntimeError</span></code>
+            </td>
+            <td>
+              <div class="doc-md-description">
+                <p>If <code>build()</code> has not been called.</p>
+              </div>
+            </td>
+          </tr>
+      </tbody>
+    </table>
+
+    </div>
+
+</div>
+
+<div class="doc doc-object doc-attribute">
+
+
+
+<h2 id="pychebyshev.tensor_train.ChebyshevTT.total_build_evals" class="doc doc-heading">
+            <code class="highlight language-python"><span class="n">total_build_evals</span></code>
+
+  <span class="doc doc-labels">
+      <small class="doc doc-label doc-label-property"><code>property</code></small>
+  </span>
+
+<a href="#pychebyshev.tensor_train.ChebyshevTT.total_build_evals" class="headerlink" title="Permanent link">&para;</a></h2>
+
+
+    <div class="doc doc-contents ">
+
+        <p>Total number of function evaluations used during build.</p>
+
+
+    <p><span class="doc-section-title">Returns:</span></p>
+    <table>
+      <thead>
+        <tr>
+          <th>Type</th>
+          <th>Description</th>
+        </tr>
+      </thead>
+      <tbody>
+          <tr class="doc-section-item">
+            <td>
+                  <code><span title="int">int</span></code>
+            </td>
+            <td>
+              <div class="doc-md-description">
+                <p>Number of function evaluations. Only meaningful after
+:meth:<code>build</code>.</p>
+              </div>
+            </td>
+          </tr>
+      </tbody>
+    </table>
+
+    </div>
+
+</div>
+
+
+
+
+<div class="doc doc-object doc-function">
+
+
+<h2 id="pychebyshev.tensor_train.ChebyshevTT.build" class="doc doc-heading">
+            <code class="highlight language-python"><span class="n">build</span><span class="p">(</span><span class="n">verbose</span><span class="o">=</span><span class="kc">True</span><span class="p">,</span> <span class="n">seed</span><span class="o">=</span><span class="kc">None</span><span class="p">,</span> <span class="n">method</span><span class="o">=</span><span class="s1">&#39;cross&#39;</span><span class="p">)</span></code>
+
+<a href="#pychebyshev.tensor_train.ChebyshevTT.build" class="headerlink" title="Permanent link">&para;</a></h2>
+
+
+    <div class="doc doc-contents ">
+
+        <p>Build TT approximation and convert to Chebyshev coefficient cores.</p>
+<p>The build process has three stages:</p>
+<ol>
+<li><strong>Generate Chebyshev grids.</strong> Compute Type I Chebyshev nodes
+   in each dimension, scaled to the specified domain.</li>
+<li><strong>Build value cores.</strong> Either TT-Cross (evaluating at
+   <span class="arithmatex">\(O(d \cdot n \cdot r^2)\)</span> strategically selected points) or
+   TT-SVD (evaluating the full <span class="arithmatex">\(O(n^d)\)</span> tensor, then decomposing
+   via sequential SVD).</li>
+<li><strong>Convert to coefficient cores.</strong> Apply DCT-II along the node
+   axis of each core to convert from function values at Chebyshev
+   nodes to Chebyshev expansion coefficients. This enables
+   evaluation at arbitrary (non-grid) points via the Chebyshev
+   polynomial inner product.</li>
+</ol>
+
+
+<p><span class="doc-section-title">Parameters:</span></p>
+    <table>
+      <thead>
+        <tr>
+          <th>Name</th>
+          <th>Type</th>
+          <th>Description</th>
+          <th>Default</th>
+        </tr>
+      </thead>
+      <tbody>
+          <tr class="doc-section-item">
+            <td>
+                <code>verbose</code>
+            </td>
+            <td>
+                  <code><span title="bool">bool</span></code>
+            </td>
+            <td>
+              <div class="doc-md-description">
+                <p>If True, print build progress. Default is True.</p>
+              </div>
+            </td>
+            <td>
+                  <code>True</code>
+            </td>
+          </tr>
+          <tr class="doc-section-item">
+            <td>
+                <code>seed</code>
+            </td>
+            <td>
+                  <code><span title="int">int</span> or None</code>
+            </td>
+            <td>
+              <div class="doc-md-description">
+                <p>Random seed for TT-Cross initialization. Default is None.
+Ignored when <code>method='svd'</code>.</p>
+              </div>
+            </td>
+            <td>
+                  <code>None</code>
+            </td>
+          </tr>
+          <tr class="doc-section-item">
+            <td>
+                <code>method</code>
+            </td>
+            <td>
+                  <code>``&#39;cross&#39;`` or ``&#39;svd&#39;``</code>
+            </td>
+            <td>
+              <div class="doc-md-description">
+                <p>Build algorithm. <code>'cross'</code> (default) uses TT-Cross to
+evaluate the function at <span class="arithmatex">\(O(d \cdot n \cdot r^2)\)</span> strategically
+selected points. <code>'svd'</code> builds the full tensor and decomposes
+via truncated SVD -- only feasible for moderate dimensions
+(<span class="arithmatex">\(d \leq 6\)</span>) but useful for validation.</p>
+              </div>
+            </td>
+            <td>
+                  <code>&#39;cross&#39;</code>
+            </td>
+          </tr>
+      </tbody>
+    </table>
+
+
+    </div>
+
+</div>
+
+<div class="doc doc-object doc-function">
+
+
+<h2 id="pychebyshev.tensor_train.ChebyshevTT.eval" class="doc doc-heading">
+            <code class="highlight language-python"><span class="nb">eval</span><span class="p">(</span><span class="n">point</span><span class="p">)</span></code>
+
+<a href="#pychebyshev.tensor_train.ChebyshevTT.eval" class="headerlink" title="Permanent link">&para;</a></h2>
+
+
+    <div class="doc doc-contents ">
+
+        <p>Evaluate at a single point via TT inner product.</p>
+<p>Computes the Chebyshev interpolant value at an arbitrary point by
+contracting the pre-computed coefficient cores with Chebyshev
+polynomial values. For each dimension <span class="arithmatex">\(k\)</span>:</p>
+<ol>
+<li>Scale the query coordinate to <span class="arithmatex">\([-1, 1]\)</span>.</li>
+<li>Evaluate all Chebyshev polynomials <span class="arithmatex">\(T_0, \ldots, T_{n_k-1}\)</span>.</li>
+<li>Contract with the coefficient core:
+   <span class="arithmatex">\(v = \sum_j q_j \cdot \text{core}[:, j, :]\)</span></li>
+</ol>
+<p>The chain of contractions reduces to a scalar.
+Cost: <span class="arithmatex">\(O(d \cdot n \cdot r^2)\)</span> per point.</p>
+
+
+<p><span class="doc-section-title">Parameters:</span></p>
+    <table>
+      <thead>
+        <tr>
+          <th>Name</th>
+          <th>Type</th>
+          <th>Description</th>
+          <th>Default</th>
+        </tr>
+      </thead>
+      <tbody>
+          <tr class="doc-section-item">
+            <td>
+                <code>point</code>
+            </td>
+            <td>
+                  <code>list of float</code>
+            </td>
+            <td>
+              <div class="doc-md-description">
+                <p>Query point, one coordinate per dimension.</p>
+              </div>
+            </td>
+            <td>
+                <em>required</em>
+            </td>
+          </tr>
+      </tbody>
+    </table>
+
+
+    <p><span class="doc-section-title">Returns:</span></p>
+    <table>
+      <thead>
+        <tr>
+          <th>Type</th>
+          <th>Description</th>
+        </tr>
+      </thead>
+      <tbody>
+          <tr class="doc-section-item">
+            <td>
+                  <code><span title="float">float</span></code>
+            </td>
+            <td>
+              <div class="doc-md-description">
+                <p>Interpolated value at the query point.</p>
+              </div>
+            </td>
+          </tr>
+      </tbody>
+    </table>
+
+
+<p><span class="doc-section-title">Raises:</span></p>
+    <table>
+      <thead>
+        <tr>
+          <th>Type</th>
+          <th>Description</th>
+        </tr>
+      </thead>
+      <tbody>
+          <tr class="doc-section-item">
+            <td>
+                  <code><span title="RuntimeError">RuntimeError</span></code>
+            </td>
+            <td>
+              <div class="doc-md-description">
+                <p>If <code>build()</code> has not been called.</p>
+              </div>
+            </td>
+          </tr>
+      </tbody>
+    </table>
+
+
+    </div>
+
+</div>
+
+<div class="doc doc-object doc-function">
+
+
+<h2 id="pychebyshev.tensor_train.ChebyshevTT.eval_batch" class="doc doc-heading">
+            <code class="highlight language-python"><span class="n">eval_batch</span><span class="p">(</span><span class="n">points</span><span class="p">)</span></code>
+
+<a href="#pychebyshev.tensor_train.ChebyshevTT.eval_batch" class="headerlink" title="Permanent link">&para;</a></h2>
+
+
+    <div class="doc doc-contents ">
+
+        <p>Evaluate at multiple points simultaneously.</p>
+<p>Vectorizes the TT inner product over all N points using
+<code>np.einsum</code> for batched matrix contractions. For each
+dimension, all N polynomial vectors are contracted with the
+coefficient core in a single einsum call, then all N chain
+multiplications proceed in parallel. Typical speedup is
+15--20x over calling :meth:<code>eval</code> in a loop.</p>
+
+
+<p><span class="doc-section-title">Parameters:</span></p>
+    <table>
+      <thead>
+        <tr>
+          <th>Name</th>
+          <th>Type</th>
+          <th>Description</th>
+          <th>Default</th>
+        </tr>
+      </thead>
+      <tbody>
+          <tr class="doc-section-item">
+            <td>
+                <code>points</code>
+            </td>
+            <td>
+                  <code>ndarray of shape (N, num_dimensions)</code>
+            </td>
+            <td>
+              <div class="doc-md-description">
+                <p>Query points.</p>
+              </div>
+            </td>
+            <td>
+                <em>required</em>
+            </td>
+          </tr>
+      </tbody>
+    </table>
+
+
+    <p><span class="doc-section-title">Returns:</span></p>
+    <table>
+      <thead>
+        <tr>
+          <th>Type</th>
+          <th>Description</th>
+        </tr>
+      </thead>
+      <tbody>
+          <tr class="doc-section-item">
+            <td>
+                  <code>ndarray of shape (N,)</code>
+            </td>
+            <td>
+              <div class="doc-md-description">
+                <p>Interpolated values at each query point.</p>
+              </div>
+            </td>
+          </tr>
+      </tbody>
+    </table>
+
+
+<p><span class="doc-section-title">Raises:</span></p>
+    <table>
+      <thead>
+        <tr>
+          <th>Type</th>
+          <th>Description</th>
+        </tr>
+      </thead>
+      <tbody>
+          <tr class="doc-section-item">
+            <td>
+                  <code><span title="RuntimeError">RuntimeError</span></code>
+            </td>
+            <td>
+              <div class="doc-md-description">
+                <p>If <code>build()</code> has not been called.</p>
+              </div>
+            </td>
+          </tr>
+      </tbody>
+    </table>
+
+
+    </div>
+
+</div>
+
+<div class="doc doc-object doc-function">
+
+
+<h2 id="pychebyshev.tensor_train.ChebyshevTT.eval_multi" class="doc doc-heading">
+            <code class="highlight language-python"><span class="n">eval_multi</span><span class="p">(</span><span class="n">point</span><span class="p">,</span> <span class="n">derivative_orders</span><span class="p">)</span></code>
+
+<a href="#pychebyshev.tensor_train.ChebyshevTT.eval_multi" class="headerlink" title="Permanent link">&para;</a></h2>
+
+
+    <div class="doc doc-contents ">
+
+        <p>Evaluate with finite-difference derivatives at a single point.</p>
+<p>Uses central finite differences. The first entry in
+<code>derivative_orders</code> is typically <code>[0, 0, ..., 0]</code> for the
+function value; subsequent entries specify derivative orders
+per dimension.</p>
+
+
+<p><span class="doc-section-title">Parameters:</span></p>
+    <table>
+      <thead>
+        <tr>
+          <th>Name</th>
+          <th>Type</th>
+          <th>Description</th>
+          <th>Default</th>
+        </tr>
+      </thead>
+      <tbody>
+          <tr class="doc-section-item">
+            <td>
+                <code>point</code>
+            </td>
+            <td>
+                  <code>list of float</code>
+            </td>
+            <td>
+              <div class="doc-md-description">
+                <p>Evaluation point in the full n-dimensional space.</p>
+              </div>
+            </td>
+            <td>
+                <em>required</em>
+            </td>
+          </tr>
+          <tr class="doc-section-item">
+            <td>
+                <code>derivative_orders</code>
+            </td>
+            <td>
+                  <code>list of list of int</code>
+            </td>
+            <td>
+              <div class="doc-md-description">
+                <p>Each inner list specifies derivative order per dimension.
+Supports 0 (value), 1 (first derivative), and 2 (second
+derivative).</p>
+              </div>
+            </td>
+            <td>
+                <em>required</em>
+            </td>
+          </tr>
+      </tbody>
+    </table>
+
+
+    <p><span class="doc-section-title">Returns:</span></p>
+    <table>
+      <thead>
+        <tr>
+          <th>Type</th>
+          <th>Description</th>
+        </tr>
+      </thead>
+      <tbody>
+          <tr class="doc-section-item">
+            <td>
+                  <code>list of float</code>
+            </td>
+            <td>
+              <div class="doc-md-description">
+                <p>One result per derivative order specification.</p>
+              </div>
+            </td>
+          </tr>
+      </tbody>
+    </table>
+
+
+<p><span class="doc-section-title">Raises:</span></p>
+    <table>
+      <thead>
+        <tr>
+          <th>Type</th>
+          <th>Description</th>
+        </tr>
+      </thead>
+      <tbody>
+          <tr class="doc-section-item">
+            <td>
+                  <code><span title="RuntimeError">RuntimeError</span></code>
+            </td>
+            <td>
+              <div class="doc-md-description">
+                <p>If <code>build()</code> has not been called.</p>
+              </div>
+            </td>
+          </tr>
+      </tbody>
+    </table>
+
+
+    </div>
+
+</div>
+
+<div class="doc doc-object doc-function">
+
+
+<h2 id="pychebyshev.tensor_train.ChebyshevTT.error_estimate" class="doc doc-heading">
+            <code class="highlight language-python"><span class="n">error_estimate</span><span class="p">()</span></code>
+
+<a href="#pychebyshev.tensor_train.ChebyshevTT.error_estimate" class="headerlink" title="Permanent link">&para;</a></h2>
+
+
+    <div class="doc doc-contents ">
+
+        <p>Estimate interpolation error from Chebyshev coefficient cores.</p>
+<p>For each dimension d, takes the maximum magnitude of the last
+Chebyshev coefficient across all "rows" and "columns" of the
+core (i.e., max over left-rank and right-rank indices of
+<code>|core[:, -1, :]|</code>). Returns the sum across dimensions.</p>
+<p>This is an approximate analog of the ex ante error estimation
+from Ruiz &amp; Zeron (2021), Section 3.4, adapted for TT format.</p>
+
+
+    <p><span class="doc-section-title">Returns:</span></p>
+    <table>
+      <thead>
+        <tr>
+          <th>Type</th>
+          <th>Description</th>
+        </tr>
+      </thead>
+      <tbody>
+          <tr class="doc-section-item">
+            <td>
+                  <code><span title="float">float</span></code>
+            </td>
+            <td>
+              <div class="doc-md-description">
+                <p>Estimated interpolation error.</p>
+              </div>
+            </td>
+          </tr>
+      </tbody>
+    </table>
+
+
+<p><span class="doc-section-title">Raises:</span></p>
+    <table>
+      <thead>
+        <tr>
+          <th>Type</th>
+          <th>Description</th>
+        </tr>
+      </thead>
+      <tbody>
+          <tr class="doc-section-item">
+            <td>
+                  <code><span title="RuntimeError">RuntimeError</span></code>
+            </td>
+            <td>
+              <div class="doc-md-description">
+                <p>If <code>build()</code> has not been called.</p>
+              </div>
+            </td>
+          </tr>
+      </tbody>
+    </table>
+
+
+    </div>
+
+</div>
+
+<div class="doc doc-object doc-function">
+
+
+<h2 id="pychebyshev.tensor_train.ChebyshevTT.__getstate__" class="doc doc-heading">
+            <code class="highlight language-python"><span class="n">__getstate__</span><span class="p">()</span></code>
+
+<a href="#pychebyshev.tensor_train.ChebyshevTT.__getstate__" class="headerlink" title="Permanent link">&para;</a></h2>
+
+
+    <div class="doc doc-contents ">
+
+        <p>Return picklable state, excluding the original function.</p>
+
+
+    </div>
+
+</div>
+
+<div class="doc doc-object doc-function">
+
+
+<h2 id="pychebyshev.tensor_train.ChebyshevTT.__setstate__" class="doc doc-heading">
+            <code class="highlight language-python"><span class="n">__setstate__</span><span class="p">(</span><span class="n">state</span><span class="p">)</span></code>
+
+<a href="#pychebyshev.tensor_train.ChebyshevTT.__setstate__" class="headerlink" title="Permanent link">&para;</a></h2>
+
+
+    <div class="doc doc-contents ">
+
+        <p>Restore state from a pickled dict.</p>
+
+
+    </div>
+
+</div>
+
+<div class="doc doc-object doc-function">
+
+
+<h2 id="pychebyshev.tensor_train.ChebyshevTT.save" class="doc doc-heading">
+            <code class="highlight language-python"><span class="n">save</span><span class="p">(</span><span class="n">path</span><span class="p">)</span></code>
+
+<a href="#pychebyshev.tensor_train.ChebyshevTT.save" class="headerlink" title="Permanent link">&para;</a></h2>
+
+
+    <div class="doc doc-contents ">
+
+        <p>Save the built TT interpolant to a file.</p>
+<p>The original function is <strong>not</strong> saved -- only the numerical
+data needed for evaluation. The saved file can be loaded with
+:meth:<code>load</code> without access to the original function.</p>
+
+
+<p><span class="doc-section-title">Parameters:</span></p>
+    <table>
+      <thead>
+        <tr>
+          <th>Name</th>
+          <th>Type</th>
+          <th>Description</th>
+          <th>Default</th>
+        </tr>
+      </thead>
+      <tbody>
+          <tr class="doc-section-item">
+            <td>
+                <code>path</code>
+            </td>
+            <td>
+                  <code><span title="str">str</span> or <span title="path">path</span> - <span title="like">like</span></code>
+            </td>
+            <td>
+              <div class="doc-md-description">
+                <p>Destination file path.</p>
+              </div>
+            </td>
+            <td>
+                <em>required</em>
+            </td>
+          </tr>
+      </tbody>
+    </table>
+
+
+<p><span class="doc-section-title">Raises:</span></p>
+    <table>
+      <thead>
+        <tr>
+          <th>Type</th>
+          <th>Description</th>
+        </tr>
+      </thead>
+      <tbody>
+          <tr class="doc-section-item">
+            <td>
+                  <code><span title="RuntimeError">RuntimeError</span></code>
+            </td>
+            <td>
+              <div class="doc-md-description">
+                <p>If <code>build()</code> has not been called.</p>
+              </div>
+            </td>
+          </tr>
+      </tbody>
+    </table>
+
+
+    </div>
+
+</div>
+
+<div class="doc doc-object doc-function">
+
+
+<h2 id="pychebyshev.tensor_train.ChebyshevTT.load" class="doc doc-heading">
+            <code class="highlight language-python"><span class="n">load</span><span class="p">(</span><span class="n">path</span><span class="p">)</span></code>
+
+  <span class="doc doc-labels">
+      <small class="doc doc-label doc-label-classmethod"><code>classmethod</code></small>
+  </span>
+
+<a href="#pychebyshev.tensor_train.ChebyshevTT.load" class="headerlink" title="Permanent link">&para;</a></h2>
+
+
+    <div class="doc doc-contents ">
+
+        <p>Load a previously saved TT interpolant from a file.</p>
+<p>The loaded object can evaluate immediately; no rebuild is needed.
+The <code>function</code> attribute will be <code>None</code>. Assign a new function
+before calling <code>build()</code> again if a rebuild is desired.</p>
+
+
+<p><span class="doc-section-title">Parameters:</span></p>
+    <table>
+      <thead>
+        <tr>
+          <th>Name</th>
+          <th>Type</th>
+          <th>Description</th>
+          <th>Default</th>
+        </tr>
+      </thead>
+      <tbody>
+          <tr class="doc-section-item">
+            <td>
+                <code>path</code>
+            </td>
+            <td>
+                  <code><span title="str">str</span> or <span title="path">path</span> - <span title="like">like</span></code>
+            </td>
+            <td>
+              <div class="doc-md-description">
+                <p>Path to the saved file.</p>
+              </div>
+            </td>
+            <td>
+                <em>required</em>
+            </td>
+          </tr>
+      </tbody>
+    </table>
+
+
+    <p><span class="doc-section-title">Returns:</span></p>
+    <table>
+      <thead>
+        <tr>
+          <th>Type</th>
+          <th>Description</th>
+        </tr>
+      </thead>
+      <tbody>
+          <tr class="doc-section-item">
+            <td>
+                  <code><a class="autorefs autorefs-internal" title="pychebyshev.tensor_train.ChebyshevTT" href="#pychebyshev.tensor_train.ChebyshevTT">ChebyshevTT</a></code>
+            </td>
+            <td>
+              <div class="doc-md-description">
+                <p>The restored TT interpolant.</p>
+              </div>
+            </td>
+          </tr>
+      </tbody>
+    </table>
+
+
+<p><span class="doc-section-title">Warns:</span></p>
+    <table>
+      <thead>
+        <tr>
+          <th>Type</th>
+          <th>Description</th>
+        </tr>
+      </thead>
+      <tbody>
+          <tr class="doc-section-item">
+            <td>
+                  <code><span title="UserWarning">UserWarning</span></code>
+            </td>
+            <td>
+              <div class="doc-md-description">
+                <p>If the file was saved with a different PyChebyshev version.</p>
+              </div>
+            </td>
+          </tr>
+          <tr class="doc-section-item">
+            <td>
+                  <code>.. warning::</code>
+            </td>
+            <td>
+              <div class="doc-md-description">
+                <p>This method uses :mod:<code>pickle</code> internally. Pickle can execute
+arbitrary code during deserialization. <strong>Only load files you
+trust.</strong></p>
+              </div>
+            </td>
+          </tr>
+      </tbody>
+    </table>
+
+
+    </div>
+
+</div>
+
+
+
+  </div>
+
+    </div>
+
+</div>
+
+
+
+
+
+
+
+
+
+
+
+
+                
+              </article>
+            </div>
+          
+          
+<script>var target=document.getElementById(location.hash.slice(1));target&&target.name&&(target.checked=target.name.startsWith("__tabbed_"))</script>
+        </div>
+        
+          <button type="button" class="md-top md-icon" data-md-component="top" hidden>
+  
+  <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24"><path d="M13 20h-2V8l-5.5 5.5-1.42-1.42L12 4.16l7.92 7.92-1.42 1.42L13 8z"/></svg>
+  Back to top
+</button>
+        
+      </main>
+      
+        <footer class="md-footer">
+  
+  <div class="md-footer-meta md-typeset">
+    <div class="md-footer-meta__inner md-grid">
+      <div class="md-copyright">
+  
+  
+    Made with
+    <a href="https://squidfunk.github.io/mkdocs-material/" target="_blank" rel="noopener">
+      Material for MkDocs
+    </a>
+  
+</div>
+      
+    </div>
+  </div>
+</footer>
+      
+    </div>
+    <div class="md-dialog" data-md-component="dialog">
+      <div class="md-dialog__inner md-typeset"></div>
+    </div>
+    
+    
+    
+      
+      
+      <script id="__config" type="application/json">{"annotate": null, "base": "../..", "features": ["content.code.copy", "navigation.sections", "navigation.top", "search.highlight"], "search": "../../assets/javascripts/workers/search.2c215733.min.js", "tags": null, "translations": {"clipboard.copied": "Copied to clipboard", "clipboard.copy": "Copy to clipboard", "search.result.more.one": "1 more on this page", "search.result.more.other": "# more on this page", "search.result.none": "No matching documents", "search.result.one": "1 matching document", "search.result.other": "# matching documents", "search.result.placeholder": "Type to start searching", "search.result.term.missing": "Missing", "select.version": "Select version"}, "version": null}</script>
+    
+    
+      <script src="../../assets/javascripts/bundle.79ae519e.min.js"></script>
+      
+        <script src="../../javascripts/katex.js"></script>
+      
+        <script src="https://unpkg.com/katex@0/dist/katex.min.js"></script>
+      
+        <script src="https://unpkg.com/katex@0/dist/contrib/auto-render.min.js"></script>
+      
+    
+  </body>
+</html>

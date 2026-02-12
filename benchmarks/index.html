@@ -492,6 +492,34 @@
   
   
     <li class="md-nav__item">
+      <a href="../user-guide/tensor-train/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Tensor Train
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
       <a href="../user-guide/error-estimation/" class="md-nav__link">
         
   
@@ -663,6 +691,67 @@
   
 </li>
       
+        <li class="md-nav__item">
+  <a href="#tensor-train-tt-vs-mocax-extend" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Tensor Train (TT) vs MoCaX Extend
+      
+    </span>
+  </a>
+  
+    <nav class="md-nav" aria-label="Tensor Train (TT) vs MoCaX Extend">
+      <ul class="md-nav__list">
+        
+          <li class="md-nav__item">
+  <a href="#build" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Build
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#price-accuracy-50-random-test-points" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Price Accuracy (50 random test points)
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#evaluation-speed-1000-random-points" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Evaluation Speed (1000 random points)
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#greeks-accuracy-10-scenarios-fd-vs-analytical" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Greeks Accuracy (10 scenarios, FD vs analytical)
+      
+    </span>
+  </a>
+  
+</li>
+        
+      </ul>
+    </nav>
+  
+</li>
+      
     </ul>
   
 </nav>
@@ -736,6 +825,67 @@
     <span class="md-ellipsis">
       
         Evaluation Method Comparison
+      
+    </span>
+  </a>
+  
+</li>
+        
+      </ul>
+    </nav>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#tensor-train-tt-vs-mocax-extend" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Tensor Train (TT) vs MoCaX Extend
+      
+    </span>
+  </a>
+  
+    <nav class="md-nav" aria-label="Tensor Train (TT) vs MoCaX Extend">
+      <ul class="md-nav__list">
+        
+          <li class="md-nav__item">
+  <a href="#build" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Build
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#price-accuracy-50-random-test-points" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Price Accuracy (50 random test points)
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#evaluation-speed-1000-random-points" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Evaluation Speed (1000 random points)
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#greeks-accuracy-10-scenarios-fd-vs-analytical" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Greeks Accuracy (10 scenarios, FD vs analytical)
       
     </span>
   </a>
@@ -878,6 +1028,116 @@ faster than JIT-compiled scalar loops — the data access pattern is more
 cache-friendly and leverages SIMD vectorization at the hardware level.
 <code>fast_eval()</code> is deprecated and will be removed in a future version.</p>
 </div>
+<h2 id="tensor-train-tt-vs-mocax-extend">Tensor Train (TT) vs MoCaX Extend<a class="headerlink" href="#tensor-train-tt-vs-mocax-extend" title="Permanent link">&para;</a></h2>
+<p><code>ChebyshevTT</code> and MoCaX <code>MocaxExtend</code> both build Chebyshev interpolants in TT
+format for the same 5D Black-Scholes problem. PyChebyshev uses TT-Cross (maxvol
+pivoting); MoCaX uses rank-adaptive ALS on a random subgrid. Both use ~7,400--8,000
+function evaluations.</p>
+<h3 id="build">Build<a class="headerlink" href="#build" title="Permanent link">&para;</a></h3>
+<table>
+<thead>
+<tr>
+<th>Metric</th>
+<th>PyChebyshev TT</th>
+<th>MoCaX TT</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>Build time</td>
+<td>0.35s</td>
+<td>5.73s</td>
+</tr>
+<tr>
+<td>Function evaluations</td>
+<td>7,419</td>
+<td>8,000</td>
+</tr>
+<tr>
+<td>TT ranks</td>
+<td>[1, 11, 11, 11, 7, 1]</td>
+<td>(not exposed)</td>
+</tr>
+<tr>
+<td>Compression ratio</td>
+<td>43.4x</td>
+<td>N/A</td>
+</tr>
+</tbody>
+</table>
+<h3 id="price-accuracy-50-random-test-points">Price Accuracy (50 random test points)<a class="headerlink" href="#price-accuracy-50-random-test-points" title="Permanent link">&para;</a></h3>
+<table>
+<thead>
+<tr>
+<th>Metric</th>
+<th>PyChebyshev TT</th>
+<th>MoCaX TT</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>Mean error</td>
+<td>0.002%</td>
+<td>0.093%</td>
+</tr>
+<tr>
+<td>Max error</td>
+<td>0.014%</td>
+<td>0.712%</td>
+</tr>
+<tr>
+<td>Median error</td>
+<td>0.001%</td>
+<td>0.045%</td>
+</tr>
+</tbody>
+</table>
+<h3 id="evaluation-speed-1000-random-points">Evaluation Speed (1000 random points)<a class="headerlink" href="#evaluation-speed-1000-random-points" title="Permanent link">&para;</a></h3>
+<table>
+<thead>
+<tr>
+<th>Method</th>
+<th>PyChebyshev TT</th>
+<th>MoCaX TT</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>Single eval</td>
+<td>0.065 ms</td>
+<td>--</td>
+</tr>
+<tr>
+<td>Batch eval</td>
+<td>0.004 ms</td>
+<td>0.246 ms</td>
+</tr>
+</tbody>
+</table>
+<h3 id="greeks-accuracy-10-scenarios-fd-vs-analytical">Greeks Accuracy (10 scenarios, FD vs analytical)<a class="headerlink" href="#greeks-accuracy-10-scenarios-fd-vs-analytical" title="Permanent link">&para;</a></h3>
+<table>
+<thead>
+<tr>
+<th>Greek</th>
+<th>PyChebyshev avg error</th>
+<th>MoCaX avg error</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>Delta</td>
+<td>0.029%</td>
+<td>0.379%</td>
+</tr>
+<tr>
+<td>Gamma</td>
+<td>0.019%</td>
+<td>1.604%</td>
+</tr>
+</tbody>
+</table>
+<p>To reproduce: <code>uv run --with tqdm --with blackscholes python compare_tensor_train.py</code>
+(requires MoCaX C++ library; PyChebyshev results are shown regardless).</p>
 
 
 
