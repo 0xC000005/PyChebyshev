@@ -456,6 +456,17 @@
   
 </li>
       
+        <li class="md-nav__item">
+  <a href="#choosing-the-right-class" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Choosing the Right Class
+      
+    </span>
+  </a>
+  
+</li>
+      
     </ul>
   
 </nav>
@@ -921,6 +932,17 @@
   
 </li>
       
+        <li class="md-nav__item">
+  <a href="#choosing-the-right-class" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Choosing the Right Class
+      
+    </span>
+  </a>
+  
+</li>
+      
     </ul>
   
 </nav>
@@ -1015,6 +1037,41 @@ to separate calls.</p>
 <li>For 5D with 11 nodes: <span class="arithmatex">\(11^5 = 161{,}051\)</span> function evaluations at build time</li>
 <li>Convergence is <strong>exponential</strong> for analytic functions — a few extra nodes can eliminate errors entirely</li>
 </ul>
+<h2 id="choosing-the-right-class">Choosing the Right Class<a class="headerlink" href="#choosing-the-right-class" title="Permanent link">&para;</a></h2>
+<table>
+<thead>
+<tr>
+<th>Class</th>
+<th>Dimensions</th>
+<th>Build Cost</th>
+<th>Derivatives</th>
+<th>Best For</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td><a href="../user-guide/usage/"><code>ChebyshevApproximation</code></a></td>
+<td>1–5</td>
+<td><span class="arithmatex">\(n^d\)</span> evals</td>
+<td>Analytical</td>
+<td>Full accuracy with spectral derivatives</td>
+</tr>
+<tr>
+<td><a href="../user-guide/tensor-train/"><code>ChebyshevTT</code></a></td>
+<td>5+</td>
+<td><span class="arithmatex">\(O(d \cdot n \cdot r^2)\)</span> evals</td>
+<td>Finite differences</td>
+<td>High-dimensional problems where full grids are infeasible</td>
+</tr>
+<tr>
+<td><a href="../user-guide/sliding/"><code>ChebyshevSlider</code></a></td>
+<td>5+</td>
+<td>Sum of slide grids</td>
+<td>Analytical (per slide)</td>
+<td>Functions with additive/separable structure</td>
+</tr>
+</tbody>
+</table>
 
 
 

@@ -700,6 +700,17 @@
 </li>
       
         <li class="md-nav__item">
+  <a href="#tensor-train-error-estimation" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Tensor Train Error Estimation
+      
+    </span>
+  </a>
+  
+</li>
+      
+        <li class="md-nav__item">
   <a href="#api-reference" class="md-nav__link">
     <span class="md-ellipsis">
       
@@ -923,6 +934,17 @@
 </li>
       
         <li class="md-nav__item">
+  <a href="#tensor-train-error-estimation" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Tensor Train Error Estimation
+      
+    </span>
+  </a>
+  
+</li>
+      
+        <li class="md-nav__item">
   <a href="#api-reference" class="md-nav__link">
     <span class="md-ellipsis">
       
@@ -1071,11 +1093,23 @@ smooth functions. This example demonstrates spectral convergence for a 1-D funct
 <p>For <span class="arithmatex">\(\sin(x)\)</span>, which is entire (analytic everywhere), the coefficients decay
 exponentially, so you should see the estimate drop by several orders of magnitude as
 <span class="arithmatex">\(n\)</span> grows.</p>
+<h2 id="tensor-train-error-estimation">Tensor Train Error Estimation<a class="headerlink" href="#tensor-train-error-estimation" title="Permanent link">&para;</a></h2>
+<p><code>ChebyshevTT</code> also supports <code>error_estimate()</code>. The estimate is computed from the
+Chebyshev coefficient cores: for each dimension, the last coefficient slice of the
+core is extracted and its norm serves as the per-dimension error proxy. These are
+summed across dimensions, following the same logic as the full tensor case.</p>
+<div class="highlight"><pre><span></span><code><a id="__codelineno-3-1" name="__codelineno-3-1" href="#__codelineno-3-1"></a><span class="kn">from</span><span class="w"> </span><span class="nn">pychebyshev</span><span class="w"> </span><span class="kn">import</span> <span class="n">ChebyshevTT</span>
+<a id="__codelineno-3-2" name="__codelineno-3-2" href="#__codelineno-3-2"></a>
+<a id="__codelineno-3-3" name="__codelineno-3-3" href="#__codelineno-3-3"></a><span class="n">tt</span> <span class="o">=</span> <span class="n">ChebyshevTT</span><span class="p">(</span><span class="n">my_func</span><span class="p">,</span> <span class="mi">5</span><span class="p">,</span> <span class="n">domain</span><span class="p">,</span> <span class="p">[</span><span class="mi">11</span><span class="p">]</span><span class="o">*</span><span class="mi">5</span><span class="p">,</span> <span class="n">max_rank</span><span class="o">=</span><span class="mi">10</span><span class="p">)</span>
+<a id="__codelineno-3-4" name="__codelineno-3-4" href="#__codelineno-3-4"></a><span class="n">tt</span><span class="o">.</span><span class="n">build</span><span class="p">()</span>
+<a id="__codelineno-3-5" name="__codelineno-3-5" href="#__codelineno-3-5"></a><span class="nb">print</span><span class="p">(</span><span class="sa">f</span><span class="s2">&quot;TT error estimate: </span><span class="si">{</span><span class="n">tt</span><span class="o">.</span><span class="n">error_estimate</span><span class="p">()</span><span class="si">:</span><span class="s2">.2e</span><span class="si">}</span><span class="s2">&quot;</span><span class="p">)</span>
+</code></pre></div>
 <h2 id="api-reference">API Reference<a class="headerlink" href="#api-reference" title="Permanent link">&para;</a></h2>
 <p>For full method signatures and parameter details, see:</p>
 <ul>
 <li><a href="../../api/reference/#pychebyshev.ChebyshevApproximation.error_estimate"><code>ChebyshevApproximation.error_estimate()</code></a> -- error estimate for standard tensor interpolation.</li>
 <li><a href="../../api/reference/#pychebyshev.ChebyshevSlider.error_estimate"><code>ChebyshevSlider.error_estimate()</code></a> -- error estimate for sliding approximation (sum of per-slide errors).</li>
+<li><a href="../../api/reference/#pychebyshev.ChebyshevTT.error_estimate"><code>ChebyshevTT.error_estimate()</code></a> -- error estimate for Tensor Train approximation (from coefficient cores).</li>
 </ul>
 
 
