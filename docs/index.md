@@ -2,14 +2,18 @@
 
 **Fast multi-dimensional Chebyshev tensor interpolation with analytical derivatives.**
 
-PyChebyshev builds a Chebyshev interpolant of any smooth function in up to N dimensions, then evaluates it and its derivatives in microseconds using vectorized NumPy operations.
+PyChebyshev builds a Chebyshev interpolant of any smooth function in up to N dimensions, then evaluates it and its derivatives in microseconds using vectorized NumPy operations. Three classes cover different use cases:
+
+- **[`ChebyshevApproximation`](user-guide/usage.md)** — full tensor interpolation with analytical derivatives (up to ~5 dimensions)
+- **[`ChebyshevTT`](user-guide/tensor-train.md)** — Tensor Train format via TT-Cross for 5+ dimensions
+- **[`ChebyshevSlider`](user-guide/sliding.md)** — additive decomposition for separable high-dimensional functions
 
 ## Key Features
 
 - **Spectral accuracy** — exponential error decay as node count increases
 - **Analytical derivatives** — via spectral differentiation matrices (no finite differences)
+- **Tensor Train** — TT-Cross builds from O(d·n·r²) evaluations instead of O(n^d)
 - **Fast evaluation** — ~0.065 ms per query (price), ~0.29 ms for price + 5 Greeks
-- **Minimal storage** — 55 floats (440 bytes) for a 5D interpolant with 11 nodes per dimension
 - **Save & load** — persist built interpolants to disk; rebuild-free deployment
 - **Pure Python** — NumPy + SciPy only, no compiled extensions needed
 

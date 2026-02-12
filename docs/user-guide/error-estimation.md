@@ -149,9 +149,25 @@ For $\sin(x)$, which is entire (analytic everywhere), the coefficients decay
 exponentially, so you should see the estimate drop by several orders of magnitude as
 $n$ grows.
 
+## Tensor Train Error Estimation
+
+`ChebyshevTT` also supports `error_estimate()`. The estimate is computed from the
+Chebyshev coefficient cores: for each dimension, the last coefficient slice of the
+core is extracted and its norm serves as the per-dimension error proxy. These are
+summed across dimensions, following the same logic as the full tensor case.
+
+```python
+from pychebyshev import ChebyshevTT
+
+tt = ChebyshevTT(my_func, 5, domain, [11]*5, max_rank=10)
+tt.build()
+print(f"TT error estimate: {tt.error_estimate():.2e}")
+```
+
 ## API Reference
 
 For full method signatures and parameter details, see:
 
 - [`ChebyshevApproximation.error_estimate()`](../api/reference.md#pychebyshev.ChebyshevApproximation.error_estimate) -- error estimate for standard tensor interpolation.
 - [`ChebyshevSlider.error_estimate()`](../api/reference.md#pychebyshev.ChebyshevSlider.error_estimate) -- error estimate for sliding approximation (sum of per-slide errors).
+- [`ChebyshevTT.error_estimate()`](../api/reference.md#pychebyshev.ChebyshevTT.error_estimate) -- error estimate for Tensor Train approximation (from coefficient cores).

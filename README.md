@@ -63,8 +63,9 @@ The convergence plots demonstrate exponential error decay as node count increase
 
 ## Features
 
-- **Full tensor interpolation** via `ChebyshevApproximation` — spectral accuracy for up to ~5-6 dimensions
-- **Sliding technique** via `ChebyshevSlider` — additive decomposition for high-dimensional functions (10+ dims)
+- **Full tensor interpolation** via `ChebyshevApproximation` — spectral accuracy for up to ~5 dimensions
+- **Tensor Train decomposition** via `ChebyshevTT` — TT-Cross builds from O(d·n·r²) evaluations for 5+ dimensions
+- **Sliding technique** via `ChebyshevSlider` — additive decomposition for separable high-dimensional functions
 - **Analytical derivatives** via spectral differentiation matrices (no finite differences)
 - **Vectorized evaluation** using BLAS matrix-vector products (~0.065ms/query)
 - **Pure Python** — NumPy + SciPy only, no compiled extensions needed
@@ -114,9 +115,31 @@ results = cheb.vectorized_eval_multi(
 )
 ```
 
-### High-Dimensional Functions (Sliding Technique)
+### High-Dimensional Functions (Tensor Train)
 
-For functions with more than ~6 dimensions, use `ChebyshevSlider` to decompose into low-dimensional slides:
+For 5+ dimensional functions where full tensor grids are too expensive, use `ChebyshevTT` with TT-Cross:
+
+```python
+from pychebyshev import ChebyshevTT
+
+tt = ChebyshevTT(
+    my_func, num_dimensions=5,
+    domain=[[-1, 1]] * 5,
+    n_nodes=[11] * 5,
+    max_rank=10,
+)
+tt.build()
+val = tt.eval([0.5] * 5)
+
+# Batch evaluation (much faster per point)
+import numpy as np
+points = np.random.uniform(-1, 1, (1000, 5))
+vals = tt.eval_batch(points)
+```
+
+### Separable Functions (Sliding Technique)
+
+For functions that decompose additively, use `ChebyshevSlider`:
 
 ```python
 from pychebyshev import ChebyshevSlider
