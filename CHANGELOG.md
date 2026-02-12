@@ -5,6 +5,22 @@ All notable changes to PyChebyshev will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [0.5.0] - 2026-02-12
+
+### Added
+
+- `ChebyshevTT` class for Chebyshev interpolation in Tensor Train format (Chapter 6, Ruiz & Zeron 2021)
+- TT-Cross approximation (`method='cross'`) for building from O(d * n * r^2) function evaluations instead of O(n^d)
+- TT-SVD build option (`method='svd'`) for validation and moderate-dimension problems
+- `eval()` for single-point evaluation via TT inner product with Chebyshev polynomial contraction
+- `eval_batch()` for vectorized batch evaluation of multiple points simultaneously via numpy einsum
+- `eval_multi()` for finite-difference derivatives (1st and 2nd order, including cross-derivatives)
+- `error_estimate()` for approximate error estimation from Chebyshev coefficient cores
+- `save()` / `load()` serialization with version compatibility checks (same pattern as other classes)
+- `tt_ranks` and `compression_ratio` properties for inspecting the TT decomposition
+- `_maxvol()` module-level function implementing the maximum-volume row selection algorithm
+- `_tt_cross()` module-level function implementing TT-Cross with alternating left-right sweeps and maxvol pivot selection
+
 ## [0.4.0] - 2026-02-10
 
 ### Added

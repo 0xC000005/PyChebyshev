@@ -43,3 +43,44 @@ Within PyChebyshev, multiple evaluation paths exist:
     faster than JIT-compiled scalar loops — the data access pattern is more
     cache-friendly and leverages SIMD vectorization at the hardware level.
     `fast_eval()` is deprecated and will be removed in a future version.
+
+## Tensor Train (TT) vs MoCaX Extend
+
+`ChebyshevTT` and MoCaX `MocaxExtend` both build Chebyshev interpolants in TT
+format for the same 5D Black-Scholes problem. PyChebyshev uses TT-Cross (maxvol
+pivoting); MoCaX uses rank-adaptive ALS on a random subgrid. Both use ~7,400--8,000
+function evaluations.
+
+### Build
+
+| Metric | PyChebyshev TT | MoCaX TT |
+|--------|----------------|----------|
+| Build time | 0.35s | 5.73s |
+| Function evaluations | 7,419 | 8,000 |
+| TT ranks | [1, 11, 11, 11, 7, 1] | (not exposed) |
+| Compression ratio | 43.4x | N/A |
+
+### Price Accuracy (50 random test points)
+
+| Metric | PyChebyshev TT | MoCaX TT |
+|--------|----------------|----------|
+| Mean error | 0.002% | 0.093% |
+| Max error | 0.014% | 0.712% |
+| Median error | 0.001% | 0.045% |
+
+### Evaluation Speed (1000 random points)
+
+| Method | PyChebyshev TT | MoCaX TT |
+|--------|----------------|----------|
+| Single eval | 0.065 ms | -- |
+| Batch eval | 0.004 ms | 0.246 ms |
+
+### Greeks Accuracy (10 scenarios, FD vs analytical)
+
+| Greek | PyChebyshev avg error | MoCaX avg error |
+|-------|-----------------------|-----------------|
+| Delta | 0.029% | 0.379% |
+| Gamma | 0.019% | 1.604% |
+
+To reproduce: `uv run --with tqdm --with blackscholes python compare_tensor_train.py`
+(requires MoCaX C++ library; PyChebyshev results are shown regardless).

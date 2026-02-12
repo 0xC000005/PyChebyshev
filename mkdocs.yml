@@ -53,6 +53,7 @@ nav:
       - Saving & Loading: user-guide/serialization.md
       - Computing Greeks: user-guide/greeks.md
       - Sliding Technique: user-guide/sliding.md
+      - Tensor Train: user-guide/tensor-train.md
       - Error Estimation: user-guide/error-estimation.md
   - API Reference: api/reference.md
   - Benchmarks: benchmarks.md

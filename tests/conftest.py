@@ -4,7 +4,7 @@ import math
 
 import pytest
 
-from pychebyshev import ChebyshevApproximation
+from pychebyshev import ChebyshevApproximation, ChebyshevTT
 
 
 # ---------------------------------------------------------------------------
@@ -98,3 +98,49 @@ def cheb_bs_5d():
     )
     cheb.build(verbose=False)
     return cheb
+
+
+# ---------------------------------------------------------------------------
+# TT Fixtures
+# ---------------------------------------------------------------------------
+
+def _bs_5d_func(x, _):
+    """5D BS call price: V(S, K, T, sigma, r), q=0.02."""
+    return _bs_call_price(S=x[0], K=x[1], T=x[2], r=x[4], sigma=x[3], q=0.02)
+
+
+_TT_5D_BS_DOMAIN = [[80, 120], [90, 110], [0.25, 1.0], [0.15, 0.35], [0.01, 0.08]]
+_TT_5D_BS_NODES = [11, 11, 11, 11, 11]
+
+
+@pytest.fixture(scope="module")
+def tt_sin_3d():
+    """Pre-built 3D sin ChebyshevTT (TT-Cross)."""
+    tt = ChebyshevTT(
+        sin_sum_3d, 3, [[-1, 1], [-1, 1], [-1, 1]], [11, 11, 11],
+        max_rank=5,
+    )
+    tt.build(verbose=False, seed=42)
+    return tt
+
+
+@pytest.fixture(scope="module")
+def tt_bs_5d():
+    """Pre-built 5D Black-Scholes ChebyshevTT (TT-Cross)."""
+    tt = ChebyshevTT(
+        _bs_5d_func, 5, _TT_5D_BS_DOMAIN, _TT_5D_BS_NODES,
+        max_rank=15, max_sweeps=5,
+    )
+    tt.build(verbose=False, seed=42)
+    return tt
+
+
+@pytest.fixture(scope="module")
+def tt_sin_3d_svd():
+    """Pre-built 3D sin ChebyshevTT (TT-SVD)."""
+    tt = ChebyshevTT(
+        sin_sum_3d, 3, [[-1, 1], [-1, 1], [-1, 1]], [11, 11, 11],
+        max_rank=5,
+    )
+    tt.build(verbose=False, method="svd")
+    return tt
