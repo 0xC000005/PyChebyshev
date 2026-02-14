@@ -54,7 +54,22 @@ price, delta, gamma, vega, rho = cheb.vectorized_eval_multi(point, [
 3. For second derivatives: apply $D$ twice ($D^2 \mathbf{f}$)
 4. Interpolate the resulting derivative values to the query point
 
-This provides **exact derivatives of the interpolating polynomial**, preserving spectral accuracy.
+This provides **exact derivatives of the interpolating polynomial**. Because the
+differentiation matrix computes derivatives of the degree-$n$ polynomial $p(x)$
+exactly (within machine precision), and $p(x)$ converges spectrally to $f(x)$,
+the derivative $p'(x)$ also converges spectrally to $f'(x)$.
+
+See [Berrut & Trefethen (2004)](https://people.maths.ox.ac.uk/trefethen/barycentric.pdf)
+for the derivation of the differentiation matrix formulas. For the full theory of
+spectral differentiation, see Trefethen, *Approximation Theory and Approximation
+Practice*, SIAM 2019, Chapter 11.
+
+!!! note "Tensor Train derivatives"
+    `ChebyshevTT` uses **finite differences** instead of analytical derivatives,
+    because the spectral differentiation matrix requires the full tensor (which TT
+    avoids storing). FD derivatives are still accurate to within a few hundredths of
+    a percent for first derivatives. See
+    [Tensor Train: Derivatives](tensor-train.md#derivatives-via-finite-differences).
 
 ## Accuracy
 

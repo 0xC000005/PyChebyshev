@@ -87,3 +87,10 @@ def my_func(point, data):
     x, y, z = point
     return x**2 + y * z
 ```
+
+## Next Steps
+
+- [Computing Greeks](greeks.md) -- analytical derivatives via spectral differentiation
+- [Error Estimation](error-estimation.md) -- check accuracy without test points
+- [Saving & Loading](serialization.md) -- persist built interpolants for production
+- For 5+ dimensions, see [Tensor Train](tensor-train.md) or [Sliding Technique](sliding.md)

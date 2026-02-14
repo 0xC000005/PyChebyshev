@@ -141,9 +141,18 @@ Given a tall matrix $A$ of shape $(m, r)$ with $m \geq r$, it finds $r$ row
 indices such that the submatrix $A[\text{idx}]$ has approximately maximal
 $|\det|$.
 
-**Why it matters:** In TT-Cross, maxvol selects which cross points to use for
-the next dimension. Points with maximal volume correspond to the most linearly
-independent function samples, giving the best cross interpolation.
+**Why maximum volume?** The cross interpolation formula
+$\hat{C} = A \cdot A[\text{idx}]^{-1}$ requires inverting the $r \times r$
+submatrix $A[\text{idx}]$. A near-singular submatrix (small determinant) would
+amplify errors in this inversion, producing inaccurate TT cores. Maximizing
+$|\det(A[\text{idx}])|$ is equivalent to selecting the $r$ most linearly
+independent rows of $A$ -- this minimizes the condition number of the inversion
+and ensures numerically stable cross interpolation.
+
+In the context of TT-Cross, each row of $A$ corresponds to a particular grid
+point (a combination of left multi-index and Chebyshev node). Maxvol therefore
+selects the grid points that carry the most "information" about the function,
+avoiding redundant or nearly-collinear samples.
 
 The implementation uses two phases:
 
@@ -176,10 +185,12 @@ coeff_core = dct(core[:, ::-1, :], type=2, axis=1) / n_k
 coeff_core[:, 0, :] /= 2
 ```
 
-The reversal (`::-1`) accounts for the ordering of Chebyshev Type I nodes.
-This is the same transform used by `ChebyshevApproximation` (see
-[Error Estimation](error-estimation.md) for details on the DCT), extended to
-3D cores.
+The reversal (`::-1`) converts from ascending to descending node order, which is
+the convention expected by the DCT-II. The division by $n_k$ normalizes the
+transform, and halving the zeroth coefficient accounts for the Chebyshev series
+convention ($\frac{c_0}{2} T_0 + c_1 T_1 + \cdots$). See
+[Error Estimation: Computing coefficients via DCT-II](error-estimation.md#computing-coefficients-via-dct-ii)
+for the mathematical justification.
 
 ### Evaluation via TT inner product
 

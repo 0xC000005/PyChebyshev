@@ -35,6 +35,12 @@ Sliding does **not** work well when:
 - Variables in different groups are **strongly coupled** (e.g., Black-Scholes where \(S\), \(T\), and \(\sigma\) interact multiplicatively).
 - High accuracy is required far from the pivot point.
 
+!!! tip "Alternative: Tensor Train"
+    For general (non-separable) high-dimensional functions, consider
+    [`ChebyshevTT`](tensor-train.md) instead. TT-Cross captures cross-variable
+    coupling that the sliding decomposition misses, at the cost of using finite
+    differences for derivatives instead of analytical spectral differentiation.
+
 !!! tip "Choosing the partition"
     Group variables that have strong non-linear interactions together. For example, if \(f = x_1^3 x_2^2 + x_3\), group \((x_1, x_2)\) in one slide and \(x_3\) in another.
 

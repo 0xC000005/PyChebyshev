@@ -14,7 +14,9 @@ Saving a built interpolant lets you:
 
 ## Saving a Built Interpolant
 
-Both `ChebyshevApproximation` and `ChebyshevSlider` provide a `save()` method:
+All three public classes -- [`ChebyshevApproximation`](usage.md),
+[`ChebyshevSlider`](sliding.md), and [`ChebyshevTT`](tensor-train.md) -- provide
+`save()` and `load()` methods:
 
 ```python
 import math
@@ -47,12 +49,22 @@ slider.build()
 slider.save("slider.pkl")
 ```
 
+For a [`ChebyshevTT`](tensor-train.md):
+
+```python
+from pychebyshev import ChebyshevTT
+
+tt = ChebyshevTT(my_func, 5, domain, [11]*5, max_rank=10)
+tt.build()
+tt.save("tt_model.pkl")
+```
+
 ## Loading an Interpolant
 
 Use the `load()` class method — no rebuild needed:
 
 ```python
-from pychebyshev import ChebyshevApproximation, ChebyshevSlider
+from pychebyshev import ChebyshevApproximation, ChebyshevSlider, ChebyshevTT
 
 # Load and evaluate immediately
 cheb = ChebyshevApproximation.load("interpolant.pkl")
@@ -61,11 +73,16 @@ value = cheb.vectorized_eval([0.5, 1.0], [0, 0])
 # Works the same for sliders
 slider = ChebyshevSlider.load("slider.pkl")
 value = slider.eval([0.5, 1.0], [0, 0])
+
+# And for Tensor Train
+tt = ChebyshevTT.load("tt_model.pkl")
+value = tt.eval([0.5, 1.0, 0.3, 0.2, 0.05])
 ```
 
 The loaded `ChebyshevApproximation` supports all evaluation methods
 (`vectorized_eval`, `vectorized_eval_multi`, `vectorized_eval_batch`).
 The loaded `ChebyshevSlider` supports `eval` and `eval_multi`.
+The loaded `ChebyshevTT` supports `eval`, `eval_batch`, and `eval_multi`.
 
 ## Inspecting Objects
 

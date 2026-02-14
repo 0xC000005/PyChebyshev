@@ -16,6 +16,25 @@ $$|f(x) - p_N(x)| = O(\rho^{-N})$$
 
 Each additional node multiplies accuracy by a constant factor $\rho$.
 
+### Bernstein ellipse
+
+A Bernstein ellipse is an ellipse in the complex plane with foci at $x = -1$ and
+$x = +1$. The parameter $\rho$ equals the sum of the semi-major and semi-minor axis
+lengths. Functions analytic inside a larger ellipse (larger $\rho$) converge faster.
+
+**Practical implication:** The convergence rate depends on how far the function's
+nearest singularity (pole, branch cut, discontinuity) is from the real interval
+$[-1, 1]$ in the complex plane. For example:
+
+- $f(x) = e^x$ is entire (no singularities) -- $\rho = \infty$, superexponential convergence.
+- $f(x) = 1/(1 + 25x^2)$ has poles at $x = \pm i/5$ -- the Bernstein ellipse must
+  avoid these poles, limiting $\rho$ and slowing convergence.
+- Black-Scholes option prices are analytic in all parameters over typical domains,
+  giving large $\rho$ and rapid convergence with 10--15 nodes per dimension.
+
+For the full theory, see Trefethen, *Approximation Theory and Approximation
+Practice*, SIAM 2019, Chapter 8.
+
 ## Barycentric Interpolation Formula
 
 The interpolating polynomial is expressed as:

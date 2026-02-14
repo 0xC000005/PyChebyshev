@@ -111,3 +111,10 @@ See [Saving & Loading](user-guide/serialization.md) for details.
 | [`ChebyshevApproximation`](user-guide/usage.md) | 1–5 | $n^d$ evals | Analytical | Full accuracy with spectral derivatives |
 | [`ChebyshevTT`](user-guide/tensor-train.md) | 5+ | $O(d \cdot n \cdot r^2)$ evals | Finite differences | High-dimensional problems where full grids are infeasible |
 | [`ChebyshevSlider`](user-guide/sliding.md) | 5+ | Sum of slide grids | Analytical (per slide) | Functions with additive/separable structure |
+
+## Next Steps
+
+- [Computing Greeks](user-guide/greeks.md) -- analytical derivatives for pricing
+- [Error Estimation](user-guide/error-estimation.md) -- validate accuracy without test points
+- [Saving & Loading](user-guide/serialization.md) -- persist built interpolants
+- [Benchmarks](benchmarks.md) -- performance comparison with MoCaX C++

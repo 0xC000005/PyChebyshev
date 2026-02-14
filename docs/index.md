@@ -56,7 +56,10 @@ pip install pychebyshev
 | Method | Price Error | Greek Error | Build Time | Query Time |
 |--------|-------------|-------------|------------|------------|
 | **Chebyshev Barycentric** | 0.000% | 1.980% | ~0.35s | ~0.065ms |
+| **Chebyshev TT** | 0.014% | 0.029% | ~0.35s | ~0.004ms |
 | **MoCaX Standard (C++)** | 0.000% | 1.980% | ~1.04s | ~0.47ms |
 | **FDM** | 0.803% | 2.234% | N/A | ~500ms |
 
 Based on 5D Black-Scholes tests with 11 nodes per dimension.
+TT uses ~7,400 function evaluations (vs 161,051 for full tensor methods).
+See [Benchmarks](benchmarks.md) for detailed comparisons including MoCaX TT.
