@@ -821,7 +821,9 @@ problem). Once built, evaluation takes microseconds.</p>
 <li><strong>Persist across sessions</strong> — save your work and reload it later</li>
 </ul>
 <h2 id="saving-a-built-interpolant">Saving a Built Interpolant<a class="headerlink" href="#saving-a-built-interpolant" title="Permanent link">&para;</a></h2>
-<p>Both <code>ChebyshevApproximation</code> and <code>ChebyshevSlider</code> provide a <code>save()</code> method:</p>
+<p>All three public classes -- <a href="../usage/"><code>ChebyshevApproximation</code></a>,
+<a href="../sliding/"><code>ChebyshevSlider</code></a>, and <a href="../tensor-train/"><code>ChebyshevTT</code></a> -- provide
+<code>save()</code> and <code>load()</code> methods:</p>
 <div class="highlight"><pre><span></span><code><a id="__codelineno-0-1" name="__codelineno-0-1" href="#__codelineno-0-1"></a><span class="kn">import</span><span class="w"> </span><span class="nn">math</span>
 <a id="__codelineno-0-2" name="__codelineno-0-2" href="#__codelineno-0-2"></a><span class="kn">from</span><span class="w"> </span><span class="nn">pychebyshev</span><span class="w"> </span><span class="kn">import</span> <span class="n">ChebyshevApproximation</span>
 <a id="__codelineno-0-3" name="__codelineno-0-3" href="#__codelineno-0-3"></a>
@@ -848,45 +850,57 @@ problem). Once built, evaluation takes microseconds.</p>
 <a id="__codelineno-1-9" name="__codelineno-1-9" href="#__codelineno-1-9"></a>
 <a id="__codelineno-1-10" name="__codelineno-1-10" href="#__codelineno-1-10"></a><span class="n">slider</span><span class="o">.</span><span class="n">save</span><span class="p">(</span><span class="s2">&quot;slider.pkl&quot;</span><span class="p">)</span>
 </code></pre></div>
+<p>For a <a href="../tensor-train/"><code>ChebyshevTT</code></a>:</p>
+<div class="highlight"><pre><span></span><code><a id="__codelineno-2-1" name="__codelineno-2-1" href="#__codelineno-2-1"></a><span class="kn">from</span><span class="w"> </span><span class="nn">pychebyshev</span><span class="w"> </span><span class="kn">import</span> <span class="n">ChebyshevTT</span>
+<a id="__codelineno-2-2" name="__codelineno-2-2" href="#__codelineno-2-2"></a>
+<a id="__codelineno-2-3" name="__codelineno-2-3" href="#__codelineno-2-3"></a><span class="n">tt</span> <span class="o">=</span> <span class="n">ChebyshevTT</span><span class="p">(</span><span class="n">my_func</span><span class="p">,</span> <span class="mi">5</span><span class="p">,</span> <span class="n">domain</span><span class="p">,</span> <span class="p">[</span><span class="mi">11</span><span class="p">]</span><span class="o">*</span><span class="mi">5</span><span class="p">,</span> <span class="n">max_rank</span><span class="o">=</span><span class="mi">10</span><span class="p">)</span>
+<a id="__codelineno-2-4" name="__codelineno-2-4" href="#__codelineno-2-4"></a><span class="n">tt</span><span class="o">.</span><span class="n">build</span><span class="p">()</span>
+<a id="__codelineno-2-5" name="__codelineno-2-5" href="#__codelineno-2-5"></a><span class="n">tt</span><span class="o">.</span><span class="n">save</span><span class="p">(</span><span class="s2">&quot;tt_model.pkl&quot;</span><span class="p">)</span>
+</code></pre></div>
 <h2 id="loading-an-interpolant">Loading an Interpolant<a class="headerlink" href="#loading-an-interpolant" title="Permanent link">&para;</a></h2>
 <p>Use the <code>load()</code> class method — no rebuild needed:</p>
-<div class="highlight"><pre><span></span><code><a id="__codelineno-2-1" name="__codelineno-2-1" href="#__codelineno-2-1"></a><span class="kn">from</span><span class="w"> </span><span class="nn">pychebyshev</span><span class="w"> </span><span class="kn">import</span> <span class="n">ChebyshevApproximation</span><span class="p">,</span> <span class="n">ChebyshevSlider</span>
-<a id="__codelineno-2-2" name="__codelineno-2-2" href="#__codelineno-2-2"></a>
-<a id="__codelineno-2-3" name="__codelineno-2-3" href="#__codelineno-2-3"></a><span class="c1"># Load and evaluate immediately</span>
-<a id="__codelineno-2-4" name="__codelineno-2-4" href="#__codelineno-2-4"></a><span class="n">cheb</span> <span class="o">=</span> <span class="n">ChebyshevApproximation</span><span class="o">.</span><span class="n">load</span><span class="p">(</span><span class="s2">&quot;interpolant.pkl&quot;</span><span class="p">)</span>
-<a id="__codelineno-2-5" name="__codelineno-2-5" href="#__codelineno-2-5"></a><span class="n">value</span> <span class="o">=</span> <span class="n">cheb</span><span class="o">.</span><span class="n">vectorized_eval</span><span class="p">([</span><span class="mf">0.5</span><span class="p">,</span> <span class="mf">1.0</span><span class="p">],</span> <span class="p">[</span><span class="mi">0</span><span class="p">,</span> <span class="mi">0</span><span class="p">])</span>
-<a id="__codelineno-2-6" name="__codelineno-2-6" href="#__codelineno-2-6"></a>
-<a id="__codelineno-2-7" name="__codelineno-2-7" href="#__codelineno-2-7"></a><span class="c1"># Works the same for sliders</span>
-<a id="__codelineno-2-8" name="__codelineno-2-8" href="#__codelineno-2-8"></a><span class="n">slider</span> <span class="o">=</span> <span class="n">ChebyshevSlider</span><span class="o">.</span><span class="n">load</span><span class="p">(</span><span class="s2">&quot;slider.pkl&quot;</span><span class="p">)</span>
-<a id="__codelineno-2-9" name="__codelineno-2-9" href="#__codelineno-2-9"></a><span class="n">value</span> <span class="o">=</span> <span class="n">slider</span><span class="o">.</span><span class="n">eval</span><span class="p">([</span><span class="mf">0.5</span><span class="p">,</span> <span class="mf">1.0</span><span class="p">],</span> <span class="p">[</span><span class="mi">0</span><span class="p">,</span> <span class="mi">0</span><span class="p">])</span>
+<div class="highlight"><pre><span></span><code><a id="__codelineno-3-1" name="__codelineno-3-1" href="#__codelineno-3-1"></a><span class="kn">from</span><span class="w"> </span><span class="nn">pychebyshev</span><span class="w"> </span><span class="kn">import</span> <span class="n">ChebyshevApproximation</span><span class="p">,</span> <span class="n">ChebyshevSlider</span><span class="p">,</span> <span class="n">ChebyshevTT</span>
+<a id="__codelineno-3-2" name="__codelineno-3-2" href="#__codelineno-3-2"></a>
+<a id="__codelineno-3-3" name="__codelineno-3-3" href="#__codelineno-3-3"></a><span class="c1"># Load and evaluate immediately</span>
+<a id="__codelineno-3-4" name="__codelineno-3-4" href="#__codelineno-3-4"></a><span class="n">cheb</span> <span class="o">=</span> <span class="n">ChebyshevApproximation</span><span class="o">.</span><span class="n">load</span><span class="p">(</span><span class="s2">&quot;interpolant.pkl&quot;</span><span class="p">)</span>
+<a id="__codelineno-3-5" name="__codelineno-3-5" href="#__codelineno-3-5"></a><span class="n">value</span> <span class="o">=</span> <span class="n">cheb</span><span class="o">.</span><span class="n">vectorized_eval</span><span class="p">([</span><span class="mf">0.5</span><span class="p">,</span> <span class="mf">1.0</span><span class="p">],</span> <span class="p">[</span><span class="mi">0</span><span class="p">,</span> <span class="mi">0</span><span class="p">])</span>
+<a id="__codelineno-3-6" name="__codelineno-3-6" href="#__codelineno-3-6"></a>
+<a id="__codelineno-3-7" name="__codelineno-3-7" href="#__codelineno-3-7"></a><span class="c1"># Works the same for sliders</span>
+<a id="__codelineno-3-8" name="__codelineno-3-8" href="#__codelineno-3-8"></a><span class="n">slider</span> <span class="o">=</span> <span class="n">ChebyshevSlider</span><span class="o">.</span><span class="n">load</span><span class="p">(</span><span class="s2">&quot;slider.pkl&quot;</span><span class="p">)</span>
+<a id="__codelineno-3-9" name="__codelineno-3-9" href="#__codelineno-3-9"></a><span class="n">value</span> <span class="o">=</span> <span class="n">slider</span><span class="o">.</span><span class="n">eval</span><span class="p">([</span><span class="mf">0.5</span><span class="p">,</span> <span class="mf">1.0</span><span class="p">],</span> <span class="p">[</span><span class="mi">0</span><span class="p">,</span> <span class="mi">0</span><span class="p">])</span>
+<a id="__codelineno-3-10" name="__codelineno-3-10" href="#__codelineno-3-10"></a>
+<a id="__codelineno-3-11" name="__codelineno-3-11" href="#__codelineno-3-11"></a><span class="c1"># And for Tensor Train</span>
+<a id="__codelineno-3-12" name="__codelineno-3-12" href="#__codelineno-3-12"></a><span class="n">tt</span> <span class="o">=</span> <span class="n">ChebyshevTT</span><span class="o">.</span><span class="n">load</span><span class="p">(</span><span class="s2">&quot;tt_model.pkl&quot;</span><span class="p">)</span>
+<a id="__codelineno-3-13" name="__codelineno-3-13" href="#__codelineno-3-13"></a><span class="n">value</span> <span class="o">=</span> <span class="n">tt</span><span class="o">.</span><span class="n">eval</span><span class="p">([</span><span class="mf">0.5</span><span class="p">,</span> <span class="mf">1.0</span><span class="p">,</span> <span class="mf">0.3</span><span class="p">,</span> <span class="mf">0.2</span><span class="p">,</span> <span class="mf">0.05</span><span class="p">])</span>
 </code></pre></div>
 <p>The loaded <code>ChebyshevApproximation</code> supports all evaluation methods
 (<code>vectorized_eval</code>, <code>vectorized_eval_multi</code>, <code>vectorized_eval_batch</code>).
-The loaded <code>ChebyshevSlider</code> supports <code>eval</code> and <code>eval_multi</code>.</p>
+The loaded <code>ChebyshevSlider</code> supports <code>eval</code> and <code>eval_multi</code>.
+The loaded <code>ChebyshevTT</code> supports <code>eval</code>, <code>eval_batch</code>, and <code>eval_multi</code>.</p>
 <h2 id="inspecting-objects">Inspecting Objects<a class="headerlink" href="#inspecting-objects" title="Permanent link">&para;</a></h2>
 <p>Use <code>repr()</code> for a compact summary and <code>print()</code> for a detailed view:</p>
-<div class="highlight"><pre><span></span><code><a id="__codelineno-3-1" name="__codelineno-3-1" href="#__codelineno-3-1"></a><span class="n">cheb</span> <span class="o">=</span> <span class="n">ChebyshevApproximation</span><span class="o">.</span><span class="n">load</span><span class="p">(</span><span class="s2">&quot;interpolant.pkl&quot;</span><span class="p">)</span>
-<a id="__codelineno-3-2" name="__codelineno-3-2" href="#__codelineno-3-2"></a>
-<a id="__codelineno-3-3" name="__codelineno-3-3" href="#__codelineno-3-3"></a><span class="nb">repr</span><span class="p">(</span><span class="n">cheb</span><span class="p">)</span>
-<a id="__codelineno-3-4" name="__codelineno-3-4" href="#__codelineno-3-4"></a><span class="c1"># ChebyshevApproximation(dims=2, nodes=[15, 15], built=True)</span>
-<a id="__codelineno-3-5" name="__codelineno-3-5" href="#__codelineno-3-5"></a>
-<a id="__codelineno-3-6" name="__codelineno-3-6" href="#__codelineno-3-6"></a><span class="nb">print</span><span class="p">(</span><span class="n">cheb</span><span class="p">)</span>
-<a id="__codelineno-3-7" name="__codelineno-3-7" href="#__codelineno-3-7"></a><span class="c1"># ChebyshevApproximation (2D, built)</span>
-<a id="__codelineno-3-8" name="__codelineno-3-8" href="#__codelineno-3-8"></a><span class="c1">#   Nodes:       [15, 15] (225 total)</span>
-<a id="__codelineno-3-9" name="__codelineno-3-9" href="#__codelineno-3-9"></a><span class="c1">#   Domain:      [-1, 1] x [0, 2]</span>
-<a id="__codelineno-3-10" name="__codelineno-3-10" href="#__codelineno-3-10"></a><span class="c1">#   Build:       0.002s, 225 evaluations</span>
-<a id="__codelineno-3-11" name="__codelineno-3-11" href="#__codelineno-3-11"></a><span class="c1">#   Derivatives: up to order 2</span>
+<div class="highlight"><pre><span></span><code><a id="__codelineno-4-1" name="__codelineno-4-1" href="#__codelineno-4-1"></a><span class="n">cheb</span> <span class="o">=</span> <span class="n">ChebyshevApproximation</span><span class="o">.</span><span class="n">load</span><span class="p">(</span><span class="s2">&quot;interpolant.pkl&quot;</span><span class="p">)</span>
+<a id="__codelineno-4-2" name="__codelineno-4-2" href="#__codelineno-4-2"></a>
+<a id="__codelineno-4-3" name="__codelineno-4-3" href="#__codelineno-4-3"></a><span class="nb">repr</span><span class="p">(</span><span class="n">cheb</span><span class="p">)</span>
+<a id="__codelineno-4-4" name="__codelineno-4-4" href="#__codelineno-4-4"></a><span class="c1"># ChebyshevApproximation(dims=2, nodes=[15, 15], built=True)</span>
+<a id="__codelineno-4-5" name="__codelineno-4-5" href="#__codelineno-4-5"></a>
+<a id="__codelineno-4-6" name="__codelineno-4-6" href="#__codelineno-4-6"></a><span class="nb">print</span><span class="p">(</span><span class="n">cheb</span><span class="p">)</span>
+<a id="__codelineno-4-7" name="__codelineno-4-7" href="#__codelineno-4-7"></a><span class="c1"># ChebyshevApproximation (2D, built)</span>
+<a id="__codelineno-4-8" name="__codelineno-4-8" href="#__codelineno-4-8"></a><span class="c1">#   Nodes:       [15, 15] (225 total)</span>
+<a id="__codelineno-4-9" name="__codelineno-4-9" href="#__codelineno-4-9"></a><span class="c1">#   Domain:      [-1, 1] x [0, 2]</span>
+<a id="__codelineno-4-10" name="__codelineno-4-10" href="#__codelineno-4-10"></a><span class="c1">#   Build:       0.002s, 225 evaluations</span>
+<a id="__codelineno-4-11" name="__codelineno-4-11" href="#__codelineno-4-11"></a><span class="c1">#   Derivatives: up to order 2</span>
 </code></pre></div>
 <p>For a slider:</p>
-<div class="highlight"><pre><span></span><code><a id="__codelineno-4-1" name="__codelineno-4-1" href="#__codelineno-4-1"></a><span class="nb">print</span><span class="p">(</span><span class="n">slider</span><span class="p">)</span>
-<a id="__codelineno-4-2" name="__codelineno-4-2" href="#__codelineno-4-2"></a><span class="c1"># ChebyshevSlider (5D, 2 slides, built)</span>
-<a id="__codelineno-4-3" name="__codelineno-4-3" href="#__codelineno-4-3"></a><span class="c1">#   Partition: [[0, 1, 2], [3, 4]]</span>
-<a id="__codelineno-4-4" name="__codelineno-4-4" href="#__codelineno-4-4"></a><span class="c1">#   Pivot:     [100.0, 1.0, 0.25, 0.05, 0.2]</span>
-<a id="__codelineno-4-5" name="__codelineno-4-5" href="#__codelineno-4-5"></a><span class="c1">#   Nodes:     [11, 11, 11, 11, 11] (1,452 vs 161,051 full tensor)</span>
-<a id="__codelineno-4-6" name="__codelineno-4-6" href="#__codelineno-4-6"></a><span class="c1">#   Domain:    [80.0, 120.0] x [0.5, 2.0] x [0.01, 0.5] x [0.01, 0.1] x [0.05, 0.5]</span>
-<a id="__codelineno-4-7" name="__codelineno-4-7" href="#__codelineno-4-7"></a><span class="c1">#   Slides:</span>
-<a id="__codelineno-4-8" name="__codelineno-4-8" href="#__codelineno-4-8"></a><span class="c1">#     [0] dims [0, 1, 2]: 1,331 evals, built in 0.189s</span>
-<a id="__codelineno-4-9" name="__codelineno-4-9" href="#__codelineno-4-9"></a><span class="c1">#     [1] dims [3, 4]:     121 evals, built in 0.021s</span>
+<div class="highlight"><pre><span></span><code><a id="__codelineno-5-1" name="__codelineno-5-1" href="#__codelineno-5-1"></a><span class="nb">print</span><span class="p">(</span><span class="n">slider</span><span class="p">)</span>
+<a id="__codelineno-5-2" name="__codelineno-5-2" href="#__codelineno-5-2"></a><span class="c1"># ChebyshevSlider (5D, 2 slides, built)</span>
+<a id="__codelineno-5-3" name="__codelineno-5-3" href="#__codelineno-5-3"></a><span class="c1">#   Partition: [[0, 1, 2], [3, 4]]</span>
+<a id="__codelineno-5-4" name="__codelineno-5-4" href="#__codelineno-5-4"></a><span class="c1">#   Pivot:     [100.0, 1.0, 0.25, 0.05, 0.2]</span>
+<a id="__codelineno-5-5" name="__codelineno-5-5" href="#__codelineno-5-5"></a><span class="c1">#   Nodes:     [11, 11, 11, 11, 11] (1,452 vs 161,051 full tensor)</span>
+<a id="__codelineno-5-6" name="__codelineno-5-6" href="#__codelineno-5-6"></a><span class="c1">#   Domain:    [80.0, 120.0] x [0.5, 2.0] x [0.01, 0.5] x [0.01, 0.1] x [0.05, 0.5]</span>
+<a id="__codelineno-5-7" name="__codelineno-5-7" href="#__codelineno-5-7"></a><span class="c1">#   Slides:</span>
+<a id="__codelineno-5-8" name="__codelineno-5-8" href="#__codelineno-5-8"></a><span class="c1">#     [0] dims [0, 1, 2]: 1,331 evals, built in 0.189s</span>
+<a id="__codelineno-5-9" name="__codelineno-5-9" href="#__codelineno-5-9"></a><span class="c1">#     [1] dims [3, 4]:     121 evals, built in 0.021s</span>
 </code></pre></div>
 <p>This is useful for verifying that a loaded interpolant matches your expectations
 before using it.</p>
@@ -899,9 +913,9 @@ before using it.</p>
 </li>
 <li>
 <p><strong>Calling <code>build()</code> on a loaded object requires reassigning a function first:</strong></p>
-<div class="highlight"><pre><span></span><code><a id="__codelineno-5-1" name="__codelineno-5-1" href="#__codelineno-5-1"></a><span class="n">cheb</span> <span class="o">=</span> <span class="n">ChebyshevApproximation</span><span class="o">.</span><span class="n">load</span><span class="p">(</span><span class="s2">&quot;interpolant.pkl&quot;</span><span class="p">)</span>
-<a id="__codelineno-5-2" name="__codelineno-5-2" href="#__codelineno-5-2"></a><span class="n">cheb</span><span class="o">.</span><span class="n">function</span> <span class="o">=</span> <span class="n">my_func</span>  <span class="c1"># reassign before rebuilding</span>
-<a id="__codelineno-5-3" name="__codelineno-5-3" href="#__codelineno-5-3"></a><span class="n">cheb</span><span class="o">.</span><span class="n">build</span><span class="p">()</span>
+<div class="highlight"><pre><span></span><code><a id="__codelineno-6-1" name="__codelineno-6-1" href="#__codelineno-6-1"></a><span class="n">cheb</span> <span class="o">=</span> <span class="n">ChebyshevApproximation</span><span class="o">.</span><span class="n">load</span><span class="p">(</span><span class="s2">&quot;interpolant.pkl&quot;</span><span class="p">)</span>
+<a id="__codelineno-6-2" name="__codelineno-6-2" href="#__codelineno-6-2"></a><span class="n">cheb</span><span class="o">.</span><span class="n">function</span> <span class="o">=</span> <span class="n">my_func</span>  <span class="c1"># reassign before rebuilding</span>
+<a id="__codelineno-6-3" name="__codelineno-6-3" href="#__codelineno-6-3"></a><span class="n">cheb</span><span class="o">.</span><span class="n">build</span><span class="p">()</span>
 </code></pre></div>
 </li>
 <li>

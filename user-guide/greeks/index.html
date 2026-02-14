@@ -863,7 +863,22 @@ is the derivative order with respect to that dimension.</p>
 <li>For second derivatives: apply <span class="arithmatex">\(D\)</span> twice (<span class="arithmatex">\(D^2 \mathbf{f}\)</span>)</li>
 <li>Interpolate the resulting derivative values to the query point</li>
 </ol>
-<p>This provides <strong>exact derivatives of the interpolating polynomial</strong>, preserving spectral accuracy.</p>
+<p>This provides <strong>exact derivatives of the interpolating polynomial</strong>. Because the
+differentiation matrix computes derivatives of the degree-<span class="arithmatex">\(n\)</span> polynomial <span class="arithmatex">\(p(x)\)</span>
+exactly (within machine precision), and <span class="arithmatex">\(p(x)\)</span> converges spectrally to <span class="arithmatex">\(f(x)\)</span>,
+the derivative <span class="arithmatex">\(p'(x)\)</span> also converges spectrally to <span class="arithmatex">\(f'(x)\)</span>.</p>
+<p>See <a href="https://people.maths.ox.ac.uk/trefethen/barycentric.pdf">Berrut &amp; Trefethen (2004)</a>
+for the derivation of the differentiation matrix formulas. For the full theory of
+spectral differentiation, see Trefethen, <em>Approximation Theory and Approximation
+Practice</em>, SIAM 2019, Chapter 11.</p>
+<div class="admonition note">
+<p class="admonition-title">Tensor Train derivatives</p>
+<p><code>ChebyshevTT</code> uses <strong>finite differences</strong> instead of analytical derivatives,
+because the spectral differentiation matrix requires the full tensor (which TT
+avoids storing). FD derivatives are still accurate to within a few hundredths of
+a percent for first derivatives. See
+<a href="../tensor-train/#derivatives-via-finite-differences">Tensor Train: Derivatives</a>.</p>
+</div>
 <h2 id="accuracy">Accuracy<a class="headerlink" href="#accuracy" title="Permanent link">&para;</a></h2>
 <p>With 11 nodes per dimension on a 5D Black-Scholes test:</p>
 <table>

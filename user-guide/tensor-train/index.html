@@ -1992,9 +1992,17 @@ has been observed for 3 consecutive checks.</p>
 Given a tall matrix <span class="arithmatex">\(A\)</span> of shape <span class="arithmatex">\((m, r)\)</span> with <span class="arithmatex">\(m \geq r\)</span>, it finds <span class="arithmatex">\(r\)</span> row
 indices such that the submatrix <span class="arithmatex">\(A[\text{idx}]\)</span> has approximately maximal
 <span class="arithmatex">\(|\det|\)</span>.</p>
-<p><strong>Why it matters:</strong> In TT-Cross, maxvol selects which cross points to use for
-the next dimension. Points with maximal volume correspond to the most linearly
-independent function samples, giving the best cross interpolation.</p>
+<p><strong>Why maximum volume?</strong> The cross interpolation formula
+<span class="arithmatex">\(\hat{C} = A \cdot A[\text{idx}]^{-1}\)</span> requires inverting the <span class="arithmatex">\(r \times r\)</span>
+submatrix <span class="arithmatex">\(A[\text{idx}]\)</span>. A near-singular submatrix (small determinant) would
+amplify errors in this inversion, producing inaccurate TT cores. Maximizing
+<span class="arithmatex">\(|\det(A[\text{idx}])|\)</span> is equivalent to selecting the <span class="arithmatex">\(r\)</span> most linearly
+independent rows of <span class="arithmatex">\(A\)</span> -- this minimizes the condition number of the inversion
+and ensures numerically stable cross interpolation.</p>
+<p>In the context of TT-Cross, each row of <span class="arithmatex">\(A\)</span> corresponds to a particular grid
+point (a combination of left multi-index and Chebyshev node). Maxvol therefore
+selects the grid points that carry the most "information" about the function,
+avoiding redundant or nearly-collinear samples.</p>
 <p>The implementation uses two phases:</p>
 <ol>
 <li>
@@ -2026,10 +2034,12 @@ values to Chebyshev expansion coefficients:</p>
 <a id="__codelineno-2-4" name="__codelineno-2-4" href="#__codelineno-2-4"></a><span class="n">coeff_core</span> <span class="o">=</span> <span class="n">dct</span><span class="p">(</span><span class="n">core</span><span class="p">[:,</span> <span class="p">::</span><span class="o">-</span><span class="mi">1</span><span class="p">,</span> <span class="p">:],</span> <span class="nb">type</span><span class="o">=</span><span class="mi">2</span><span class="p">,</span> <span class="n">axis</span><span class="o">=</span><span class="mi">1</span><span class="p">)</span> <span class="o">/</span> <span class="n">n_k</span>
 <a id="__codelineno-2-5" name="__codelineno-2-5" href="#__codelineno-2-5"></a><span class="n">coeff_core</span><span class="p">[:,</span> <span class="mi">0</span><span class="p">,</span> <span class="p">:]</span> <span class="o">/=</span> <span class="mi">2</span>
 </code></pre></div>
-<p>The reversal (<code>::-1</code>) accounts for the ordering of Chebyshev Type I nodes.
-This is the same transform used by <code>ChebyshevApproximation</code> (see
-<a href="../error-estimation/">Error Estimation</a> for details on the DCT), extended to
-3D cores.</p>
+<p>The reversal (<code>::-1</code>) converts from ascending to descending node order, which is
+the convention expected by the DCT-II. The division by <span class="arithmatex">\(n_k\)</span> normalizes the
+transform, and halving the zeroth coefficient accounts for the Chebyshev series
+convention (<span class="arithmatex">\(\frac{c_0}{2} T_0 + c_1 T_1 + \cdots\)</span>). See
+<a href="../error-estimation/#computing-coefficients-via-dct-ii">Error Estimation: Computing coefficients via DCT-II</a>
+for the mathematical justification.</p>
 <h3 id="evaluation-via-tt-inner-product">Evaluation via TT inner product<a class="headerlink" href="#evaluation-via-tt-inner-product" title="Permanent link">&para;</a></h3>
 <p>Given the pre-computed coefficient cores <span class="arithmatex">\(\mathcal{C}\)</span> and a query point <span class="arithmatex">\(p\)</span>,
 evaluation computes the inner product:</p>

@@ -848,6 +848,13 @@
 <td>~0.065ms</td>
 </tr>
 <tr>
+<td><strong>Chebyshev TT</strong></td>
+<td>0.014%</td>
+<td>0.029%</td>
+<td>~0.35s</td>
+<td>~0.004ms</td>
+</tr>
+<tr>
 <td><strong>MoCaX Standard (C++)</strong></td>
 <td>0.000%</td>
 <td>1.980%</td>
@@ -863,7 +870,9 @@
 </tr>
 </tbody>
 </table>
-<p>Based on 5D Black-Scholes tests with 11 nodes per dimension.</p>
+<p>Based on 5D Black-Scholes tests with 11 nodes per dimension.
+TT uses ~7,400 function evaluations (vs 161,051 for full tensor methods).
+See <a href="benchmarks/">Benchmarks</a> for detailed comparisons including MoCaX TT.</p>
 
 
 

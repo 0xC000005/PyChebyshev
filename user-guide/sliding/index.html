@@ -1214,6 +1214,13 @@ f(\mathbf{x}) \approx v + \sum_{i=1}^{k} \bigl[ s_i(\mathbf{x}_{G_i}) - v \bigr]
 <li>High accuracy is required far from the pivot point.</li>
 </ul>
 <div class="admonition tip">
+<p class="admonition-title">Alternative: Tensor Train</p>
+<p>For general (non-separable) high-dimensional functions, consider
+<a href="../tensor-train/"><code>ChebyshevTT</code></a> instead. TT-Cross captures cross-variable
+coupling that the sliding decomposition misses, at the cost of using finite
+differences for derivatives instead of analytical spectral differentiation.</p>
+</div>
+<div class="admonition tip">
 <p class="admonition-title">Choosing the partition</p>
 <p>Group variables that have strong non-linear interactions together. For example, if <span class="arithmatex">\(f = x_1^3 x_2^2 + x_3\)</span>, group <span class="arithmatex">\((x_1, x_2)\)</span> in one slide and <span class="arithmatex">\(x_3\)</span> in another.</p>
 </div>
