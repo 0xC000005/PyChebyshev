@@ -1,0 +1,1395 @@
+
+<!doctype html>
+<html lang="en" class="no-js">
+  <head>
+    
+      <meta charset="utf-8">
+      <meta name="viewport" content="width=device-width,initial-scale=1">
+      
+        <meta name="description" content="Fast multi-dimensional Chebyshev tensor interpolation with analytical derivatives">
+      
+      
+      
+      
+        <link rel="prev" href="../tensor-train/">
+      
+      
+        <link rel="next" href="../error-estimation/">
+      
+      
+        
+      
+      
+      <link rel="icon" href="../../assets/images/favicon.png">
+      <meta name="generator" content="mkdocs-1.6.1, mkdocs-material-9.7.1">
+    
+    
+      
+        <title>Chebyshev Algebra - PyChebyshev</title>
+      
+    
+    
+      <link rel="stylesheet" href="../../assets/stylesheets/main.484c7ddc.min.css">
+      
+        
+        <link rel="stylesheet" href="../../assets/stylesheets/palette.ab4e12ef.min.css">
+      
+      
+
+
+    
+    
+      
+    
+    
+      
+        
+        
+        <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+        <link rel="stylesheet" href="https://fonts.googleapis.com/css?family=Roboto:300,300i,400,400i,700,700i%7CRoboto+Mono:400,400i,700,700i&display=fallback">
+        <style>:root{--md-text-font:"Roboto";--md-code-font:"Roboto Mono"}</style>
+      
+    
+    
+      <link rel="stylesheet" href="../../assets/_mkdocstrings.css">
+    
+      <link rel="stylesheet" href="https://unpkg.com/katex@0/dist/katex.min.css">
+    
+    <script>__md_scope=new URL("../..",location),__md_hash=e=>[...e].reduce(((e,_)=>(e<<5)-e+_.charCodeAt(0)),0),__md_get=(e,_=localStorage,t=__md_scope)=>JSON.parse(_.getItem(t.pathname+"."+e)),__md_set=(e,_,t=localStorage,a=__md_scope)=>{try{t.setItem(a.pathname+"."+e,JSON.stringify(_))}catch(e){}}</script>
+    
+      
+
+    
+    
+  </head>
+  
+  
+    
+    
+      
+    
+    
+    
+    
+    <body dir="ltr" data-md-color-scheme="default" data-md-color-primary="indigo" data-md-color-accent="indigo">
+  
+    
+    <input class="md-toggle" data-md-toggle="drawer" type="checkbox" id="__drawer" autocomplete="off">
+    <input class="md-toggle" data-md-toggle="search" type="checkbox" id="__search" autocomplete="off">
+    <label class="md-overlay" for="__drawer"></label>
+    <div data-md-component="skip">
+      
+        
+        <a href="#chebyshev-algebra" class="md-skip">
+          Skip to content
+        </a>
+      
+    </div>
+    <div data-md-component="announce">
+      
+    </div>
+    
+    
+      
+
+  
+
+<header class="md-header md-header--shadow" data-md-component="header">
+  <nav class="md-header__inner md-grid" aria-label="Header">
+    <a href="../.." title="PyChebyshev" class="md-header__button md-logo" aria-label="PyChebyshev" data-md-component="logo">
+      
+  
+  <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24"><path d="M12 8a3 3 0 0 0 3-3 3 3 0 0 0-3-3 3 3 0 0 0-3 3 3 3 0 0 0 3 3m0 3.54C9.64 9.35 6.5 8 3 8v11c3.5 0 6.64 1.35 9 3.54 2.36-2.19 5.5-3.54 9-3.54V8c-3.5 0-6.64 1.35-9 3.54"/></svg>
+
+    </a>
+    <label class="md-header__button md-icon" for="__drawer">
+      
+      <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24"><path d="M3 6h18v2H3zm0 5h18v2H3zm0 5h18v2H3z"/></svg>
+    </label>
+    <div class="md-header__title" data-md-component="header-title">
+      <div class="md-header__ellipsis">
+        <div class="md-header__topic">
+          <span class="md-ellipsis">
+            PyChebyshev
+          </span>
+        </div>
+        <div class="md-header__topic" data-md-component="header-topic">
+          <span class="md-ellipsis">
+            
+              Chebyshev Algebra
+            
+          </span>
+        </div>
+      </div>
+    </div>
+    
+      
+        <form class="md-header__option" data-md-component="palette">
+  
+    
+    
+    
+    <input class="md-option" data-md-color-media="" data-md-color-scheme="default" data-md-color-primary="indigo" data-md-color-accent="indigo"  aria-hidden="true"  type="radio" name="__palette" id="__palette_0">
+    
+  
+</form>
+      
+    
+    
+      <script>var palette=__md_get("__palette");if(palette&&palette.color){if("(prefers-color-scheme)"===palette.color.media){var media=matchMedia("(prefers-color-scheme: light)"),input=document.querySelector(media.matches?"[data-md-color-media='(prefers-color-scheme: light)']":"[data-md-color-media='(prefers-color-scheme: dark)']");palette.color.media=input.getAttribute("data-md-color-media"),palette.color.scheme=input.getAttribute("data-md-color-scheme"),palette.color.primary=input.getAttribute("data-md-color-primary"),palette.color.accent=input.getAttribute("data-md-color-accent")}for(var[key,value]of Object.entries(palette.color))document.body.setAttribute("data-md-color-"+key,value)}</script>
+    
+    
+    
+      
+      
+        <label class="md-header__button md-icon" for="__search">
+          
+          <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24"><path d="M9.5 3A6.5 6.5 0 0 1 16 9.5c0 1.61-.59 3.09-1.56 4.23l.27.27h.79l5 5-1.5 1.5-5-5v-.79l-.27-.27A6.52 6.52 0 0 1 9.5 16 6.5 6.5 0 0 1 3 9.5 6.5 6.5 0 0 1 9.5 3m0 2C7 5 5 7 5 9.5S7 14 9.5 14 14 12 14 9.5 12 5 9.5 5"/></svg>
+        </label>
+        <div class="md-search" data-md-component="search" role="dialog">
+  <label class="md-search__overlay" for="__search"></label>
+  <div class="md-search__inner" role="search">
+    <form class="md-search__form" name="search">
+      <input type="text" class="md-search__input" name="query" aria-label="Search" placeholder="Search" autocapitalize="off" autocorrect="off" autocomplete="off" spellcheck="false" data-md-component="search-query" required>
+      <label class="md-search__icon md-icon" for="__search">
+        
+        <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24"><path d="M9.5 3A6.5 6.5 0 0 1 16 9.5c0 1.61-.59 3.09-1.56 4.23l.27.27h.79l5 5-1.5 1.5-5-5v-.79l-.27-.27A6.52 6.52 0 0 1 9.5 16 6.5 6.5 0 0 1 3 9.5 6.5 6.5 0 0 1 9.5 3m0 2C7 5 5 7 5 9.5S7 14 9.5 14 14 12 14 9.5 12 5 9.5 5"/></svg>
+        
+        <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24"><path d="M20 11v2H8l5.5 5.5-1.42 1.42L4.16 12l7.92-7.92L13.5 5.5 8 11z"/></svg>
+      </label>
+      <nav class="md-search__options" aria-label="Search">
+        
+        <button type="reset" class="md-search__icon md-icon" title="Clear" aria-label="Clear" tabindex="-1">
+          
+          <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24"><path d="M19 6.41 17.59 5 12 10.59 6.41 5 5 6.41 10.59 12 5 17.59 6.41 19 12 13.41 17.59 19 19 17.59 13.41 12z"/></svg>
+        </button>
+      </nav>
+      
+    </form>
+    <div class="md-search__output">
+      <div class="md-search__scrollwrap" tabindex="0" data-md-scrollfix>
+        <div class="md-search-result" data-md-component="search-result">
+          <div class="md-search-result__meta">
+            Initializing search
+          </div>
+          <ol class="md-search-result__list" role="presentation"></ol>
+        </div>
+      </div>
+    </div>
+  </div>
+</div>
+      
+    
+    
+      <div class="md-header__source">
+        <a href="https://github.com/0xC000005/PyChebyshev" title="Go to repository" class="md-source" data-md-component="source">
+  <div class="md-source__icon md-icon">
+    
+    <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 448 512"><!--! Font Awesome Free 7.1.0 by @fontawesome - https://fontawesome.com License - https://fontawesome.com/license/free (Icons: CC BY 4.0, Fonts: SIL OFL 1.1, Code: MIT License) Copyright 2025 Fonticons, Inc.--><path d="M439.6 236.1 244 40.5c-5.4-5.5-12.8-8.5-20.4-8.5s-15 3-20.4 8.4L162.5 81l51.5 51.5c27.1-9.1 52.7 16.8 43.4 43.7l49.7 49.7c34.2-11.8 61.2 31 35.5 56.7-26.5 26.5-70.2-2.9-56-37.3L240.3 199v121.9c25.3 12.5 22.3 41.8 9.1 55-6.4 6.4-15.2 10.1-24.3 10.1s-17.8-3.6-24.3-10.1c-17.6-17.6-11.1-46.9 11.2-56v-123c-20.8-8.5-24.6-30.7-18.6-45L142.6 101 8.5 235.1C3 240.6 0 247.9 0 255.5s3 15 8.5 20.4l195.6 195.7c5.4 5.4 12.7 8.4 20.4 8.4s15-3 20.4-8.4l194.7-194.7c5.4-5.4 8.4-12.8 8.4-20.4s-3-15-8.4-20.4"/></svg>
+  </div>
+  <div class="md-source__repository">
+    PyChebyshev
+  </div>
+</a>
+      </div>
+    
+  </nav>
+  
+</header>
+    
+    <div class="md-container" data-md-component="container">
+      
+      
+        
+          
+        
+      
+      <main class="md-main" data-md-component="main">
+        <div class="md-main__inner md-grid">
+          
+            
+              
+              <div class="md-sidebar md-sidebar--primary" data-md-component="sidebar" data-md-type="navigation" >
+                <div class="md-sidebar__scrollwrap">
+                  <div class="md-sidebar__inner">
+                    
+
+
+
+<nav class="md-nav md-nav--primary" aria-label="Navigation" data-md-level="0">
+  <label class="md-nav__title" for="__drawer">
+    <a href="../.." title="PyChebyshev" class="md-nav__button md-logo" aria-label="PyChebyshev" data-md-component="logo">
+      
+  
+  <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24"><path d="M12 8a3 3 0 0 0 3-3 3 3 0 0 0-3-3 3 3 0 0 0-3 3 3 3 0 0 0 3 3m0 3.54C9.64 9.35 6.5 8 3 8v11c3.5 0 6.64 1.35 9 3.54 2.36-2.19 5.5-3.54 9-3.54V8c-3.5 0-6.64 1.35-9 3.54"/></svg>
+
+    </a>
+    PyChebyshev
+  </label>
+  
+    <div class="md-nav__source">
+      <a href="https://github.com/0xC000005/PyChebyshev" title="Go to repository" class="md-source" data-md-component="source">
+  <div class="md-source__icon md-icon">
+    
+    <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 448 512"><!--! Font Awesome Free 7.1.0 by @fontawesome - https://fontawesome.com License - https://fontawesome.com/license/free (Icons: CC BY 4.0, Fonts: SIL OFL 1.1, Code: MIT License) Copyright 2025 Fonticons, Inc.--><path d="M439.6 236.1 244 40.5c-5.4-5.5-12.8-8.5-20.4-8.5s-15 3-20.4 8.4L162.5 81l51.5 51.5c27.1-9.1 52.7 16.8 43.4 43.7l49.7 49.7c34.2-11.8 61.2 31 35.5 56.7-26.5 26.5-70.2-2.9-56-37.3L240.3 199v121.9c25.3 12.5 22.3 41.8 9.1 55-6.4 6.4-15.2 10.1-24.3 10.1s-17.8-3.6-24.3-10.1c-17.6-17.6-11.1-46.9 11.2-56v-123c-20.8-8.5-24.6-30.7-18.6-45L142.6 101 8.5 235.1C3 240.6 0 247.9 0 255.5s3 15 8.5 20.4l195.6 195.7c5.4 5.4 12.7 8.4 20.4 8.4s15-3 20.4-8.4l194.7-194.7c5.4-5.4 8.4-12.8 8.4-20.4s-3-15-8.4-20.4"/></svg>
+  </div>
+  <div class="md-source__repository">
+    PyChebyshev
+  </div>
+</a>
+    </div>
+  
+  <ul class="md-nav__list" data-md-scrollfix>
+    
+      
+      
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../.." class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Home
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+    
+      
+      
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../getting-started/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Getting Started
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+    
+      
+      
+  
+  
+    
+  
+  
+  
+    
+    
+    
+    
+      
+        
+        
+      
+    
+    
+    <li class="md-nav__item md-nav__item--active md-nav__item--section md-nav__item--nested">
+      
+        
+        
+        <input class="md-nav__toggle md-toggle " type="checkbox" id="__nav_3" checked>
+        
+          
+          <label class="md-nav__link" for="__nav_3" id="__nav_3_label" tabindex="">
+            
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    User Guide
+  
+
+    
+  </span>
+  
+  
+
+            <span class="md-nav__icon md-icon"></span>
+          </label>
+        
+        <nav class="md-nav" data-md-level="1" aria-labelledby="__nav_3_label" aria-expanded="true">
+          <label class="md-nav__title" for="__nav_3">
+            <span class="md-nav__icon md-icon"></span>
+            
+  
+    User Guide
+  
+
+          </label>
+          <ul class="md-nav__list" data-md-scrollfix>
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../concepts/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Mathematical Concepts
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../usage/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Usage Patterns
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../serialization/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Saving & Loading
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../greeks/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Computing Greeks
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../sliding/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Sliding Technique
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../spline/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Chebyshev Splines
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../tensor-train/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Tensor Train
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+    
+  
+  
+  
+    <li class="md-nav__item md-nav__item--active">
+      
+      <input class="md-nav__toggle md-toggle" type="checkbox" id="__toc">
+      
+      
+        
+      
+      
+        <label class="md-nav__link md-nav__link--active" for="__toc">
+          
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Chebyshev Algebra
+  
+
+    
+  </span>
+  
+  
+
+          <span class="md-nav__icon md-icon"></span>
+        </label>
+      
+      <a href="./" class="md-nav__link md-nav__link--active">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Chebyshev Algebra
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+      
+        
+
+<nav class="md-nav md-nav--secondary" aria-label="Table of contents">
+  
+  
+  
+    
+  
+  
+    <label class="md-nav__title" for="__toc">
+      <span class="md-nav__icon md-icon"></span>
+      Table of contents
+    </label>
+    <ul class="md-nav__list" data-md-component="toc" data-md-scrollfix>
+      
+        <li class="md-nav__item">
+  <a href="#motivation-portfolio-combination" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Motivation -- Portfolio Combination
+      
+    </span>
+  </a>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#mathematical-basis" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Mathematical Basis
+      
+    </span>
+  </a>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#quick-start" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Quick Start
+      
+    </span>
+  </a>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#supported-operations" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Supported Operations
+      
+    </span>
+  </a>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#compatibility-requirements" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Compatibility Requirements
+      
+    </span>
+  </a>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#derivatives" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Derivatives
+      
+    </span>
+  </a>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#error-estimation" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Error Estimation
+      
+    </span>
+  </a>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#serialization" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Serialization
+      
+    </span>
+  </a>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#spline-and-slider-examples" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Spline and Slider Examples
+      
+    </span>
+  </a>
+  
+    <nav class="md-nav" aria-label="Spline and Slider Examples">
+      <ul class="md-nav__list">
+        
+          <li class="md-nav__item">
+  <a href="#chebyshevspline-addition" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        ChebyshevSpline addition
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#chebyshevslider-addition" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        ChebyshevSlider addition
+      
+    </span>
+  </a>
+  
+</li>
+        
+      </ul>
+    </nav>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#why-pointwise-products-are-not-supported" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Why Pointwise Products are NOT Supported
+      
+    </span>
+  </a>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#limitations" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Limitations
+      
+    </span>
+  </a>
+  
+</li>
+      
+    </ul>
+  
+</nav>
+      
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../error-estimation/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Error Estimation
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+          </ul>
+        </nav>
+      
+    </li>
+  
+
+    
+      
+      
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../api/reference/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    API Reference
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+    
+      
+      
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../benchmarks/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Benchmarks
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+    
+  </ul>
+</nav>
+                  </div>
+                </div>
+              </div>
+            
+            
+              
+              <div class="md-sidebar md-sidebar--secondary" data-md-component="sidebar" data-md-type="toc" >
+                <div class="md-sidebar__scrollwrap">
+                  <div class="md-sidebar__inner">
+                    
+
+<nav class="md-nav md-nav--secondary" aria-label="Table of contents">
+  
+  
+  
+    
+  
+  
+    <label class="md-nav__title" for="__toc">
+      <span class="md-nav__icon md-icon"></span>
+      Table of contents
+    </label>
+    <ul class="md-nav__list" data-md-component="toc" data-md-scrollfix>
+      
+        <li class="md-nav__item">
+  <a href="#motivation-portfolio-combination" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Motivation -- Portfolio Combination
+      
+    </span>
+  </a>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#mathematical-basis" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Mathematical Basis
+      
+    </span>
+  </a>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#quick-start" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Quick Start
+      
+    </span>
+  </a>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#supported-operations" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Supported Operations
+      
+    </span>
+  </a>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#compatibility-requirements" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Compatibility Requirements
+      
+    </span>
+  </a>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#derivatives" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Derivatives
+      
+    </span>
+  </a>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#error-estimation" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Error Estimation
+      
+    </span>
+  </a>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#serialization" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Serialization
+      
+    </span>
+  </a>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#spline-and-slider-examples" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Spline and Slider Examples
+      
+    </span>
+  </a>
+  
+    <nav class="md-nav" aria-label="Spline and Slider Examples">
+      <ul class="md-nav__list">
+        
+          <li class="md-nav__item">
+  <a href="#chebyshevspline-addition" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        ChebyshevSpline addition
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#chebyshevslider-addition" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        ChebyshevSlider addition
+      
+    </span>
+  </a>
+  
+</li>
+        
+      </ul>
+    </nav>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#why-pointwise-products-are-not-supported" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Why Pointwise Products are NOT Supported
+      
+    </span>
+  </a>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#limitations" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Limitations
+      
+    </span>
+  </a>
+  
+</li>
+      
+    </ul>
+  
+</nav>
+                  </div>
+                </div>
+              </div>
+            
+          
+          
+            <div class="md-content" data-md-component="content">
+              
+              <article class="md-content__inner md-typeset">
+                
+                  
+
+
+  
+  
+
+
+<h1 id="chebyshev-algebra">Chebyshev Algebra<a class="headerlink" href="#chebyshev-algebra" title="Permanent link">&para;</a></h1>
+<h2 id="motivation-portfolio-combination">Motivation -- Portfolio Combination<a class="headerlink" href="#motivation-portfolio-combination" title="Permanent link">&para;</a></h2>
+<p>In counterparty credit risk (CCR), thousands of trades sharing common risk factors
+must be priced at millions of Monte Carlo scenarios.  Building a Chebyshev proxy per
+trade reduces pricing cost, but evaluating 1,000 separate proxies at each scenario is
+still <span class="arithmatex">\(O(\text{num\_trades})\)</span>.</p>
+<p>Algebraic combination lets you <strong>pre-combine</strong> trade proxies into a single
+netting-set-level proxy:</p>
+<div class="highlight"><pre><span></span><code><a id="__codelineno-0-1" name="__codelineno-0-1" href="#__codelineno-0-1"></a><span class="n">portfolio</span> <span class="o">=</span> <span class="n">w1</span> <span class="o">*</span> <span class="n">trade_1</span> <span class="o">+</span> <span class="n">w2</span> <span class="o">*</span> <span class="n">trade_2</span> <span class="o">+</span> <span class="o">...</span> <span class="o">+</span> <span class="n">wn</span> <span class="o">*</span> <span class="n">trade_n</span>
+</code></pre></div>
+<p>One evaluation of <code>portfolio</code> gives the netting set price -- <span class="arithmatex">\(O(1)\)</span> regardless of
+the number of trades.</p>
+<div class="admonition tip">
+<p class="admonition-title">When to use algebra</p>
+<p>Use algebraic combination when multiple Chebyshev interpolants share the <strong>same
+grid</strong> (same domain, node counts, derivative order) and you want to combine them
+into a single interpolant for faster evaluation.</p>
+</div>
+<h2 id="mathematical-basis">Mathematical Basis<a class="headerlink" href="#mathematical-basis" title="Permanent link">&para;</a></h2>
+<p>The barycentric interpolation formula evaluates a Chebyshev Tensor (CT) at any point
+<span class="arithmatex">\(\mathbf{x}\)</span>:</p>
+<div class="arithmatex">\[
+p_n(\mathbf{x}) = \sum_{i_1, \ldots, i_d} v_{i_1, \ldots, i_d} \prod_{k=1}^{d} \ell^{(k)}_{i_k}(x_k)
+\]</div>
+<p>where <span class="arithmatex">\(\ell^{(k)}_{i_k}\)</span> are the barycentric basis functions.  This is <strong>linear in
+the values</strong> <span class="arithmatex">\(v_{i_1, \ldots, i_d}\)</span>.</p>
+<p><strong>Theorem (Linearity of CT operations).</strong>  Let <span class="arithmatex">\(T_f\)</span> and <span class="arithmatex">\(T_g\)</span> be two CTs on the
+same grid.  Then:</p>
+<ol>
+<li><strong>Addition</strong>: <span class="arithmatex">\(T_f + T_g\)</span> (element-wise on grid values) is the CT for <span class="arithmatex">\(f + g\)</span></li>
+<li><strong>Scalar multiplication</strong>: <span class="arithmatex">\(c \cdot T_f\)</span> is the CT for <span class="arithmatex">\(c \cdot f\)</span></li>
+<li><strong>Subtraction</strong>: <span class="arithmatex">\(T_f - T_g\)</span> is the CT for <span class="arithmatex">\(f - g\)</span></li>
+</ol>
+<p><em>Proof.</em>  Direct from linearity of the barycentric formula.</p>
+<p><strong>Corollary (Derivatives).</strong>  Since the spectral differentiation matrix
+<span class="arithmatex">\(\mathcal{D}_k\)</span> depends only on grid points:</p>
+<div class="arithmatex">\[
+\mathcal{D}_k (v_f + v_g) = \mathcal{D}_k v_f + \mathcal{D}_k v_g
+\]</div>
+<p>Derivatives of a combined CT equal the combined derivatives.</p>
+<p><strong>Error bound.</strong>  By the triangle inequality:</p>
+<div class="arithmatex">\[
+\|(f + g) - (p_f + p_g)\|_\infty \leq \epsilon_f + \epsilon_g
+\]</div>
+<p>For scalar multiplication: <span class="arithmatex">\(\|cf - cp_f\|_\infty = |c| \cdot \epsilon_f\)</span>.</p>
+<div class="admonition note">
+<p class="admonition-title">Book reference</p>
+<p>The linearity of Chebyshev Tensor operations is described in Section 3.9 of Ruiz
+&amp; Zeron (2021), <em>Machine Learning for Risk Calculations</em>, Wiley Finance.</p>
+</div>
+<h2 id="quick-start">Quick Start<a class="headerlink" href="#quick-start" title="Permanent link">&para;</a></h2>
+<div class="highlight"><pre><span></span><code><a id="__codelineno-1-1" name="__codelineno-1-1" href="#__codelineno-1-1"></a><span class="kn">import</span><span class="w"> </span><span class="nn">math</span>
+<a id="__codelineno-1-2" name="__codelineno-1-2" href="#__codelineno-1-2"></a><span class="kn">from</span><span class="w"> </span><span class="nn">pychebyshev</span><span class="w"> </span><span class="kn">import</span> <span class="n">ChebyshevApproximation</span>
+<a id="__codelineno-1-3" name="__codelineno-1-3" href="#__codelineno-1-3"></a>
+<a id="__codelineno-1-4" name="__codelineno-1-4" href="#__codelineno-1-4"></a><span class="c1"># Two functions on the same grid</span>
+<a id="__codelineno-1-5" name="__codelineno-1-5" href="#__codelineno-1-5"></a><span class="k">def</span><span class="w"> </span><span class="nf">f</span><span class="p">(</span><span class="n">x</span><span class="p">,</span> <span class="n">_</span><span class="p">):</span>
+<a id="__codelineno-1-6" name="__codelineno-1-6" href="#__codelineno-1-6"></a>    <span class="k">return</span> <span class="n">math</span><span class="o">.</span><span class="n">sin</span><span class="p">(</span><span class="n">x</span><span class="p">[</span><span class="mi">0</span><span class="p">])</span> <span class="o">+</span> <span class="n">math</span><span class="o">.</span><span class="n">sin</span><span class="p">(</span><span class="n">x</span><span class="p">[</span><span class="mi">1</span><span class="p">])</span>
+<a id="__codelineno-1-7" name="__codelineno-1-7" href="#__codelineno-1-7"></a>
+<a id="__codelineno-1-8" name="__codelineno-1-8" href="#__codelineno-1-8"></a><span class="k">def</span><span class="w"> </span><span class="nf">g</span><span class="p">(</span><span class="n">x</span><span class="p">,</span> <span class="n">_</span><span class="p">):</span>
+<a id="__codelineno-1-9" name="__codelineno-1-9" href="#__codelineno-1-9"></a>    <span class="k">return</span> <span class="n">math</span><span class="o">.</span><span class="n">cos</span><span class="p">(</span><span class="n">x</span><span class="p">[</span><span class="mi">0</span><span class="p">])</span> <span class="o">*</span> <span class="n">math</span><span class="o">.</span><span class="n">cos</span><span class="p">(</span><span class="n">x</span><span class="p">[</span><span class="mi">1</span><span class="p">])</span>
+<a id="__codelineno-1-10" name="__codelineno-1-10" href="#__codelineno-1-10"></a>
+<a id="__codelineno-1-11" name="__codelineno-1-11" href="#__codelineno-1-11"></a><span class="n">a</span> <span class="o">=</span> <span class="n">ChebyshevApproximation</span><span class="p">(</span><span class="n">f</span><span class="p">,</span> <span class="mi">2</span><span class="p">,</span> <span class="p">[[</span><span class="o">-</span><span class="mi">1</span><span class="p">,</span> <span class="mi">1</span><span class="p">],</span> <span class="p">[</span><span class="o">-</span><span class="mi">1</span><span class="p">,</span> <span class="mi">1</span><span class="p">]],</span> <span class="p">[</span><span class="mi">11</span><span class="p">,</span> <span class="mi">11</span><span class="p">])</span>
+<a id="__codelineno-1-12" name="__codelineno-1-12" href="#__codelineno-1-12"></a><span class="n">b</span> <span class="o">=</span> <span class="n">ChebyshevApproximation</span><span class="p">(</span><span class="n">g</span><span class="p">,</span> <span class="mi">2</span><span class="p">,</span> <span class="p">[[</span><span class="o">-</span><span class="mi">1</span><span class="p">,</span> <span class="mi">1</span><span class="p">],</span> <span class="p">[</span><span class="o">-</span><span class="mi">1</span><span class="p">,</span> <span class="mi">1</span><span class="p">]],</span> <span class="p">[</span><span class="mi">11</span><span class="p">,</span> <span class="mi">11</span><span class="p">])</span>
+<a id="__codelineno-1-13" name="__codelineno-1-13" href="#__codelineno-1-13"></a><span class="n">a</span><span class="o">.</span><span class="n">build</span><span class="p">();</span> <span class="n">b</span><span class="o">.</span><span class="n">build</span><span class="p">()</span>
+<a id="__codelineno-1-14" name="__codelineno-1-14" href="#__codelineno-1-14"></a>
+<a id="__codelineno-1-15" name="__codelineno-1-15" href="#__codelineno-1-15"></a><span class="c1"># Combine into a portfolio proxy</span>
+<a id="__codelineno-1-16" name="__codelineno-1-16" href="#__codelineno-1-16"></a><span class="n">portfolio</span> <span class="o">=</span> <span class="mf">0.6</span> <span class="o">*</span> <span class="n">a</span> <span class="o">+</span> <span class="mf">0.4</span> <span class="o">*</span> <span class="n">b</span>
+<a id="__codelineno-1-17" name="__codelineno-1-17" href="#__codelineno-1-17"></a>
+<a id="__codelineno-1-18" name="__codelineno-1-18" href="#__codelineno-1-18"></a><span class="c1"># Evaluate price and Greeks at any point</span>
+<a id="__codelineno-1-19" name="__codelineno-1-19" href="#__codelineno-1-19"></a><span class="n">point</span> <span class="o">=</span> <span class="p">[</span><span class="mf">0.5</span><span class="p">,</span> <span class="mf">0.3</span><span class="p">]</span>
+<a id="__codelineno-1-20" name="__codelineno-1-20" href="#__codelineno-1-20"></a><span class="n">price</span> <span class="o">=</span> <span class="n">portfolio</span><span class="o">.</span><span class="n">vectorized_eval</span><span class="p">(</span><span class="n">point</span><span class="p">,</span> <span class="p">[</span><span class="mi">0</span><span class="p">,</span> <span class="mi">0</span><span class="p">])</span>
+<a id="__codelineno-1-21" name="__codelineno-1-21" href="#__codelineno-1-21"></a><span class="n">delta</span> <span class="o">=</span> <span class="n">portfolio</span><span class="o">.</span><span class="n">vectorized_eval</span><span class="p">(</span><span class="n">point</span><span class="p">,</span> <span class="p">[</span><span class="mi">1</span><span class="p">,</span> <span class="mi">0</span><span class="p">])</span>
+<a id="__codelineno-1-22" name="__codelineno-1-22" href="#__codelineno-1-22"></a><span class="n">gamma</span> <span class="o">=</span> <span class="n">portfolio</span><span class="o">.</span><span class="n">vectorized_eval</span><span class="p">(</span><span class="n">point</span><span class="p">,</span> <span class="p">[</span><span class="mi">2</span><span class="p">,</span> <span class="mi">0</span><span class="p">])</span>
+<a id="__codelineno-1-23" name="__codelineno-1-23" href="#__codelineno-1-23"></a>
+<a id="__codelineno-1-24" name="__codelineno-1-24" href="#__codelineno-1-24"></a><span class="nb">print</span><span class="p">(</span><span class="n">portfolio</span><span class="p">)</span>
+</code></pre></div>
+<p>Output:</p>
+<div class="highlight"><pre><span></span><code><a id="__codelineno-2-1" name="__codelineno-2-1" href="#__codelineno-2-1"></a>ChebyshevApproximation (2D, built)
+<a id="__codelineno-2-2" name="__codelineno-2-2" href="#__codelineno-2-2"></a>  Nodes:       [11, 11] (121 total)
+<a id="__codelineno-2-3" name="__codelineno-2-3" href="#__codelineno-2-3"></a>  Domain:      [-1, 1] x [-1, 1]
+<a id="__codelineno-2-4" name="__codelineno-2-4" href="#__codelineno-2-4"></a>  Build:       0.000s, 0 evaluations
+<a id="__codelineno-2-5" name="__codelineno-2-5" href="#__codelineno-2-5"></a>  Error est:   4.22e-10
+<a id="__codelineno-2-6" name="__codelineno-2-6" href="#__codelineno-2-6"></a>  Derivatives: up to order 2
+</code></pre></div>
+<p>The combined <code>portfolio</code> is a regular <code>ChebyshevApproximation</code> -- all existing
+evaluation methods (<code>eval</code>, <code>vectorized_eval</code>, <code>vectorized_eval_multi</code>,
+<code>vectorized_eval_batch</code>) work unchanged.</p>
+<h2 id="supported-operations">Supported Operations<a class="headerlink" href="#supported-operations" title="Permanent link">&para;</a></h2>
+<table>
+<thead>
+<tr>
+<th>Operator</th>
+<th>Example</th>
+<th>Result</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td><code>+</code></td>
+<td><code>cheb_a + cheb_b</code></td>
+<td>Element-wise add tensor values</td>
+</tr>
+<tr>
+<td><code>-</code></td>
+<td><code>cheb_a - cheb_b</code></td>
+<td>Element-wise subtract</td>
+</tr>
+<tr>
+<td><code>*</code> scalar</td>
+<td><code>3.0 * cheb</code> or <code>cheb * 3.0</code></td>
+<td>Scale all tensor values</td>
+</tr>
+<tr>
+<td><code>/</code> scalar</td>
+<td><code>cheb / 2.0</code></td>
+<td>Divide all tensor values</td>
+</tr>
+<tr>
+<td>unary <code>-</code></td>
+<td><code>-cheb</code></td>
+<td>Negate all tensor values</td>
+</tr>
+<tr>
+<td><code>+=</code></td>
+<td><code>cheb_a += cheb_b</code></td>
+<td>In-place add</td>
+</tr>
+<tr>
+<td><code>-=</code></td>
+<td><code>cheb_a -= cheb_b</code></td>
+<td>In-place subtract</td>
+</tr>
+<tr>
+<td><code>*=</code></td>
+<td><code>cheb *= 3.0</code></td>
+<td>In-place scale</td>
+</tr>
+<tr>
+<td><code>/=</code></td>
+<td><code>cheb /= 2.0</code></td>
+<td>In-place divide</td>
+</tr>
+</tbody>
+</table>
+<h2 id="compatibility-requirements">Compatibility Requirements<a class="headerlink" href="#compatibility-requirements" title="Permanent link">&para;</a></h2>
+<p>Both operands must share:</p>
+<ul>
+<li><strong>Same type</strong> -- both <code>ChebyshevApproximation</code>, both <code>ChebyshevSpline</code>, etc.</li>
+<li><strong>Same <code>num_dimensions</code></strong> -- number of interpolation dimensions</li>
+<li><strong>Same <code>domain</code></strong> -- identical domain bounds in every dimension</li>
+<li><strong>Same <code>n_nodes</code></strong> -- same node counts in every dimension</li>
+<li><strong>Same <code>max_derivative_order</code></strong> -- same spectral differentiation depth</li>
+<li><strong>Both must be built</strong> -- <code>build()</code> must have been called on each operand</li>
+</ul>
+<p>Additional requirements for specific classes:</p>
+<ul>
+<li><strong><code>ChebyshevSpline</code></strong>: same <code>knots</code> in every dimension</li>
+<li><strong><code>ChebyshevSlider</code></strong>: same <code>partition</code> and same <code>pivot_point</code></li>
+</ul>
+<p>A <code>ValueError</code> is raised if any of these conditions are not met.</p>
+<div class="admonition example">
+<p class="admonition-title">Checking compatibility</p>
+<div class="highlight"><pre><span></span><code><a id="__codelineno-3-1" name="__codelineno-3-1" href="#__codelineno-3-1"></a><span class="c1"># These will raise ValueError:</span>
+<a id="__codelineno-3-2" name="__codelineno-3-2" href="#__codelineno-3-2"></a><span class="n">a</span> <span class="o">=</span> <span class="n">ChebyshevApproximation</span><span class="p">(</span><span class="n">f</span><span class="p">,</span> <span class="mi">2</span><span class="p">,</span> <span class="p">[[</span><span class="mi">0</span><span class="p">,</span> <span class="mi">1</span><span class="p">],</span> <span class="p">[</span><span class="mi">0</span><span class="p">,</span> <span class="mi">1</span><span class="p">]],</span> <span class="p">[</span><span class="mi">10</span><span class="p">,</span> <span class="mi">10</span><span class="p">])</span>
+<a id="__codelineno-3-3" name="__codelineno-3-3" href="#__codelineno-3-3"></a><span class="n">b</span> <span class="o">=</span> <span class="n">ChebyshevApproximation</span><span class="p">(</span><span class="n">g</span><span class="p">,</span> <span class="mi">2</span><span class="p">,</span> <span class="p">[[</span><span class="mi">0</span><span class="p">,</span> <span class="mi">1</span><span class="p">],</span> <span class="p">[</span><span class="mi">0</span><span class="p">,</span> <span class="mi">2</span><span class="p">]],</span> <span class="p">[</span><span class="mi">10</span><span class="p">,</span> <span class="mi">10</span><span class="p">])</span>  <span class="c1"># different domain</span>
+<a id="__codelineno-3-4" name="__codelineno-3-4" href="#__codelineno-3-4"></a><span class="n">a</span><span class="o">.</span><span class="n">build</span><span class="p">();</span> <span class="n">b</span><span class="o">.</span><span class="n">build</span><span class="p">()</span>
+<a id="__codelineno-3-5" name="__codelineno-3-5" href="#__codelineno-3-5"></a><span class="n">c</span> <span class="o">=</span> <span class="n">a</span> <span class="o">+</span> <span class="n">b</span>  <span class="c1"># ValueError: domain mismatch</span>
+</code></pre></div>
+</div>
+<h2 id="derivatives">Derivatives<a class="headerlink" href="#derivatives" title="Permanent link">&para;</a></h2>
+<p>Derivatives propagate automatically through algebraic operations.  The combined
+interpolant inherits the spectral differentiation matrices from its operands, so
+no re-computation is needed:</p>
+<div class="highlight"><pre><span></span><code><a id="__codelineno-4-1" name="__codelineno-4-1" href="#__codelineno-4-1"></a><span class="c1"># Build two interpolants</span>
+<a id="__codelineno-4-2" name="__codelineno-4-2" href="#__codelineno-4-2"></a><span class="n">call</span><span class="o">.</span><span class="n">build</span><span class="p">()</span>
+<a id="__codelineno-4-3" name="__codelineno-4-3" href="#__codelineno-4-3"></a><span class="n">put</span><span class="o">.</span><span class="n">build</span><span class="p">()</span>
+<a id="__codelineno-4-4" name="__codelineno-4-4" href="#__codelineno-4-4"></a>
+<a id="__codelineno-4-5" name="__codelineno-4-5" href="#__codelineno-4-5"></a><span class="c1"># Combine</span>
+<a id="__codelineno-4-6" name="__codelineno-4-6" href="#__codelineno-4-6"></a><span class="n">portfolio</span> <span class="o">=</span> <span class="mf">0.6</span> <span class="o">*</span> <span class="n">call</span> <span class="o">+</span> <span class="mf">0.4</span> <span class="o">*</span> <span class="n">put</span>
+<a id="__codelineno-4-7" name="__codelineno-4-7" href="#__codelineno-4-7"></a>
+<a id="__codelineno-4-8" name="__codelineno-4-8" href="#__codelineno-4-8"></a><span class="c1"># Delta of the portfolio = 0.6 * delta_call + 0.4 * delta_put</span>
+<a id="__codelineno-4-9" name="__codelineno-4-9" href="#__codelineno-4-9"></a><span class="n">delta</span> <span class="o">=</span> <span class="n">portfolio</span><span class="o">.</span><span class="n">vectorized_eval</span><span class="p">(</span><span class="n">point</span><span class="p">,</span> <span class="p">[</span><span class="mi">1</span><span class="p">,</span> <span class="mi">0</span><span class="p">,</span> <span class="mi">0</span><span class="p">])</span>
+<a id="__codelineno-4-10" name="__codelineno-4-10" href="#__codelineno-4-10"></a>
+<a id="__codelineno-4-11" name="__codelineno-4-11" href="#__codelineno-4-11"></a><span class="c1"># Gamma works too</span>
+<a id="__codelineno-4-12" name="__codelineno-4-12" href="#__codelineno-4-12"></a><span class="n">gamma</span> <span class="o">=</span> <span class="n">portfolio</span><span class="o">.</span><span class="n">vectorized_eval</span><span class="p">(</span><span class="n">point</span><span class="p">,</span> <span class="p">[</span><span class="mi">2</span><span class="p">,</span> <span class="mi">0</span><span class="p">,</span> <span class="mi">0</span><span class="p">])</span>
+</code></pre></div>
+<p>This follows directly from the linearity of the spectral differentiation matrices
+<span class="arithmatex">\(\mathcal{D}_k\)</span>.</p>
+<h2 id="error-estimation">Error Estimation<a class="headerlink" href="#error-estimation" title="Permanent link">&para;</a></h2>
+<p><code>error_estimate()</code> recomputes from the combined Chebyshev coefficients (DCT of the
+combined tensor values).  In practice this may give a <strong>tighter bound</strong> than the
+triangle inequality <span class="arithmatex">\(\epsilon_f + \epsilon_g\)</span>, because cancellation between the
+high-order coefficients of <span class="arithmatex">\(f\)</span> and <span class="arithmatex">\(g\)</span> can reduce the estimated tail.</p>
+<div class="highlight"><pre><span></span><code><a id="__codelineno-5-1" name="__codelineno-5-1" href="#__codelineno-5-1"></a><span class="n">portfolio</span> <span class="o">=</span> <span class="mf">0.6</span> <span class="o">*</span> <span class="n">call</span> <span class="o">+</span> <span class="mf">0.4</span> <span class="o">*</span> <span class="n">put</span>
+<a id="__codelineno-5-2" name="__codelineno-5-2" href="#__codelineno-5-2"></a><span class="n">err</span> <span class="o">=</span> <span class="n">portfolio</span><span class="o">.</span><span class="n">error_estimate</span><span class="p">()</span>
+<a id="__codelineno-5-3" name="__codelineno-5-3" href="#__codelineno-5-3"></a><span class="nb">print</span><span class="p">(</span><span class="sa">f</span><span class="s2">&quot;Portfolio error estimate: </span><span class="si">{</span><span class="n">err</span><span class="si">:</span><span class="s2">.2e</span><span class="si">}</span><span class="s2">&quot;</span><span class="p">)</span>
+</code></pre></div>
+<h2 id="serialization">Serialization<a class="headerlink" href="#serialization" title="Permanent link">&para;</a></h2>
+<p>Combined interpolants support <code>save()</code> and <code>load()</code> just like any other built
+interpolant.  The underlying function reference is lost (<code>function=None</code>), but all
+tensor values, grid data, and differentiation matrices are preserved:</p>
+<div class="highlight"><pre><span></span><code><a id="__codelineno-6-1" name="__codelineno-6-1" href="#__codelineno-6-1"></a><span class="n">portfolio</span> <span class="o">=</span> <span class="mf">0.6</span> <span class="o">*</span> <span class="n">call</span> <span class="o">+</span> <span class="mf">0.4</span> <span class="o">*</span> <span class="n">put</span>
+<a id="__codelineno-6-2" name="__codelineno-6-2" href="#__codelineno-6-2"></a><span class="n">portfolio</span><span class="o">.</span><span class="n">save</span><span class="p">(</span><span class="s2">&quot;portfolio.pkl&quot;</span><span class="p">)</span>
+<a id="__codelineno-6-3" name="__codelineno-6-3" href="#__codelineno-6-3"></a>
+<a id="__codelineno-6-4" name="__codelineno-6-4" href="#__codelineno-6-4"></a><span class="n">loaded</span> <span class="o">=</span> <span class="n">ChebyshevApproximation</span><span class="o">.</span><span class="n">load</span><span class="p">(</span><span class="s2">&quot;portfolio.pkl&quot;</span><span class="p">)</span>
+<a id="__codelineno-6-5" name="__codelineno-6-5" href="#__codelineno-6-5"></a><span class="n">loaded</span><span class="o">.</span><span class="n">vectorized_eval</span><span class="p">(</span><span class="n">point</span><span class="p">,</span> <span class="p">[</span><span class="mi">0</span><span class="p">,</span> <span class="mi">0</span><span class="p">])</span>  <span class="c1"># works identically</span>
+</code></pre></div>
+<h2 id="spline-and-slider-examples">Spline and Slider Examples<a class="headerlink" href="#spline-and-slider-examples" title="Permanent link">&para;</a></h2>
+<h3 id="chebyshevspline-addition">ChebyshevSpline addition<a class="headerlink" href="#chebyshevspline-addition" title="Permanent link">&para;</a></h3>
+<p>Two splines with the <strong>same knots</strong> can be combined:</p>
+<div class="highlight"><pre><span></span><code><a id="__codelineno-7-1" name="__codelineno-7-1" href="#__codelineno-7-1"></a><span class="kn">from</span><span class="w"> </span><span class="nn">pychebyshev</span><span class="w"> </span><span class="kn">import</span> <span class="n">ChebyshevSpline</span>
+<a id="__codelineno-7-2" name="__codelineno-7-2" href="#__codelineno-7-2"></a>
+<a id="__codelineno-7-3" name="__codelineno-7-3" href="#__codelineno-7-3"></a><span class="n">spline_a</span> <span class="o">=</span> <span class="n">ChebyshevSpline</span><span class="p">(</span>
+<a id="__codelineno-7-4" name="__codelineno-7-4" href="#__codelineno-7-4"></a>    <span class="n">f</span><span class="p">,</span> <span class="mi">2</span><span class="p">,</span> <span class="p">[[</span><span class="mi">80</span><span class="p">,</span> <span class="mi">120</span><span class="p">],</span> <span class="p">[</span><span class="mf">0.25</span><span class="p">,</span> <span class="mf">1.0</span><span class="p">]],</span> <span class="p">[</span><span class="mi">15</span><span class="p">,</span> <span class="mi">15</span><span class="p">],</span>
+<a id="__codelineno-7-5" name="__codelineno-7-5" href="#__codelineno-7-5"></a>    <span class="n">knots</span><span class="o">=</span><span class="p">[[</span><span class="mf">100.0</span><span class="p">],</span> <span class="p">[]],</span>
+<a id="__codelineno-7-6" name="__codelineno-7-6" href="#__codelineno-7-6"></a><span class="p">)</span>
+<a id="__codelineno-7-7" name="__codelineno-7-7" href="#__codelineno-7-7"></a><span class="n">spline_b</span> <span class="o">=</span> <span class="n">ChebyshevSpline</span><span class="p">(</span>
+<a id="__codelineno-7-8" name="__codelineno-7-8" href="#__codelineno-7-8"></a>    <span class="n">g</span><span class="p">,</span> <span class="mi">2</span><span class="p">,</span> <span class="p">[[</span><span class="mi">80</span><span class="p">,</span> <span class="mi">120</span><span class="p">],</span> <span class="p">[</span><span class="mf">0.25</span><span class="p">,</span> <span class="mf">1.0</span><span class="p">]],</span> <span class="p">[</span><span class="mi">15</span><span class="p">,</span> <span class="mi">15</span><span class="p">],</span>
+<a id="__codelineno-7-9" name="__codelineno-7-9" href="#__codelineno-7-9"></a>    <span class="n">knots</span><span class="o">=</span><span class="p">[[</span><span class="mf">100.0</span><span class="p">],</span> <span class="p">[]],</span>
+<a id="__codelineno-7-10" name="__codelineno-7-10" href="#__codelineno-7-10"></a><span class="p">)</span>
+<a id="__codelineno-7-11" name="__codelineno-7-11" href="#__codelineno-7-11"></a><span class="n">spline_a</span><span class="o">.</span><span class="n">build</span><span class="p">();</span> <span class="n">spline_b</span><span class="o">.</span><span class="n">build</span><span class="p">()</span>
+<a id="__codelineno-7-12" name="__codelineno-7-12" href="#__codelineno-7-12"></a>
+<a id="__codelineno-7-13" name="__codelineno-7-13" href="#__codelineno-7-13"></a><span class="n">combined</span> <span class="o">=</span> <span class="n">spline_a</span> <span class="o">+</span> <span class="n">spline_b</span>
+<a id="__codelineno-7-14" name="__codelineno-7-14" href="#__codelineno-7-14"></a><span class="n">price</span> <span class="o">=</span> <span class="n">combined</span><span class="o">.</span><span class="n">eval</span><span class="p">([</span><span class="mf">110.0</span><span class="p">,</span> <span class="mf">0.5</span><span class="p">],</span> <span class="p">[</span><span class="mi">0</span><span class="p">,</span> <span class="mi">0</span><span class="p">])</span>
+</code></pre></div>
+<p>Each piece is combined independently -- the combined spline has the same knot
+structure as its operands.</p>
+<h3 id="chebyshevslider-addition">ChebyshevSlider addition<a class="headerlink" href="#chebyshevslider-addition" title="Permanent link">&para;</a></h3>
+<p>Two sliders with the <strong>same partition and pivot point</strong> can be combined:</p>
+<div class="highlight"><pre><span></span><code><a id="__codelineno-8-1" name="__codelineno-8-1" href="#__codelineno-8-1"></a><span class="kn">from</span><span class="w"> </span><span class="nn">pychebyshev</span><span class="w"> </span><span class="kn">import</span> <span class="n">ChebyshevSlider</span>
+<a id="__codelineno-8-2" name="__codelineno-8-2" href="#__codelineno-8-2"></a>
+<a id="__codelineno-8-3" name="__codelineno-8-3" href="#__codelineno-8-3"></a><span class="n">slider_a</span> <span class="o">=</span> <span class="n">ChebyshevSlider</span><span class="p">(</span>
+<a id="__codelineno-8-4" name="__codelineno-8-4" href="#__codelineno-8-4"></a>    <span class="n">f</span><span class="p">,</span> <span class="mi">5</span><span class="p">,</span> <span class="n">domain</span><span class="p">,</span> <span class="p">[</span><span class="mi">11</span><span class="p">]</span> <span class="o">*</span> <span class="mi">5</span><span class="p">,</span>
+<a id="__codelineno-8-5" name="__codelineno-8-5" href="#__codelineno-8-5"></a>    <span class="n">partition</span><span class="o">=</span><span class="p">[[</span><span class="mi">0</span><span class="p">,</span> <span class="mi">1</span><span class="p">],</span> <span class="p">[</span><span class="mi">2</span><span class="p">,</span> <span class="mi">3</span><span class="p">,</span> <span class="mi">4</span><span class="p">]],</span>
+<a id="__codelineno-8-6" name="__codelineno-8-6" href="#__codelineno-8-6"></a>    <span class="n">pivot_point</span><span class="o">=</span><span class="p">[</span><span class="mf">0.0</span><span class="p">]</span> <span class="o">*</span> <span class="mi">5</span><span class="p">,</span>
+<a id="__codelineno-8-7" name="__codelineno-8-7" href="#__codelineno-8-7"></a><span class="p">)</span>
+<a id="__codelineno-8-8" name="__codelineno-8-8" href="#__codelineno-8-8"></a><span class="n">slider_b</span> <span class="o">=</span> <span class="n">ChebyshevSlider</span><span class="p">(</span>
+<a id="__codelineno-8-9" name="__codelineno-8-9" href="#__codelineno-8-9"></a>    <span class="n">g</span><span class="p">,</span> <span class="mi">5</span><span class="p">,</span> <span class="n">domain</span><span class="p">,</span> <span class="p">[</span><span class="mi">11</span><span class="p">]</span> <span class="o">*</span> <span class="mi">5</span><span class="p">,</span>
+<a id="__codelineno-8-10" name="__codelineno-8-10" href="#__codelineno-8-10"></a>    <span class="n">partition</span><span class="o">=</span><span class="p">[[</span><span class="mi">0</span><span class="p">,</span> <span class="mi">1</span><span class="p">],</span> <span class="p">[</span><span class="mi">2</span><span class="p">,</span> <span class="mi">3</span><span class="p">,</span> <span class="mi">4</span><span class="p">]],</span>
+<a id="__codelineno-8-11" name="__codelineno-8-11" href="#__codelineno-8-11"></a>    <span class="n">pivot_point</span><span class="o">=</span><span class="p">[</span><span class="mf">0.0</span><span class="p">]</span> <span class="o">*</span> <span class="mi">5</span><span class="p">,</span>
+<a id="__codelineno-8-12" name="__codelineno-8-12" href="#__codelineno-8-12"></a><span class="p">)</span>
+<a id="__codelineno-8-13" name="__codelineno-8-13" href="#__codelineno-8-13"></a><span class="n">slider_a</span><span class="o">.</span><span class="n">build</span><span class="p">();</span> <span class="n">slider_b</span><span class="o">.</span><span class="n">build</span><span class="p">()</span>
+<a id="__codelineno-8-14" name="__codelineno-8-14" href="#__codelineno-8-14"></a>
+<a id="__codelineno-8-15" name="__codelineno-8-15" href="#__codelineno-8-15"></a><span class="n">combined</span> <span class="o">=</span> <span class="n">slider_a</span> <span class="o">+</span> <span class="n">slider_b</span>
+<a id="__codelineno-8-16" name="__codelineno-8-16" href="#__codelineno-8-16"></a><span class="n">val</span> <span class="o">=</span> <span class="n">combined</span><span class="o">.</span><span class="n">eval</span><span class="p">([</span><span class="mf">0.5</span><span class="p">]</span> <span class="o">*</span> <span class="mi">5</span><span class="p">,</span> <span class="p">[</span><span class="mi">0</span><span class="p">]</span> <span class="o">*</span> <span class="mi">5</span><span class="p">)</span>
+</code></pre></div>
+<p>Each slide is combined independently, preserving the additive decomposition structure.</p>
+<h2 id="why-pointwise-products-are-not-supported">Why Pointwise Products are NOT Supported<a class="headerlink" href="#why-pointwise-products-are-not-supported" title="Permanent link">&para;</a></h2>
+<p>The product <span class="arithmatex">\(f \cdot g\)</span> is <strong>not</strong> <span class="arithmatex">\(v_f \odot v_g\)</span> (element-wise product of grid
+values).  The product of two polynomials of degree <span class="arithmatex">\(n\)</span> has degree <span class="arithmatex">\(2n\)</span>, which
+cannot be represented on the same <span class="arithmatex">\(n\)</span>-point grid.</p>
+<p>Only <strong>linear combinations</strong> (addition, subtraction, scalar multiplication) are exact
+on the same grid.  Pointwise multiplication of two Chebyshev interpolants requires a
+grid refinement step and is not supported.</p>
+<div class="admonition note">
+<p class="admonition-title">Workaround for products</p>
+<p>If you need to approximate <span class="arithmatex">\(f \cdot g\)</span>, build a single Chebyshev interpolant
+for the product function directly: define <code>h(x, aux) = f(x) * g(x)</code> and call
+<code>ChebyshevApproximation(h, ...).build()</code>.</p>
+</div>
+<h2 id="limitations">Limitations<a class="headerlink" href="#limitations" title="Permanent link">&para;</a></h2>
+<ul>
+<li><strong>No <code>ChebyshevTT</code> operators</strong> -- TT addition requires rank control (rank of
+  <span class="arithmatex">\(T_f + T_g\)</span> is <span class="arithmatex">\(r_f + r_g\)</span>) and is not currently implemented.</li>
+<li><strong>No cross-type operations</strong> -- you cannot add a <code>ChebyshevApproximation</code> to a
+  <code>ChebyshevSpline</code> or a <code>ChebyshevSlider</code>.</li>
+<li><strong>Operands must share exact grid parameters</strong> -- domain, node counts, derivative
+  order, and (where applicable) knots or partition must be identical.</li>
+<li><strong>Result has <code>function=None</code></strong> -- the combined interpolant cannot call <code>build()</code>
+  again, since it has no underlying function reference.</li>
+</ul>
+
+
+
+
+
+
+
+
+
+
+
+
+                
+              </article>
+            </div>
+          
+          
+<script>var target=document.getElementById(location.hash.slice(1));target&&target.name&&(target.checked=target.name.startsWith("__tabbed_"))</script>
+        </div>
+        
+          <button type="button" class="md-top md-icon" data-md-component="top" hidden>
+  
+  <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24"><path d="M13 20h-2V8l-5.5 5.5-1.42-1.42L12 4.16l7.92 7.92-1.42 1.42L13 8z"/></svg>
+  Back to top
+</button>
+        
+      </main>
+      
+        <footer class="md-footer">
+  
+  <div class="md-footer-meta md-typeset">
+    <div class="md-footer-meta__inner md-grid">
+      <div class="md-copyright">
+  
+  
+    Made with
+    <a href="https://squidfunk.github.io/mkdocs-material/" target="_blank" rel="noopener">
+      Material for MkDocs
+    </a>
+  
+</div>
+      
+    </div>
+  </div>
+</footer>
+      
+    </div>
+    <div class="md-dialog" data-md-component="dialog">
+      <div class="md-dialog__inner md-typeset"></div>
+    </div>
+    
+    
+    
+      
+      
+      <script id="__config" type="application/json">{"annotate": null, "base": "../..", "features": ["content.code.copy", "navigation.sections", "navigation.top", "search.highlight"], "search": "../../assets/javascripts/workers/search.2c215733.min.js", "tags": null, "translations": {"clipboard.copied": "Copied to clipboard", "clipboard.copy": "Copy to clipboard", "search.result.more.one": "1 more on this page", "search.result.more.other": "# more on this page", "search.result.none": "No matching documents", "search.result.one": "1 matching document", "search.result.other": "# matching documents", "search.result.placeholder": "Type to start searching", "search.result.term.missing": "Missing", "select.version": "Select version"}, "version": null}</script>
+    
+    
+      <script src="../../assets/javascripts/bundle.79ae519e.min.js"></script>
+      
+        <script src="../../javascripts/katex.js"></script>
+      
+        <script src="https://unpkg.com/katex@0/dist/katex.min.js"></script>
+      
+        <script src="https://unpkg.com/katex@0/dist/contrib/auto-render.min.js"></script>
+      
+    
+  </body>
+</html>
