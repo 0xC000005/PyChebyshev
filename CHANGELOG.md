@@ -5,6 +5,22 @@ All notable changes to PyChebyshev will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [0.6.0] - 2026-02-14
+
+### Added
+
+- `ChebyshevSpline` class for piecewise Chebyshev interpolation with user-specified knots (Section 3.8, Ruiz & Zeron 2021)
+- Knot-based domain partitioning: place knots at kinks or discontinuities to restore spectral convergence on each piece
+- `eval()`, `eval_multi()`, `eval_batch()` with automatic piece routing via `np.searchsorted`
+- Analytical derivatives within each piece via spectral differentiation matrices (inherited from `ChebyshevApproximation`)
+- `ValueError` raised when requesting derivatives at knot boundaries (left/right derivatives differ)
+- `error_estimate()` returning the maximum error across all disjoint pieces
+- `save()` / `load()` serialization following the same pattern as other PyChebyshev classes
+- `num_pieces`, `total_build_evals`, `build_time` properties
+- New documentation page: Chebyshev Splines (mathematical justification, usage guide)
+- `compare_spline.py` — MoCaX spine comparison script (local only, not in CI)
+- ~34 new tests for spline construction, accuracy, derivatives, batch eval, serialization
+
 ## [0.5.0] - 2026-02-12
 
 ### Added

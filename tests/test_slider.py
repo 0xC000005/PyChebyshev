@@ -512,3 +512,74 @@ class TestSliderErrorEstimation:
         )
         with pytest.raises(RuntimeError, match="build"):
             slider.error_estimate()
+
+
+# ---------------------------------------------------------------------------
+# Additional coverage tests
+# ---------------------------------------------------------------------------
+
+
+class TestCoverageGaps:
+    def test_verbose_build(self, capsys):
+        """Build with verbose=True should print progress messages."""
+        slider = ChebyshevSlider(
+            sin_sum_3d, 3,
+            [[-1, 1]] * 3,
+            [5] * 3,
+            partition=[[0], [1], [2]],
+            pivot_point=[0.0] * 3,
+        )
+        slider.build(verbose=True)
+        captured = capsys.readouterr()
+        assert "Building" in captured.out
+        assert "Slide" in captured.out
+        assert "Build complete" in captured.out
+
+    def test_load_wrong_type_raises(self, tmp_path):
+        """Loading a non-ChebyshevSlider object should raise TypeError."""
+        import pickle
+
+        path = tmp_path / "not_slider.pkl"
+        with open(path, "wb") as fh:
+            pickle.dump({"not": "a slider"}, fh)
+        with pytest.raises(TypeError, match="ChebyshevSlider"):
+            ChebyshevSlider.load(path)
+
+    def test_version_mismatch_warning(self):
+        """Loading with version mismatch should emit a warning."""
+        import warnings
+
+        slider = ChebyshevSlider(
+            sin_sum_3d, 3,
+            [[-1, 1]] * 3,
+            [5] * 3,
+            partition=[[0], [1], [2]],
+            pivot_point=[0.0] * 3,
+        )
+        slider.build(verbose=False)
+
+        state = slider.__getstate__()
+        state["_pychebyshev_version"] = "0.0.0-fake"
+
+        obj = object.__new__(ChebyshevSlider)
+        with warnings.catch_warnings(record=True) as w:
+            warnings.simplefilter("always")
+            obj.__setstate__(state)
+            assert len(w) == 1
+            assert "0.0.0-fake" in str(w[0].message)
+
+    def test_high_dim_str_truncation(self):
+        """__str__() for 7D+ should truncate nodes, domain, pivot, partition."""
+        def f(x, _):
+            return sum(x)
+
+        slider = ChebyshevSlider(
+            f, 8,
+            [[-1, 1]] * 8,
+            [3] * 8,
+            partition=[[0], [1], [2], [3], [4], [5], [6], [7]],
+            pivot_point=[0.0] * 8,
+        )
+        s = str(slider)
+        assert "...]" in s
+        assert "..." in s

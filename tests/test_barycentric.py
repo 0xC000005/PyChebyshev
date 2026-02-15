@@ -398,3 +398,74 @@ class TestErrorEstimation:
         cheb = ChebyshevApproximation(sin_1d, 1, [[-1, 1]], [30])
         cheb.build(verbose=False)
         assert cheb.error_estimate() < 1e-14
+
+
+# ---------------------------------------------------------------------------
+# Additional coverage tests
+# ---------------------------------------------------------------------------
+
+
+class TestCoverageGaps:
+    def test_verbose_build(self, capsys):
+        """Build with verbose=True should print progress messages."""
+        def f(x, _):
+            return x[0]
+
+        cheb = ChebyshevApproximation(f, 1, [[-1, 1]], [5])
+        cheb.build(verbose=True)
+        captured = capsys.readouterr()
+        assert "Building" in captured.out
+        assert "Built in" in captured.out
+
+    def test_eval_before_build_raises(self):
+        """eval() before build() should raise RuntimeError."""
+        def f(x, _):
+            return x[0]
+
+        cheb = ChebyshevApproximation(f, 1, [[-1, 1]], [5])
+        with pytest.raises(RuntimeError, match="build"):
+            cheb.eval([0.5], [0])
+
+    def test_vectorized_eval_multi_before_build_raises(self):
+        """vectorized_eval_multi() before build() should raise RuntimeError."""
+        def f(x, _):
+            return x[0]
+
+        cheb = ChebyshevApproximation(f, 1, [[-1, 1]], [5])
+        with pytest.raises(RuntimeError, match="build"):
+            cheb.vectorized_eval_multi([0.5], [[0]])
+
+    def test_get_derivative_id(self, cheb_sin_3d):
+        """get_derivative_id() should return the input as-is."""
+        assert cheb_sin_3d.get_derivative_id([1, 0, 0]) == [1, 0, 0]
+
+    def test_load_wrong_type_raises(self, tmp_path):
+        """Loading a non-ChebyshevApproximation object should raise TypeError."""
+        import pickle
+
+        path = tmp_path / "not_cheb.pkl"
+        with open(path, "wb") as fh:
+            pickle.dump({"not": "a chebyshev"}, fh)
+        with pytest.raises(TypeError, match="ChebyshevApproximation"):
+            ChebyshevApproximation.load(path)
+
+    def test_derivative_order_3_raises(self):
+        """barycentric_derivative_analytical with order>2 should raise."""
+        from pychebyshev.barycentric import barycentric_derivative_analytical
+
+        nodes = np.array([0.0, 1.0])
+        values = np.array([0.0, 1.0])
+        weights = np.array([1.0, -1.0])
+        diff_matrix = np.array([[0.0, 1.0], [-1.0, 0.0]])
+        with pytest.raises(ValueError, match="not supported"):
+            barycentric_derivative_analytical(0.5, nodes, values, weights, diff_matrix, order=3)
+
+    def test_high_dim_str_truncation(self):
+        """__str__() for 7D+ should truncate nodes and domain display."""
+        def f(x, _):
+            return sum(x)
+
+        cheb = ChebyshevApproximation(f, 7, [[-1, 1]] * 7, [3] * 7)
+        s = str(cheb)
+        assert "...]" in s
+        assert "..." in s

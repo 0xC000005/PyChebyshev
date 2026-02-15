@@ -37,9 +37,10 @@ uv run python compare_methods_time_accuracy.py
 
 ### Library (`src/pychebyshev/`)
 
-The installable package. Public classes: `ChebyshevApproximation`, `ChebyshevSlider`, and `ChebyshevTT`.
+The installable package. Public classes: `ChebyshevApproximation`, `ChebyshevSpline`, `ChebyshevSlider`, and `ChebyshevTT`.
 
 - **`barycentric.py`** — Core implementation. `ChebyshevApproximation` class with `build()`, `eval()`, `vectorized_eval()`, `vectorized_eval_multi()`. Key insight: barycentric weights depend only on node positions (not function values), enabling full pre-computation. `vectorized_eval()` uses a reshape trick to route N-D tensor contractions through BLAS GEMV (~0.065ms/query). `vectorized_eval_multi()` shares barycentric weight computation across price + derivatives (~0.29ms for 6 outputs). `fast_eval()` exists but is deprecated (JIT path, ~150x slower than BLAS).
+- **`spline.py`** — `ChebyshevSpline` class for piecewise Chebyshev interpolation with user-specified knots at singularities. Partitions the domain into sub-intervals and builds an independent `ChebyshevApproximation` on each piece. Restores spectral convergence for functions with kinks or discontinuities.
 - **`slider.py`** — `ChebyshevSlider` class for high-dimensional approximation via the Sliding Technique.
 - **`tensor_train.py`** — `ChebyshevTT` class for Tensor Train Chebyshev interpolation. TT-Cross builds from O(d·n·r²) evaluations with maxvol pivoting, eval caching, and SVD-based adaptive rank. Vectorized batch eval via numpy einsum. FD derivatives.
 - **`_jit.py`** — Deprecated Numba JIT kernel with pure NumPy fallback. Used only by deprecated `fast_eval()`.
@@ -55,12 +56,14 @@ Not part of the library. Compare Chebyshev barycentric against alternative metho
 - `mocax_baseline.py`, `mocax_tt.py`, `mocax_sliding.py` — MoCaX C++ library tests (require `mocaxextend_lib/`)
 - `compare_methods_time_accuracy.py` — Fair time/accuracy comparison across all methods
 - `compare_tensor_train.py` — PyChebyshev TT vs MoCaX TT comparison (requires `mocaxextend_lib/`)
+- `compare_spline.py` — PyChebyshev ChebyshevSpline vs MoCaX spine comparison (requires `mocaxextend_lib/`)
 
 ### Tests (`tests/`)
 
-- `conftest.py` — Shared fixtures (`cheb_sin_3d`, `cheb_bs_3d`, `cheb_bs_5d`, `tt_sin_3d`, `tt_bs_5d`) and analytical Black-Scholes functions (reimplemented via `scipy.stats.norm` to avoid external deps). Helper functions are imported as `from conftest import ...` (pytest auto-import, NOT `from tests.conftest`).
+- `conftest.py` — Shared fixtures (`cheb_sin_3d`, `cheb_bs_3d`, `cheb_bs_5d`, `tt_sin_3d`, `tt_bs_5d`, `spline_abs_1d`, `spline_bs_2d`) and analytical Black-Scholes functions (reimplemented via `scipy.stats.norm` to avoid external deps). Helper functions are imported as `from conftest import ...` (pytest auto-import, NOT `from tests.conftest`).
 - `test_barycentric.py` — 35 tests: accuracy, derivatives, eval method consistency, node coincidence, error estimation, build-required guard.
 - `test_slider.py` — 36 tests: additive/coupled functions, 5D, cross-group derivatives, error estimation, serialization.
+- `test_spline.py` — ~34 tests: construction validation, 1D/2D accuracy, batch eval, derivatives, knot boundary checks, multiple knots, error estimation, serialization.
 - `test_tensor_train.py` — 23 tests: TT-Cross/TT-SVD accuracy, batch eval, FD derivatives, rank control, serialization, error estimation.
 
 ### CI/CD (`.github/workflows/`)

@@ -108,7 +108,8 @@ See [Saving & Loading](user-guide/serialization.md) for details.
 
 | Class | Dimensions | Build Cost | Derivatives | Best For |
 |-------|-----------|-----------|-------------|----------|
-| [`ChebyshevApproximation`](user-guide/usage.md) | 1–5 | $n^d$ evals | Analytical | Full accuracy with spectral derivatives |
+| [`ChebyshevApproximation`](user-guide/usage.md) | 1--5 | $n^d$ evals | Analytical | Full accuracy with spectral derivatives |
+| [`ChebyshevSpline`](user-guide/spline.md) | 1--5 | $\text{pieces} \times n^d$ evals | Analytical (per piece) | Functions with kinks at known locations |
 | [`ChebyshevTT`](user-guide/tensor-train.md) | 5+ | $O(d \cdot n \cdot r^2)$ evals | Finite differences | High-dimensional problems where full grids are infeasible |
 | [`ChebyshevSlider`](user-guide/sliding.md) | 5+ | Sum of slide grids | Analytical (per slide) | Functions with additive/separable structure |
 

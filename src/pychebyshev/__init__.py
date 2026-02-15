@@ -4,8 +4,10 @@ Provides the :class:`ChebyshevApproximation` class for building and
 evaluating multi-dimensional Chebyshev interpolants with analytical
 derivatives via spectral differentiation matrices, the
 :class:`ChebyshevSlider` class for high-dimensional approximation
-via the Sliding Technique, and the :class:`ChebyshevTT` class for
-Tensor Train Chebyshev interpolation of 5+ dimensional functions.
+via the Sliding Technique, the :class:`ChebyshevSpline` class for
+piecewise Chebyshev interpolation at user-specified knots, and the
+:class:`ChebyshevTT` class for Tensor Train Chebyshev interpolation
+of 5+ dimensional functions.
 
 Example
 -------
@@ -22,6 +24,7 @@ Example
 from pychebyshev._version import __version__
 from pychebyshev.barycentric import ChebyshevApproximation
 from pychebyshev.slider import ChebyshevSlider
+from pychebyshev.spline import ChebyshevSpline
 from pychebyshev.tensor_train import ChebyshevTT
 
-__all__ = ["ChebyshevApproximation", "ChebyshevSlider", "ChebyshevTT", "__version__"]
+__all__ = ["ChebyshevApproximation", "ChebyshevSlider", "ChebyshevSpline", "ChebyshevTT", "__version__"]

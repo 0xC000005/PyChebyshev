@@ -64,6 +64,7 @@ The convergence plots demonstrate exponential error decay as node count increase
 ## Features
 
 - **Full tensor interpolation** via `ChebyshevApproximation` — spectral accuracy for up to ~5 dimensions
+- **Piecewise Chebyshev (splines)** via `ChebyshevSpline` — knots at kinks/discontinuities restore spectral convergence for non-smooth functions
 - **Tensor Train decomposition** via `ChebyshevTT` — TT-Cross builds from O(d·n·r²) evaluations for 5+ dimensions
 - **Sliding technique** via `ChebyshevSlider` — additive decomposition for separable high-dimensional functions
 - **Analytical derivatives** via spectral differentiation matrices (no finite differences)
@@ -165,11 +166,12 @@ See the [documentation](https://0xc000005.github.io/PyChebyshev/) for full API r
 
 PyChebyshev uses **Chebyshev tensor interpolation** to pre-compute fast approximations of smooth functions. The approach generalizes to all analytic functions, as proven by [Gaß et al. (2018)](https://arxiv.org/abs/1505.04648), which establishes (sub)exponential convergence rates for Chebyshev interpolation of parametric conditional expectations.
 
-### Three approaches for different scales
+### Four approaches for different scales
 
 | Class | Approach | Build Cost | Eval Cost | Derivatives |
 |-------|----------|-----------|-----------|-------------|
 | `ChebyshevApproximation` | Full tensor + barycentric weights | $n^d$ evals | $O(d \cdot n)$ via BLAS GEMV | Analytical (spectral) |
+| `ChebyshevSpline` | Piecewise Chebyshev at knots | $\text{pieces} \times n^d$ evals | $O(d \cdot n)$ via BLAS GEMV | Analytical (per piece) |
 | `ChebyshevTT` | TT-Cross + maxvol pivoting | $O(d \cdot n \cdot r^2)$ evals | $O(d \cdot n \cdot r^2)$ via einsum | Finite differences |
 | `ChebyshevSlider` | Additive decomposition into slides | Sum of slide grids | Sum of per-slide evals | Analytical (per-slide) |
 

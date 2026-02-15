@@ -300,3 +300,122 @@ class TestCrossVsSVD:
             assert abs(v_cross - v_svd) < 1e-6, (
                 f"Cross-SVD diff {abs(v_cross - v_svd):.2e} at {pt}"
             )
+
+
+# ======================================================================
+# Additional coverage tests
+# ======================================================================
+
+
+class TestCoverageGaps:
+    def test_verbose_cross_build(self, capsys):
+        """Build TT-Cross with verbose=True should print progress."""
+        def f(x, _):
+            return math.sin(x[0]) + math.sin(x[1]) + math.sin(x[2])
+
+        tt = ChebyshevTT(f, 3, [[-1, 1]] * 3, [7, 7, 7], max_rank=3)
+        tt.build(verbose=True, method="cross")
+        captured = capsys.readouterr()
+        assert "Building" in captured.out
+        assert "TT-Cross" in captured.out
+
+    def test_verbose_svd_build(self, capsys):
+        """Build TT-SVD with verbose=True should print progress."""
+        def f(x, _):
+            return math.sin(x[0]) + math.sin(x[1]) + math.sin(x[2])
+
+        tt = ChebyshevTT(f, 3, [[-1, 1]] * 3, [5, 5, 5], max_rank=3)
+        tt.build(verbose=True, method="svd")
+        captured = capsys.readouterr()
+        assert "Building" in captured.out
+        assert "TT-SVD" in captured.out or "full tensor" in captured.out
+
+    def test_cross_derivative_mixed_partial(self, tt_sin_3d):
+        """Cross-derivative d^2f/dx0dx1 for separable function should be ~0."""
+        pt = [0.5, 0.3, 0.1]
+        results = tt_sin_3d.eval_multi(pt, [[1, 1, 0]])
+        # For f = sin(x0) + sin(x1) + sin(x2), d^2f/dx0dx1 = 0
+        assert abs(results[0]) < 0.01, f"Mixed partial = {results[0]:.4e}"
+
+    def test_fd_derivative_near_boundary(self, tt_sin_3d):
+        """FD derivative near domain boundary should use nudged point."""
+        # Point very close to left boundary of [-1, 1]
+        pt = [-0.999, 0.3, 0.1]
+        results = tt_sin_3d.eval_multi(pt, [[1, 0, 0]])
+        # cos(-0.999) ~ cos(-1) ~ 0.5403
+        analytical = math.cos(-0.999)
+        rel_err = abs(results[0] - analytical) / abs(analytical)
+        assert rel_err < 0.05, f"Boundary FD rel error {rel_err:.2e}"
+
+    def test_fd_derivative_near_right_boundary(self, tt_sin_3d):
+        """FD derivative near right domain boundary should use nudged point."""
+        pt = [0.3, 0.1, 0.999]
+        results = tt_sin_3d.eval_multi(pt, [[0, 0, 1]])
+        analytical = math.cos(0.999)
+        rel_err = abs(results[0] - analytical) / abs(analytical)
+        assert rel_err < 0.05, f"Boundary FD rel error {rel_err:.2e}"
+
+    def test_derivative_order_3_raises(self, tt_sin_3d):
+        """Derivative order > 2 should raise ValueError."""
+        pt = [0.5, 0.3, 0.1]
+        with pytest.raises(ValueError, match="not supported"):
+            tt_sin_3d.eval_multi(pt, [[3, 0, 0]])
+
+    def test_load_wrong_type_raises(self, tmp_path):
+        """Loading a non-ChebyshevTT object should raise TypeError."""
+        import pickle
+
+        path = tmp_path / "not_tt.pkl"
+        with open(path, "wb") as fh:
+            pickle.dump({"not": "a tt"}, fh)
+        with pytest.raises(TypeError, match="ChebyshevTT"):
+            ChebyshevTT.load(path)
+
+    def test_version_mismatch_warning(self, tt_sin_3d):
+        """Loading with version mismatch should emit a warning."""
+        import warnings
+
+        state = tt_sin_3d.__getstate__()
+        state["_pychebyshev_version"] = "0.0.0-fake"
+
+        obj = object.__new__(ChebyshevTT)
+        with warnings.catch_warnings(record=True) as w:
+            warnings.simplefilter("always")
+            obj.__setstate__(state)
+            assert len(w) == 1
+            assert "0.0.0-fake" in str(w[0].message)
+
+    def test_str_unbuilt(self):
+        """str() of unbuilt TT should show 'not built'."""
+        def f(x, _):
+            return x[0]
+
+        tt = ChebyshevTT(f, 3, [[-1, 1]] * 3, [5, 5, 5], max_rank=3)
+        s = str(tt)
+        assert "not built" in s
+        assert "Domain:" in s
+
+    def test_high_dim_str_truncation(self):
+        """__str__() for 7D+ should truncate nodes and domain display."""
+        def f(x, _):
+            return sum(x)
+
+        tt = ChebyshevTT(f, 7, [[-1, 1]] * 7, [3] * 7, max_rank=2)
+        s = str(tt)
+        assert "...]" in s
+        assert "..." in s
+
+    def test_higher_order_cross_derivative(self, tt_sin_3d):
+        """Higher-order cross derivative [2,1,0] triggers nested FD path."""
+        pt = [0.5, 0.3, 0.1]
+        # d^3f/dx0^2 dx1 for f = sin(x0)+sin(x1)+sin(x2)
+        # = d/dx1 (d^2/dx0^2 sin(x0)) = d/dx1 (-sin(x0)) = 0
+        results = tt_sin_3d.eval_multi(pt, [[2, 1, 0]])
+        assert abs(results[0]) < 0.1, f"Higher-order cross deriv = {results[0]:.4e}"
+
+    def test_triple_cross_derivative(self, tt_sin_3d):
+        """Triple cross [1,1,1] triggers 3-active-dim nested FD path."""
+        pt = [0.5, 0.3, 0.1]
+        # d^3f/dx0 dx1 dx2 for separable f = 0
+        results = tt_sin_3d.eval_multi(pt, [[1, 1, 1]])
+        assert abs(results[0]) < 0.1, f"Triple cross deriv = {results[0]:.4e}"

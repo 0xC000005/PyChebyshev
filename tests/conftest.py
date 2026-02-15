@@ -4,7 +4,7 @@ import math
 
 import pytest
 
-from pychebyshev import ChebyshevApproximation, ChebyshevTT
+from pychebyshev import ChebyshevApproximation, ChebyshevSpline, ChebyshevTT
 
 
 # ---------------------------------------------------------------------------
@@ -144,3 +144,29 @@ def tt_sin_3d_svd():
     )
     tt.build(verbose=False, method="svd")
     return tt
+
+
+# ---------------------------------------------------------------------------
+# Spline Fixtures
+# ---------------------------------------------------------------------------
+
+@pytest.fixture(scope="module")
+def spline_abs_1d():
+    """Pre-built 1D |x| with knot at x=0."""
+    def f(x, _):
+        return abs(x[0])
+
+    sp = ChebyshevSpline(f, 1, [[-1, 1]], [15], [[0.0]])
+    sp.build(verbose=False)
+    return sp
+
+
+@pytest.fixture(scope="module")
+def spline_bs_2d():
+    """Pre-built 2D discounted call payoff max(S-K,0)*exp(-rT) with knot at K=100."""
+    def f(x, _):
+        return max(x[0] - 100.0, 0.0) * math.exp(-0.05 * x[1])
+
+    sp = ChebyshevSpline(f, 2, [[80, 120], [0.25, 1.0]], [15, 15], [[100.0], []])
+    sp.build(verbose=False)
+    return sp

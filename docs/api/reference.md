@@ -8,6 +8,10 @@
 
 ::: pychebyshev.ChebyshevSlider
 
+## ChebyshevSpline
+
+::: pychebyshev.ChebyshevSpline
+
 ## ChebyshevTT
 
 ::: pychebyshev.ChebyshevTT
