@@ -517,6 +517,115 @@ class ChebyshevSpline:
         return obj
 
     # ------------------------------------------------------------------
+    # Internal factory for arithmetic operators
+    # ------------------------------------------------------------------
+
+    @classmethod
+    def _from_pieces(cls, source, pieces):
+        """Create a new spline sharing grid metadata from *source* with new *pieces*."""
+        obj = object.__new__(cls)
+        obj.function = None
+        obj.num_dimensions = source.num_dimensions
+        obj.domain = [list(bounds) for bounds in source.domain]
+        obj.n_nodes = list(source.n_nodes)
+        obj.max_derivative_order = source.max_derivative_order
+        obj.knots = [list(k) for k in source.knots]
+        obj._intervals = source._intervals
+        obj._shape = source._shape
+        obj._pieces = pieces
+        obj._built = True
+        obj._build_time = 0.0
+        obj._cached_error_estimate = None
+        return obj
+
+    def _check_spline_compatible(self, other):
+        """Validate that two splines can be combined arithmetically."""
+        from pychebyshev._algebra import _check_compatible
+        _check_compatible(self, other)
+        if self.knots != other.knots:
+            raise ValueError(f"Knot mismatch: {self.knots} vs {other.knots}")
+
+    # ------------------------------------------------------------------
+    # Arithmetic operators
+    # ------------------------------------------------------------------
+
+    def __add__(self, other):
+        if type(self) is not type(other):
+            return NotImplemented
+        self._check_spline_compatible(other)
+        pieces = [
+            ChebyshevApproximation._from_grid(p_self, p_self.tensor_values + p_other.tensor_values)
+            for p_self, p_other in zip(self._pieces, other._pieces)
+        ]
+        return ChebyshevSpline._from_pieces(self, pieces)
+
+    def __sub__(self, other):
+        if type(self) is not type(other):
+            return NotImplemented
+        self._check_spline_compatible(other)
+        pieces = [
+            ChebyshevApproximation._from_grid(p_self, p_self.tensor_values - p_other.tensor_values)
+            for p_self, p_other in zip(self._pieces, other._pieces)
+        ]
+        return ChebyshevSpline._from_pieces(self, pieces)
+
+    def __mul__(self, scalar):
+        from pychebyshev._algebra import _is_scalar
+        if not _is_scalar(scalar):
+            return NotImplemented
+        s = float(scalar)
+        pieces = [
+            ChebyshevApproximation._from_grid(p, p.tensor_values * s)
+            for p in self._pieces
+        ]
+        return ChebyshevSpline._from_pieces(self, pieces)
+
+    def __rmul__(self, scalar):
+        return self.__mul__(scalar)
+
+    def __truediv__(self, scalar):
+        from pychebyshev._algebra import _is_scalar
+        if not _is_scalar(scalar):
+            return NotImplemented
+        return self.__mul__(1.0 / float(scalar))
+
+    def __neg__(self):
+        return self.__mul__(-1.0)
+
+    def __iadd__(self, other):
+        self._check_spline_compatible(other)
+        for p_self, p_other in zip(self._pieces, other._pieces):
+            p_self.tensor_values = p_self.tensor_values + p_other.tensor_values
+            p_self._cached_error_estimate = None
+        self._cached_error_estimate = None
+        return self
+
+    def __isub__(self, other):
+        self._check_spline_compatible(other)
+        for p_self, p_other in zip(self._pieces, other._pieces):
+            p_self.tensor_values = p_self.tensor_values - p_other.tensor_values
+            p_self._cached_error_estimate = None
+        self._cached_error_estimate = None
+        return self
+
+    def __imul__(self, scalar):
+        from pychebyshev._algebra import _is_scalar
+        if not _is_scalar(scalar):
+            return NotImplemented
+        s = float(scalar)
+        for p in self._pieces:
+            p.tensor_values = p.tensor_values * s
+            p._cached_error_estimate = None
+        self._cached_error_estimate = None
+        return self
+
+    def __itruediv__(self, scalar):
+        from pychebyshev._algebra import _is_scalar
+        if not _is_scalar(scalar):
+            return NotImplemented
+        return self.__imul__(1.0 / float(scalar))
+
+    # ------------------------------------------------------------------
     # Printing
     # ------------------------------------------------------------------
 

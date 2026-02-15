@@ -399,6 +399,120 @@ class ChebyshevSlider:
         return obj
 
     # ------------------------------------------------------------------
+    # Internal factory for arithmetic operators
+    # ------------------------------------------------------------------
+
+    @classmethod
+    def _from_slides(cls, source, slides, pivot_value):
+        """Create a new slider sharing grid metadata from *source* with new *slides* and *pivot_value*."""
+        obj = object.__new__(cls)
+        obj.function = None
+        obj.num_dimensions = source.num_dimensions
+        obj.domain = [list(bounds) for bounds in source.domain]
+        obj.n_nodes = list(source.n_nodes)
+        obj.max_derivative_order = source.max_derivative_order
+        obj.partition = [list(group) for group in source.partition]
+        obj.pivot_point = list(source.pivot_point)
+        obj.slides = slides
+        obj.pivot_value = pivot_value
+        obj._dim_to_slide = source._dim_to_slide
+        obj._built = True
+        obj._cached_error_estimate = None
+        return obj
+
+    def _check_slider_compatible(self, other):
+        """Validate that two sliders can be combined arithmetically."""
+        from pychebyshev._algebra import _check_compatible
+        _check_compatible(self, other)
+        if self.partition != other.partition:
+            raise ValueError(f"Partition mismatch: {self.partition} vs {other.partition}")
+        if self.pivot_point != other.pivot_point:
+            raise ValueError(f"Pivot point mismatch: {self.pivot_point} vs {other.pivot_point}")
+
+    # ------------------------------------------------------------------
+    # Arithmetic operators
+    # ------------------------------------------------------------------
+
+    def __add__(self, other):
+        if type(self) is not type(other):
+            return NotImplemented
+        self._check_slider_compatible(other)
+        slides = [
+            ChebyshevApproximation._from_grid(s_self, s_self.tensor_values + s_other.tensor_values)
+            for s_self, s_other in zip(self.slides, other.slides)
+        ]
+        return ChebyshevSlider._from_slides(self, slides, self.pivot_value + other.pivot_value)
+
+    def __sub__(self, other):
+        if type(self) is not type(other):
+            return NotImplemented
+        self._check_slider_compatible(other)
+        slides = [
+            ChebyshevApproximation._from_grid(s_self, s_self.tensor_values - s_other.tensor_values)
+            for s_self, s_other in zip(self.slides, other.slides)
+        ]
+        return ChebyshevSlider._from_slides(self, slides, self.pivot_value - other.pivot_value)
+
+    def __mul__(self, scalar):
+        from pychebyshev._algebra import _is_scalar
+        if not _is_scalar(scalar):
+            return NotImplemented
+        s = float(scalar)
+        slides = [
+            ChebyshevApproximation._from_grid(sl, sl.tensor_values * s)
+            for sl in self.slides
+        ]
+        return ChebyshevSlider._from_slides(self, slides, self.pivot_value * s)
+
+    def __rmul__(self, scalar):
+        return self.__mul__(scalar)
+
+    def __truediv__(self, scalar):
+        from pychebyshev._algebra import _is_scalar
+        if not _is_scalar(scalar):
+            return NotImplemented
+        return self.__mul__(1.0 / float(scalar))
+
+    def __neg__(self):
+        return self.__mul__(-1.0)
+
+    def __iadd__(self, other):
+        self._check_slider_compatible(other)
+        for s_self, s_other in zip(self.slides, other.slides):
+            s_self.tensor_values = s_self.tensor_values + s_other.tensor_values
+            s_self._cached_error_estimate = None
+        self.pivot_value += other.pivot_value
+        self._cached_error_estimate = None
+        return self
+
+    def __isub__(self, other):
+        self._check_slider_compatible(other)
+        for s_self, s_other in zip(self.slides, other.slides):
+            s_self.tensor_values = s_self.tensor_values - s_other.tensor_values
+            s_self._cached_error_estimate = None
+        self.pivot_value -= other.pivot_value
+        self._cached_error_estimate = None
+        return self
+
+    def __imul__(self, scalar):
+        from pychebyshev._algebra import _is_scalar
+        if not _is_scalar(scalar):
+            return NotImplemented
+        s = float(scalar)
+        for sl in self.slides:
+            sl.tensor_values = sl.tensor_values * s
+            sl._cached_error_estimate = None
+        self.pivot_value *= s
+        self._cached_error_estimate = None
+        return self
+
+    def __itruediv__(self, scalar):
+        from pychebyshev._algebra import _is_scalar
+        if not _is_scalar(scalar):
+            return NotImplemented
+        return self.__imul__(1.0 / float(scalar))
+
+    # ------------------------------------------------------------------
     # Printing
     # ------------------------------------------------------------------
 

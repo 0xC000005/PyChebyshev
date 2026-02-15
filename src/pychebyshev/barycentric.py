@@ -715,6 +715,107 @@ class ChebyshevApproximation:
         return obj
 
     # ------------------------------------------------------------------
+    # Internal factory for arithmetic operators
+    # ------------------------------------------------------------------
+
+    @classmethod
+    def _from_grid(cls, source, tensor_values):
+        """Create a new instance sharing grid data from *source* with new *tensor_values*.
+
+        Internal factory for arithmetic operators. The result is already 'built'
+        (tensor_values is set) but has function=None and build_time=0.0.
+        """
+        obj = object.__new__(cls)
+        obj.function = None
+        obj.num_dimensions = source.num_dimensions
+        obj.domain = [list(bounds) for bounds in source.domain]
+        obj.n_nodes = list(source.n_nodes)
+        obj.max_derivative_order = source.max_derivative_order
+        obj.nodes = source.nodes          # list of 1-D arrays -- shared, not copied
+        obj.weights = source.weights      # list of 1-D arrays -- shared
+        obj.diff_matrices = source.diff_matrices  # shared
+        obj.tensor_values = tensor_values
+        obj.build_time = 0.0
+        obj.n_evaluations = 0
+        obj._cached_error_estimate = None
+        # Pre-allocate eval cache for deprecated fast_eval()
+        obj._eval_cache = {}
+        for d in range(obj.num_dimensions - 1, 0, -1):
+            shape = tuple(obj.n_nodes[i] for i in range(d))
+            obj._eval_cache[d] = np.zeros(shape)
+        return obj
+
+    # ------------------------------------------------------------------
+    # Arithmetic operators
+    # ------------------------------------------------------------------
+
+    def __add__(self, other):
+        if type(self) is not type(other):
+            return NotImplemented
+        from pychebyshev._algebra import _check_compatible
+        _check_compatible(self, other)
+        return ChebyshevApproximation._from_grid(
+            self, self.tensor_values + other.tensor_values
+        )
+
+    def __sub__(self, other):
+        if type(self) is not type(other):
+            return NotImplemented
+        from pychebyshev._algebra import _check_compatible
+        _check_compatible(self, other)
+        return ChebyshevApproximation._from_grid(
+            self, self.tensor_values - other.tensor_values
+        )
+
+    def __mul__(self, scalar):
+        from pychebyshev._algebra import _is_scalar
+        if not _is_scalar(scalar):
+            return NotImplemented
+        return ChebyshevApproximation._from_grid(
+            self, self.tensor_values * float(scalar)
+        )
+
+    def __rmul__(self, scalar):
+        return self.__mul__(scalar)
+
+    def __truediv__(self, scalar):
+        from pychebyshev._algebra import _is_scalar
+        if not _is_scalar(scalar):
+            return NotImplemented
+        return self.__mul__(1.0 / float(scalar))
+
+    def __neg__(self):
+        return self.__mul__(-1.0)
+
+    def __iadd__(self, other):
+        from pychebyshev._algebra import _check_compatible
+        _check_compatible(self, other)
+        self.tensor_values = self.tensor_values + other.tensor_values
+        self._cached_error_estimate = None
+        return self
+
+    def __isub__(self, other):
+        from pychebyshev._algebra import _check_compatible
+        _check_compatible(self, other)
+        self.tensor_values = self.tensor_values - other.tensor_values
+        self._cached_error_estimate = None
+        return self
+
+    def __imul__(self, scalar):
+        from pychebyshev._algebra import _is_scalar
+        if not _is_scalar(scalar):
+            return NotImplemented
+        self.tensor_values = self.tensor_values * float(scalar)
+        self._cached_error_estimate = None
+        return self
+
+    def __itruediv__(self, scalar):
+        from pychebyshev._algebra import _is_scalar
+        if not _is_scalar(scalar):
+            return NotImplemented
+        return self.__imul__(1.0 / float(scalar))
+
+    # ------------------------------------------------------------------
     # Printing
     # ------------------------------------------------------------------
 

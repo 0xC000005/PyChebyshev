@@ -4,7 +4,7 @@ import math
 
 import pytest
 
-from pychebyshev import ChebyshevApproximation, ChebyshevSpline, ChebyshevTT
+from pychebyshev import ChebyshevApproximation, ChebyshevSlider, ChebyshevSpline, ChebyshevTT
 
 
 # ---------------------------------------------------------------------------
@@ -170,3 +170,63 @@ def spline_bs_2d():
     sp = ChebyshevSpline(f, 2, [[80, 120], [0.25, 1.0]], [15, 15], [[100.0], []])
     sp.build(verbose=False)
     return sp
+
+
+# ---------------------------------------------------------------------------
+# Algebra Fixtures
+# ---------------------------------------------------------------------------
+
+@pytest.fixture(scope="module")
+def algebra_cheb_f():
+    """2D sin(x)+sin(y) on [-1,1]^2, [11,11] nodes."""
+    def f(x, _): return math.sin(x[0]) + math.sin(x[1])
+    cheb = ChebyshevApproximation(f, 2, [[-1, 1], [-1, 1]], [11, 11])
+    cheb.build(verbose=False)
+    return cheb
+
+
+@pytest.fixture(scope="module")
+def algebra_cheb_g():
+    """2D cos(x)*cos(y) on same grid as algebra_cheb_f."""
+    def g(x, _): return math.cos(x[0]) * math.cos(x[1])
+    cheb = ChebyshevApproximation(g, 2, [[-1, 1], [-1, 1]], [11, 11])
+    cheb.build(verbose=False)
+    return cheb
+
+
+@pytest.fixture(scope="module")
+def algebra_spline_f():
+    """1D |x| with knot at x=0, [15] nodes."""
+    def f(x, _): return abs(x[0])
+    sp = ChebyshevSpline(f, 1, [[-1, 1]], [15], [[0.0]])
+    sp.build(verbose=False)
+    return sp
+
+
+@pytest.fixture(scope="module")
+def algebra_spline_g():
+    """1D x^2 with knot at x=0 (same knot structure), [15] nodes."""
+    def g(x, _): return x[0] ** 2
+    sp = ChebyshevSpline(g, 1, [[-1, 1]], [15], [[0.0]])
+    sp.build(verbose=False)
+    return sp
+
+
+@pytest.fixture(scope="module")
+def algebra_slider_f():
+    """3D sin(x)+sin(y)+sin(z), partition [[0],[1],[2]], pivot [0,0,0]."""
+    def f(x, _): return math.sin(x[0]) + math.sin(x[1]) + math.sin(x[2])
+    sl = ChebyshevSlider(f, 3, [[-1, 1], [-1, 1], [-1, 1]], [8, 8, 8],
+                         [[0], [1], [2]], [0.0, 0.0, 0.0])
+    sl.build(verbose=False)
+    return sl
+
+
+@pytest.fixture(scope="module")
+def algebra_slider_g():
+    """3D cos(x)+cos(y)+cos(z), same partition/pivot as algebra_slider_f."""
+    def g(x, _): return math.cos(x[0]) + math.cos(x[1]) + math.cos(x[2])
+    sl = ChebyshevSlider(g, 3, [[-1, 1], [-1, 1], [-1, 1]], [8, 8, 8],
+                         [[0], [1], [2]], [0.0, 0.0, 0.0])
+    sl.build(verbose=False)
+    return sl

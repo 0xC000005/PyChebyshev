@@ -55,6 +55,7 @@ nav:
       - Sliding Technique: user-guide/sliding.md
       - Chebyshev Splines: user-guide/spline.md
       - Tensor Train: user-guide/tensor-train.md
+      - Chebyshev Algebra: user-guide/algebra.md
       - Error Estimation: user-guide/error-estimation.md
   - API Reference: api/reference.md
   - Benchmarks: benchmarks.md

@@ -5,6 +5,16 @@ All notable changes to PyChebyshev will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [0.7.0] - 2026-02-14
+
+### Added
+
+- Arithmetic operators (`+`, `-`, `*`, `/`, unary `-`, `+=`, `-=`, `*=`, `/=`) for `ChebyshevApproximation`, `ChebyshevSpline`, and `ChebyshevSlider`.
+- Portfolio-level combination of Chebyshev interpolants via weighted sums -- no re-evaluation needed.
+- Derivatives and error estimates propagate correctly through algebraic operations.
+- Internal `_algebra.py` module with shared compatibility validation.
+- `_from_grid()` factory on `ChebyshevApproximation`, `_from_pieces()` on `ChebyshevSpline`, `_from_slides()` on `ChebyshevSlider`.
+
 ## [0.6.0] - 2026-02-14
 
 ### Added
