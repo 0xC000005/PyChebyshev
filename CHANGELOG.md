@@ -5,6 +5,19 @@ All notable changes to PyChebyshev will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [0.8.0] - 2026-02-15
+
+### Added
+
+- `extrude()` and `slice()` methods on `ChebyshevApproximation`, `ChebyshevSpline`, and `ChebyshevSlider`.
+- Extrusion adds new dimensions where the function is constant, enabling portfolio combination across different risk-factor sets.
+- Slicing fixes a dimension at a value, reducing dimensionality via barycentric interpolation (with fast path at exact nodes).
+- Extrude-then-slice round-trip preserves the original interpolant exactly.
+- Internal `_extrude_slice.py` module with shared validation and tensor manipulation helpers.
+- New documentation page: Extrusion & Slicing (mathematical proofs, API reference, portfolio use case).
+- `compare_extrude_slice.py` -- MoCaX comparison script (local only, not in CI).
+- 63 new tests for extrusion and slicing across all three classes.
+
 ## [0.7.0] - 2026-02-14
 
 ### Added

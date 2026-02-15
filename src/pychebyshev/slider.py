@@ -420,6 +420,258 @@ class ChebyshevSlider:
         obj._cached_error_estimate = None
         return obj
 
+    # ------------------------------------------------------------------
+    # Extrusion and slicing
+    # ------------------------------------------------------------------
+
+    def extrude(self, params):
+        """Add new dimensions where the function is constant.
+
+        Each new dimension becomes its own single-dim slide group with
+        ``tensor_values = np.full(n, pivot_value)``, so that
+        ``s_new(x) - pivot_value = 0`` for all x (no contribution to
+        the sliding sum).  This is the partition-of-unity property:
+        the barycentric weights sum to 1, so a constant tensor
+        produces the same value for any coordinate.
+
+        Existing slide groups have their dimension indices remapped to
+        account for the inserted dimensions.
+
+        Parameters
+        ----------
+        params : tuple or list of tuples
+            Single ``(dim_index, (lo, hi), n_nodes)`` or a list of such
+            tuples.  ``dim_index`` is the position in the **output** space
+            (0-indexed).  ``n_nodes`` must be >= 2 and ``lo < hi``.
+
+        Returns
+        -------
+        ChebyshevSlider
+            A new, higher-dimensional slider (already built).
+            The result has ``function=None``.
+
+        Raises
+        ------
+        RuntimeError
+            If the slider has not been built yet.
+        TypeError
+            If ``dim_index`` is not an integer.
+        ValueError
+            If ``dim_index`` is out of range, duplicated, ``lo >= hi``,
+            or ``n_nodes < 2``.
+        """
+        if not self._built:
+            raise RuntimeError("Call build() first")
+
+        from pychebyshev._extrude_slice import (
+            _make_nodes_for_dim,
+            _normalize_extrusion_params,
+        )
+        from pychebyshev.barycentric import (
+            compute_barycentric_weights,
+            compute_differentiation_matrix,
+        )
+
+        sorted_params = _normalize_extrusion_params(params, self.num_dimensions)
+
+        domain = [list(b) for b in self.domain]
+        n_nodes = list(self.n_nodes)
+        pivot_point = list(self.pivot_point)
+        partition = [list(g) for g in self.partition]
+        slides = list(self.slides)
+
+        for dim_idx, (lo, hi), n in sorted_params:
+            # Remap partition indices: increment all indices >= dim_idx
+            for group in partition:
+                for i in range(len(group)):
+                    if group[i] >= dim_idx:
+                        group[i] += 1
+
+            # Create new 1-dim slide: constant at pivot_value
+            new_nodes = _make_nodes_for_dim(lo, hi, n)
+            new_weights = compute_barycentric_weights(new_nodes)
+            new_diff_mat = compute_differentiation_matrix(new_nodes, new_weights)
+            new_tensor = np.full(n, self.pivot_value)
+
+            new_slide = object.__new__(ChebyshevApproximation)
+            new_slide.function = None
+            new_slide.num_dimensions = 1
+            new_slide.domain = [[lo, hi]]
+            new_slide.n_nodes = [n]
+            new_slide.max_derivative_order = self.max_derivative_order
+            new_slide.nodes = [new_nodes]
+            new_slide.weights = [new_weights]
+            new_slide.diff_matrices = [new_diff_mat]
+            new_slide.tensor_values = new_tensor
+            new_slide.build_time = 0.0
+            new_slide.n_evaluations = 0
+            new_slide._cached_error_estimate = None
+            new_slide._eval_cache = {}
+
+            # Add new group and slide
+            partition.append([dim_idx])
+            slides.append(new_slide)
+
+            # Insert into domain/n_nodes/pivot_point
+            domain.insert(dim_idx, [lo, hi])
+            n_nodes.insert(dim_idx, n)
+            pivot_point.insert(dim_idx, 0.5 * (lo + hi))
+
+        new_ndim = self.num_dimensions + len(sorted_params)
+
+        # Rebuild _dim_to_slide
+        dim_to_slide = {}
+        for slide_idx, group in enumerate(partition):
+            for d in group:
+                dim_to_slide[d] = slide_idx
+
+        obj = object.__new__(ChebyshevSlider)
+        obj.function = None
+        obj.num_dimensions = new_ndim
+        obj.domain = domain
+        obj.n_nodes = n_nodes
+        obj.max_derivative_order = self.max_derivative_order
+        obj.partition = partition
+        obj.pivot_point = pivot_point
+        obj.slides = slides
+        obj.pivot_value = self.pivot_value
+        obj._dim_to_slide = dim_to_slide
+        obj._built = True
+        obj._cached_error_estimate = None
+        return obj
+
+    def slice(self, params):
+        """Fix one or more dimensions at given values, reducing dimensionality.
+
+        Two cases per sliced dimension:
+
+        - **Multi-dim group**: The slide's ``ChebyshevApproximation`` is
+          sliced at the local dimension index via barycentric contraction.
+          When the slice value coincides with a Chebyshev node (within
+          1e-14), the contraction reduces to an exact ``np.take``
+          (fast path).  The dimension is removed from the group.
+        - **Single-dim group**: The slide is evaluated at the value,
+          giving a constant ``s_val``.  The shift
+          ``delta = s_val - pivot_value`` is absorbed into
+          ``pivot_value`` and each remaining slide's
+          ``tensor_values``, and the group is removed entirely.
+
+        Remaining dimension indices in all groups are remapped downward
+        to stay contiguous.
+
+        Parameters
+        ----------
+        params : tuple or list of tuples
+            Single ``(dim_index, value)`` or a list of such tuples.
+            ``value`` must lie within the domain for that dimension.
+
+        Returns
+        -------
+        ChebyshevSlider
+            A new, lower-dimensional slider (already built).
+            The result has ``function=None``.
+
+        Raises
+        ------
+        RuntimeError
+            If the slider has not been built yet.
+        TypeError
+            If ``dim_index`` is not an integer.
+        ValueError
+            If a slice value is outside the domain, if slicing all
+            dimensions, or if ``dim_index`` is out of range or duplicated.
+        """
+        if not self._built:
+            raise RuntimeError("Call build() first")
+
+        from pychebyshev._extrude_slice import _normalize_slicing_params
+
+        sorted_params = _normalize_slicing_params(params, self.num_dimensions)
+
+        # Validate values within domain
+        for dim_idx, value in sorted_params:
+            lo, hi = self.domain[dim_idx]
+            if value < lo or value > hi:
+                raise ValueError(
+                    f"Slice value {value} for dim {dim_idx} is outside "
+                    f"domain [{lo}, {hi}]"
+                )
+
+        domain = [list(b) for b in self.domain]
+        n_nodes = list(self.n_nodes)
+        pivot_point = list(self.pivot_point)
+        partition = [list(g) for g in self.partition]
+        slides = list(self.slides)
+        pivot_value = self.pivot_value
+
+        for dim_idx, value in sorted_params:  # descending order
+            # Find which slide group contains dim_idx
+            slide_idx = None
+            local_dim_idx = None
+            for si, group in enumerate(partition):
+                if dim_idx in group:
+                    slide_idx = si
+                    local_dim_idx = group.index(dim_idx)
+                    break
+
+            if len(partition[slide_idx]) > 1:
+                # Case 1: Multi-dim group — slice the slide's ChebyshevApproximation
+                slides[slide_idx] = slides[slide_idx].slice(
+                    (local_dim_idx, value)
+                )
+                partition[slide_idx].remove(dim_idx)
+            else:
+                # Case 2: Single-dim group — evaluate and absorb
+                s_val = slides[slide_idx].vectorized_eval([value], [0])
+                delta = s_val - pivot_value
+
+                # Add delta to each remaining slide's tensor_values
+                for i in range(len(slides)):
+                    if i != slide_idx:
+                        slides[i] = ChebyshevApproximation._from_grid(
+                            slides[i],
+                            slides[i].tensor_values + delta,
+                        )
+
+                pivot_value = s_val
+
+                # Remove group and slide
+                del partition[slide_idx]
+                del slides[slide_idx]
+
+            # Remap all partition indices > dim_idx down by 1
+            for group in partition:
+                for i in range(len(group)):
+                    if group[i] > dim_idx:
+                        group[i] -= 1
+
+            del domain[dim_idx]
+            del n_nodes[dim_idx]
+            del pivot_point[dim_idx]
+
+        new_ndim = self.num_dimensions - len(sorted_params)
+
+        # Rebuild _dim_to_slide
+        dim_to_slide = {}
+        for si, group in enumerate(partition):
+            for d in group:
+                dim_to_slide[d] = si
+
+        obj = object.__new__(ChebyshevSlider)
+        obj.function = None
+        obj.num_dimensions = new_ndim
+        obj.domain = domain
+        obj.n_nodes = n_nodes
+        obj.max_derivative_order = self.max_derivative_order
+        obj.partition = partition
+        obj.pivot_point = pivot_point
+        obj.slides = slides
+        obj.pivot_value = pivot_value
+        obj._dim_to_slide = dim_to_slide
+        obj._built = True
+        obj._cached_error_estimate = None
+        return obj
+
     def _check_slider_compatible(self, other):
         """Validate that two sliders can be combined arithmetically."""
         from pychebyshev._algebra import _check_compatible

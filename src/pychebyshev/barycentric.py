@@ -746,6 +746,177 @@ class ChebyshevApproximation:
         return obj
 
     # ------------------------------------------------------------------
+    # Extrusion and slicing
+    # ------------------------------------------------------------------
+
+    def extrude(self, params):
+        """Add new dimensions where the function is constant.
+
+        The extruded interpolant evaluates identically to the original
+        regardless of the new coordinate(s), because Chebyshev basis
+        functions form a partition of unity: the barycentric weights
+        sum to 1, so replicating tensor values along a new axis
+        produces the same result for any coordinate in the new domain.
+
+        Parameters
+        ----------
+        params : tuple or list of tuples
+            Single ``(dim_index, (lo, hi), n_nodes)`` or a list of such
+            tuples.  ``dim_index`` is the position in the **output** space
+            (0-indexed).  ``n_nodes`` must be >= 2 and ``lo < hi``.
+
+        Returns
+        -------
+        ChebyshevApproximation
+            A new, higher-dimensional interpolant (already built).
+            The result has ``function=None`` and ``build_time=0.0``.
+
+        Raises
+        ------
+        RuntimeError
+            If the interpolant has not been built yet.
+        TypeError
+            If ``dim_index`` is not an integer.
+        ValueError
+            If ``dim_index`` is out of range, duplicated, ``lo >= hi``,
+            or ``n_nodes < 2``.
+        """
+        if self.tensor_values is None:
+            raise RuntimeError("Call build() first")
+
+        from pychebyshev._extrude_slice import (
+            _extrude_tensor,
+            _make_nodes_for_dim,
+            _normalize_extrusion_params,
+        )
+
+        sorted_params = _normalize_extrusion_params(params, self.num_dimensions)
+
+        tensor = self.tensor_values.copy()
+        nodes = list(self.nodes)
+        weights = list(self.weights)
+        diff_matrices = list(self.diff_matrices)
+        domain = [list(b) for b in self.domain]
+        n_nodes = list(self.n_nodes)
+
+        for dim_idx, (lo, hi), n in sorted_params:
+            tensor = _extrude_tensor(tensor, dim_idx, n)
+            new_nodes = _make_nodes_for_dim(lo, hi, n)
+            new_weights = compute_barycentric_weights(new_nodes)
+            new_diff_mat = compute_differentiation_matrix(new_nodes, new_weights)
+            nodes.insert(dim_idx, new_nodes)
+            weights.insert(dim_idx, new_weights)
+            diff_matrices.insert(dim_idx, new_diff_mat)
+            domain.insert(dim_idx, [lo, hi])
+            n_nodes.insert(dim_idx, n)
+
+        new_ndim = self.num_dimensions + len(sorted_params)
+        obj = object.__new__(ChebyshevApproximation)
+        obj.function = None
+        obj.num_dimensions = new_ndim
+        obj.domain = domain
+        obj.n_nodes = n_nodes
+        obj.max_derivative_order = self.max_derivative_order
+        obj.nodes = nodes
+        obj.weights = weights
+        obj.diff_matrices = diff_matrices
+        obj.tensor_values = tensor
+        obj.build_time = 0.0
+        obj.n_evaluations = 0
+        obj._cached_error_estimate = None
+        obj._eval_cache = {}
+        for d in range(new_ndim - 1, 0, -1):
+            shape = tuple(n_nodes[i] for i in range(d))
+            obj._eval_cache[d] = np.zeros(shape)
+        return obj
+
+    def slice(self, params):
+        """Fix one or more dimensions at given values, reducing dimensionality.
+
+        Contracts the tensor along each sliced dimension using the
+        barycentric interpolation formula: for each sliced axis the
+        normalized weight vector ``w_i / (x - x_i) / sum(w_j / (x - x_j))``
+        is contracted with the tensor via ``np.tensordot``.  When the
+        slice value coincides with a Chebyshev node (within 1e-14), the
+        contraction reduces to an exact ``np.take`` (fast path).
+
+        Parameters
+        ----------
+        params : tuple or list of tuples
+            Single ``(dim_index, value)`` or a list of such tuples.
+            ``value`` must lie within the domain for that dimension.
+
+        Returns
+        -------
+        ChebyshevApproximation
+            A new, lower-dimensional interpolant (already built).
+            The result has ``function=None`` and ``build_time=0.0``.
+
+        Raises
+        ------
+        RuntimeError
+            If the interpolant has not been built yet.
+        TypeError
+            If ``dim_index`` is not an integer.
+        ValueError
+            If a slice value is outside the domain, if slicing all
+            dimensions, or if ``dim_index`` is out of range or duplicated.
+        """
+        if self.tensor_values is None:
+            raise RuntimeError("Call build() first")
+
+        from pychebyshev._extrude_slice import (
+            _normalize_slicing_params,
+            _slice_tensor,
+        )
+
+        sorted_params = _normalize_slicing_params(params, self.num_dimensions)
+
+        # Validate values within domain
+        for dim_idx, value in sorted_params:
+            lo, hi = self.domain[dim_idx]
+            if value < lo or value > hi:
+                raise ValueError(
+                    f"Slice value {value} for dim {dim_idx} is outside "
+                    f"domain [{lo}, {hi}]"
+                )
+
+        tensor = self.tensor_values.copy()
+        nodes = list(self.nodes)
+        weights = list(self.weights)
+        diff_matrices = list(self.diff_matrices)
+        domain = [list(b) for b in self.domain]
+        n_nodes = list(self.n_nodes)
+
+        for dim_idx, value in sorted_params:  # descending order
+            tensor = _slice_tensor(tensor, dim_idx, nodes[dim_idx], weights[dim_idx], value)
+            del nodes[dim_idx]
+            del weights[dim_idx]
+            del diff_matrices[dim_idx]
+            del domain[dim_idx]
+            del n_nodes[dim_idx]
+
+        new_ndim = self.num_dimensions - len(sorted_params)
+        obj = object.__new__(ChebyshevApproximation)
+        obj.function = None
+        obj.num_dimensions = new_ndim
+        obj.domain = domain
+        obj.n_nodes = n_nodes
+        obj.max_derivative_order = self.max_derivative_order
+        obj.nodes = nodes
+        obj.weights = weights
+        obj.diff_matrices = diff_matrices
+        obj.tensor_values = tensor
+        obj.build_time = 0.0
+        obj.n_evaluations = 0
+        obj._cached_error_estimate = None
+        obj._eval_cache = {}
+        for d in range(new_ndim - 1, 0, -1):
+            shape = tuple(n_nodes[i] for i in range(d))
+            obj._eval_cache[d] = np.zeros(shape)
+        return obj
+
+    # ------------------------------------------------------------------
     # Arithmetic operators
     # ------------------------------------------------------------------
 

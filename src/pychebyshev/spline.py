@@ -538,6 +538,183 @@ class ChebyshevSpline:
         obj._cached_error_estimate = None
         return obj
 
+    # ------------------------------------------------------------------
+    # Extrusion and slicing
+    # ------------------------------------------------------------------
+
+    def extrude(self, params):
+        """Add new dimensions where the function is constant.
+
+        Each piece is extruded independently via
+        :meth:`ChebyshevApproximation.extrude`.  The extruded spline
+        evaluates identically to the original regardless of the new
+        coordinate(s), because Chebyshev basis functions form a partition
+        of unity.  The new dimension gets ``knots=[]`` and a single
+        interval ``(lo, hi)``.
+
+        Parameters
+        ----------
+        params : tuple or list of tuples
+            Single ``(dim_index, (lo, hi), n_nodes)`` or a list of such
+            tuples.  ``dim_index`` is the position in the **output** space
+            (0-indexed).  ``n_nodes`` must be >= 2 and ``lo < hi``.
+
+        Returns
+        -------
+        ChebyshevSpline
+            A new, higher-dimensional spline (already built).
+            The result has ``function=None`` and ``build_time=0.0``.
+
+        Raises
+        ------
+        RuntimeError
+            If the spline has not been built yet.
+        TypeError
+            If ``dim_index`` is not an integer.
+        ValueError
+            If ``dim_index`` is out of range, duplicated, ``lo >= hi``,
+            or ``n_nodes < 2``.
+        """
+        if not self._built:
+            raise RuntimeError("Call build() first")
+
+        from pychebyshev._extrude_slice import _normalize_extrusion_params
+
+        sorted_params = _normalize_extrusion_params(params, self.num_dimensions)
+
+        knots = [list(k) for k in self.knots]
+        intervals = [list(iv) for iv in self._intervals]
+        shape = list(self._shape)
+        domain = [list(b) for b in self.domain]
+        n_nodes = list(self.n_nodes)
+
+        for dim_idx, (lo, hi), n in sorted_params:
+            knots.insert(dim_idx, [])
+            intervals.insert(dim_idx, [(lo, hi)])
+            shape.insert(dim_idx, 1)
+            domain.insert(dim_idx, [lo, hi])
+            n_nodes.insert(dim_idx, n)
+
+        # Extrude each piece
+        pieces = []
+        for piece in self._pieces:
+            p = piece
+            for dim_idx, bounds, n in sorted_params:
+                p = p.extrude((dim_idx, bounds, n))
+            pieces.append(p)
+
+        new_ndim = self.num_dimensions + len(sorted_params)
+        obj = object.__new__(ChebyshevSpline)
+        obj.function = None
+        obj.num_dimensions = new_ndim
+        obj.domain = domain
+        obj.n_nodes = n_nodes
+        obj.max_derivative_order = self.max_derivative_order
+        obj.knots = knots
+        obj._intervals = intervals
+        obj._shape = tuple(shape)
+        obj._pieces = pieces
+        obj._built = True
+        obj._build_time = 0.0
+        obj._cached_error_estimate = None
+        return obj
+
+    def slice(self, params):
+        """Fix one or more dimensions at given values, reducing dimensionality.
+
+        For each sliced dimension, only the pieces whose interval contains
+        the slice value survive.  Each surviving piece is then sliced via
+        :meth:`ChebyshevApproximation.slice`, which contracts the tensor
+        along that axis using the barycentric interpolation formula.  When
+        the slice value coincides with a Chebyshev node (within 1e-14),
+        the contraction reduces to an exact ``np.take`` (fast path).
+
+        Parameters
+        ----------
+        params : tuple or list of tuples
+            Single ``(dim_index, value)`` or a list of such tuples.
+            ``value`` must lie within the domain for that dimension.
+
+        Returns
+        -------
+        ChebyshevSpline
+            A new, lower-dimensional spline (already built).
+            The result has ``function=None`` and ``build_time=0.0``.
+
+        Raises
+        ------
+        RuntimeError
+            If the spline has not been built yet.
+        TypeError
+            If ``dim_index`` is not an integer.
+        ValueError
+            If a slice value is outside the domain, if slicing all
+            dimensions, or if ``dim_index`` is out of range or duplicated.
+        """
+        if not self._built:
+            raise RuntimeError("Call build() first")
+
+        from pychebyshev._extrude_slice import _normalize_slicing_params
+
+        sorted_params = _normalize_slicing_params(params, self.num_dimensions)
+
+        # Validate values within domain
+        for dim_idx, value in sorted_params:
+            lo, hi = self.domain[dim_idx]
+            if value < lo or value > hi:
+                raise ValueError(
+                    f"Slice value {value} for dim {dim_idx} is outside "
+                    f"domain [{lo}, {hi}]"
+                )
+
+        knots = [list(k) for k in self.knots]
+        intervals = [list(iv) for iv in self._intervals]
+        shape = list(self._shape)
+        domain = [list(b) for b in self.domain]
+        n_nodes = list(self.n_nodes)
+        # Work with pieces as a multi-dimensional array for easy indexing
+        pieces_arr = np.array(self._pieces, dtype=object).reshape(self._shape)
+
+        for dim_idx, value in sorted_params:  # descending order
+            # Find which interval contains the value along this dim
+            knots_d = knots[dim_idx]
+            if len(knots_d) == 0:
+                interval_idx = 0
+            else:
+                interval_idx = int(np.searchsorted(knots_d, value, side="right"))
+                interval_idx = min(interval_idx, shape[dim_idx] - 1)
+
+            # Select only pieces at this interval index along dim_idx
+            pieces_arr = np.take(pieces_arr, interval_idx, axis=dim_idx)
+
+            # Slice each surviving piece
+            flat_pieces = pieces_arr.ravel()
+            for i in range(len(flat_pieces)):
+                flat_pieces[i] = flat_pieces[i].slice((dim_idx, value))
+            pieces_arr = flat_pieces.reshape(pieces_arr.shape)
+
+            del knots[dim_idx]
+            del intervals[dim_idx]
+            del shape[dim_idx]
+            del domain[dim_idx]
+            del n_nodes[dim_idx]
+
+        new_ndim = self.num_dimensions - len(sorted_params)
+        obj = object.__new__(ChebyshevSpline)
+        obj.function = None
+        obj.num_dimensions = new_ndim
+        obj.domain = domain
+        obj.n_nodes = n_nodes
+        obj.max_derivative_order = self.max_derivative_order
+        obj.knots = knots
+        obj._intervals = intervals
+        obj._shape = tuple(shape)
+        obj._pieces = list(pieces_arr.ravel())
+        obj._built = True
+        obj._build_time = 0.0
+        obj._cached_error_estimate = None
+        return obj
+
     def _check_spline_compatible(self, other):
         """Validate that two splines can be combined arithmetically."""
         from pychebyshev._algebra import _check_compatible

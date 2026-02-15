@@ -22,6 +22,10 @@ the number of trades.
     grid** (same domain, node counts, derivative order) and you want to combine them
     into a single interpolant for faster evaluation.
 
+    If your interpolants live on **different** sets of dimensions (e.g., Trade A
+    depends on (spot, rate) while Trade B depends on (spot, vol)), use
+    [Extrusion & Slicing](extrude-slice.md) to bring them onto a common grid first.
+
 ## Mathematical Basis
 
 The barycentric interpolation formula evaluates a Chebyshev Tensor (CT) at any point

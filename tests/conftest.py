@@ -222,6 +222,28 @@ def algebra_slider_f():
     return sl
 
 
+# ---------------------------------------------------------------------------
+# Extrude/Slice Fixtures
+# ---------------------------------------------------------------------------
+
+@pytest.fixture(scope="module")
+def extrude_cheb_1d():
+    """Pre-built 1D sin(x) on [-1,1], 11 nodes."""
+    def f(x, _): return math.sin(x[0])
+    cheb = ChebyshevApproximation(f, 1, [[-1, 1]], [11])
+    cheb.build(verbose=False)
+    return cheb
+
+
+@pytest.fixture(scope="module")
+def extrude_cheb_2d():
+    """Pre-built 2D sin(x)+cos(y) on [-1,1]^2, [11,11] nodes."""
+    def f(x, _): return math.sin(x[0]) + math.cos(x[1])
+    cheb = ChebyshevApproximation(f, 2, [[-1, 1], [-1, 1]], [11, 11])
+    cheb.build(verbose=False)
+    return cheb
+
+
 @pytest.fixture(scope="module")
 def algebra_slider_g():
     """3D cos(x)+cos(y)+cos(z), same partition/pivot as algebra_slider_f."""
