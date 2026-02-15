@@ -936,6 +936,28 @@
   
 </li>
       
+        <li class="md-nav__item">
+  <a href="#pychebyshev.spline.ChebyshevSpline.extrude" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        extrude
+      
+    </span>
+  </a>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#pychebyshev.spline.ChebyshevSpline.slice" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        slice
+      
+    </span>
+  </a>
+  
+</li>
+      
     </ul>
   
 </nav>
@@ -988,6 +1010,34 @@
     
   
     Chebyshev Algebra
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../extrude-slice/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Extrusion & Slicing
   
 
     
@@ -1491,6 +1541,28 @@
     <span class="md-ellipsis">
       
         load
+      
+    </span>
+  </a>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#pychebyshev.spline.ChebyshevSpline.extrude" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        extrude
+      
+    </span>
+  </a>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#pychebyshev.spline.ChebyshevSpline.slice" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        slice
       
     </span>
   </a>
@@ -2776,6 +2848,255 @@ before calling <code>build()</code> again if a rebuild is desired.</p>
                 <p>This method uses :mod:<code>pickle</code> internally.  Pickle can execute
 arbitrary code during deserialization.  <strong>Only load files you
 trust.</strong></p>
+              </div>
+            </td>
+          </tr>
+      </tbody>
+    </table>
+
+
+    </div>
+
+</div>
+
+<div class="doc doc-object doc-function">
+
+
+<h2 id="pychebyshev.spline.ChebyshevSpline.extrude" class="doc doc-heading">
+            <code class="highlight language-python"><span class="n">extrude</span><span class="p">(</span><span class="n">params</span><span class="p">)</span></code>
+
+<a href="#pychebyshev.spline.ChebyshevSpline.extrude" class="headerlink" title="Permanent link">&para;</a></h2>
+
+
+    <div class="doc doc-contents ">
+
+        <p>Add new dimensions where the function is constant.</p>
+<p>Each piece is extruded independently via
+:meth:<code>ChebyshevApproximation.extrude</code>.  The extruded spline
+evaluates identically to the original regardless of the new
+coordinate(s), because Chebyshev basis functions form a partition
+of unity.  The new dimension gets <code>knots=[]</code> and a single
+interval <code>(lo, hi)</code>.</p>
+
+
+<p><span class="doc-section-title">Parameters:</span></p>
+    <table>
+      <thead>
+        <tr>
+          <th>Name</th>
+          <th>Type</th>
+          <th>Description</th>
+          <th>Default</th>
+        </tr>
+      </thead>
+      <tbody>
+          <tr class="doc-section-item">
+            <td>
+                <code>params</code>
+            </td>
+            <td>
+                  <code>tuple or list of tuples</code>
+            </td>
+            <td>
+              <div class="doc-md-description">
+                <p>Single <code>(dim_index, (lo, hi), n_nodes)</code> or a list of such
+tuples.  <code>dim_index</code> is the position in the <strong>output</strong> space
+(0-indexed).  <code>n_nodes</code> must be &gt;= 2 and <code>lo &lt; hi</code>.</p>
+              </div>
+            </td>
+            <td>
+                <em>required</em>
+            </td>
+          </tr>
+      </tbody>
+    </table>
+
+
+    <p><span class="doc-section-title">Returns:</span></p>
+    <table>
+      <thead>
+        <tr>
+          <th>Type</th>
+          <th>Description</th>
+        </tr>
+      </thead>
+      <tbody>
+          <tr class="doc-section-item">
+            <td>
+                  <code><a class="autorefs autorefs-internal" title="pychebyshev.spline.ChebyshevSpline" href="#pychebyshev.spline.ChebyshevSpline">ChebyshevSpline</a></code>
+            </td>
+            <td>
+              <div class="doc-md-description">
+                <p>A new, higher-dimensional spline (already built).
+The result has <code>function=None</code> and <code>build_time=0.0</code>.</p>
+              </div>
+            </td>
+          </tr>
+      </tbody>
+    </table>
+
+
+<p><span class="doc-section-title">Raises:</span></p>
+    <table>
+      <thead>
+        <tr>
+          <th>Type</th>
+          <th>Description</th>
+        </tr>
+      </thead>
+      <tbody>
+          <tr class="doc-section-item">
+            <td>
+                  <code><span title="RuntimeError">RuntimeError</span></code>
+            </td>
+            <td>
+              <div class="doc-md-description">
+                <p>If the spline has not been built yet.</p>
+              </div>
+            </td>
+          </tr>
+          <tr class="doc-section-item">
+            <td>
+                  <code><span title="TypeError">TypeError</span></code>
+            </td>
+            <td>
+              <div class="doc-md-description">
+                <p>If <code>dim_index</code> is not an integer.</p>
+              </div>
+            </td>
+          </tr>
+          <tr class="doc-section-item">
+            <td>
+                  <code><span title="ValueError">ValueError</span></code>
+            </td>
+            <td>
+              <div class="doc-md-description">
+                <p>If <code>dim_index</code> is out of range, duplicated, <code>lo &gt;= hi</code>,
+or <code>n_nodes &lt; 2</code>.</p>
+              </div>
+            </td>
+          </tr>
+      </tbody>
+    </table>
+
+
+    </div>
+
+</div>
+
+<div class="doc doc-object doc-function">
+
+
+<h2 id="pychebyshev.spline.ChebyshevSpline.slice" class="doc doc-heading">
+            <code class="highlight language-python"><span class="nb">slice</span><span class="p">(</span><span class="n">params</span><span class="p">)</span></code>
+
+<a href="#pychebyshev.spline.ChebyshevSpline.slice" class="headerlink" title="Permanent link">&para;</a></h2>
+
+
+    <div class="doc doc-contents ">
+
+        <p>Fix one or more dimensions at given values, reducing dimensionality.</p>
+<p>For each sliced dimension, only the pieces whose interval contains
+the slice value survive.  Each surviving piece is then sliced via
+:meth:<code>ChebyshevApproximation.slice</code>, which contracts the tensor
+along that axis using the barycentric interpolation formula.  When
+the slice value coincides with a Chebyshev node (within 1e-14),
+the contraction reduces to an exact <code>np.take</code> (fast path).</p>
+
+
+<p><span class="doc-section-title">Parameters:</span></p>
+    <table>
+      <thead>
+        <tr>
+          <th>Name</th>
+          <th>Type</th>
+          <th>Description</th>
+          <th>Default</th>
+        </tr>
+      </thead>
+      <tbody>
+          <tr class="doc-section-item">
+            <td>
+                <code>params</code>
+            </td>
+            <td>
+                  <code>tuple or list of tuples</code>
+            </td>
+            <td>
+              <div class="doc-md-description">
+                <p>Single <code>(dim_index, value)</code> or a list of such tuples.
+<code>value</code> must lie within the domain for that dimension.</p>
+              </div>
+            </td>
+            <td>
+                <em>required</em>
+            </td>
+          </tr>
+      </tbody>
+    </table>
+
+
+    <p><span class="doc-section-title">Returns:</span></p>
+    <table>
+      <thead>
+        <tr>
+          <th>Type</th>
+          <th>Description</th>
+        </tr>
+      </thead>
+      <tbody>
+          <tr class="doc-section-item">
+            <td>
+                  <code><a class="autorefs autorefs-internal" title="pychebyshev.spline.ChebyshevSpline" href="#pychebyshev.spline.ChebyshevSpline">ChebyshevSpline</a></code>
+            </td>
+            <td>
+              <div class="doc-md-description">
+                <p>A new, lower-dimensional spline (already built).
+The result has <code>function=None</code> and <code>build_time=0.0</code>.</p>
+              </div>
+            </td>
+          </tr>
+      </tbody>
+    </table>
+
+
+<p><span class="doc-section-title">Raises:</span></p>
+    <table>
+      <thead>
+        <tr>
+          <th>Type</th>
+          <th>Description</th>
+        </tr>
+      </thead>
+      <tbody>
+          <tr class="doc-section-item">
+            <td>
+                  <code><span title="RuntimeError">RuntimeError</span></code>
+            </td>
+            <td>
+              <div class="doc-md-description">
+                <p>If the spline has not been built yet.</p>
+              </div>
+            </td>
+          </tr>
+          <tr class="doc-section-item">
+            <td>
+                  <code><span title="TypeError">TypeError</span></code>
+            </td>
+            <td>
+              <div class="doc-md-description">
+                <p>If <code>dim_index</code> is not an integer.</p>
+              </div>
+            </td>
+          </tr>
+          <tr class="doc-section-item">
+            <td>
+                  <code><span title="ValueError">ValueError</span></code>
+            </td>
+            <td>
+              <div class="doc-md-description">
+                <p>If a slice value is outside the domain, if slicing all
+dimensions, or if <code>dim_index</code> is out of range or duplicated.</p>
               </div>
             </td>
           </tr>

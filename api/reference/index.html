@@ -578,6 +578,34 @@
   
   
     <li class="md-nav__item">
+      <a href="../../user-guide/extrude-slice/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Extrusion & Slicing
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
       <a href="../../user-guide/error-estimation/" class="md-nav__link">
         
   
@@ -827,6 +855,28 @@
 </li>
       
         <li class="md-nav__item">
+  <a href="#pychebyshev.ChebyshevApproximation.extrude" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        extrude
+      
+    </span>
+  </a>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#pychebyshev.ChebyshevApproximation.slice" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        slice
+      
+    </span>
+  </a>
+  
+</li>
+      
+        <li class="md-nav__item">
   <a href="#chebyshevslider" class="md-nav__link">
     <span class="md-ellipsis">
       
@@ -941,6 +991,28 @@
     <span class="md-ellipsis">
       
         load
+      
+    </span>
+  </a>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#pychebyshev.ChebyshevSlider.extrude" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        extrude
+      
+    </span>
+  </a>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#pychebyshev.ChebyshevSlider.slice" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        slice
       
     </span>
   </a>
@@ -1095,6 +1167,28 @@
     <span class="md-ellipsis">
       
         load
+      
+    </span>
+  </a>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#pychebyshev.ChebyshevSpline.extrude" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        extrude
+      
+    </span>
+  </a>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#pychebyshev.ChebyshevSpline.slice" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        slice
       
     </span>
   </a>
@@ -1515,6 +1609,28 @@
 </li>
       
         <li class="md-nav__item">
+  <a href="#pychebyshev.ChebyshevApproximation.extrude" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        extrude
+      
+    </span>
+  </a>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#pychebyshev.ChebyshevApproximation.slice" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        slice
+      
+    </span>
+  </a>
+  
+</li>
+      
+        <li class="md-nav__item">
   <a href="#chebyshevslider" class="md-nav__link">
     <span class="md-ellipsis">
       
@@ -1629,6 +1745,28 @@
     <span class="md-ellipsis">
       
         load
+      
+    </span>
+  </a>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#pychebyshev.ChebyshevSlider.extrude" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        extrude
+      
+    </span>
+  </a>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#pychebyshev.ChebyshevSlider.slice" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        slice
       
     </span>
   </a>
@@ -1783,6 +1921,28 @@
     <span class="md-ellipsis">
       
         load
+      
+    </span>
+  </a>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#pychebyshev.ChebyshevSpline.extrude" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        extrude
+      
+    </span>
+  </a>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#pychebyshev.ChebyshevSpline.slice" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        slice
       
     </span>
   </a>
@@ -3037,6 +3197,254 @@ trust.</strong></p>
 
 </div>
 
+<div class="doc doc-object doc-function">
+
+
+<h2 id="pychebyshev.ChebyshevApproximation.extrude" class="doc doc-heading">
+            <code class="highlight language-python"><span class="n">extrude</span><span class="p">(</span><span class="n">params</span><span class="p">)</span></code>
+
+<a href="#pychebyshev.ChebyshevApproximation.extrude" class="headerlink" title="Permanent link">&para;</a></h2>
+
+
+    <div class="doc doc-contents ">
+
+        <p>Add new dimensions where the function is constant.</p>
+<p>The extruded interpolant evaluates identically to the original
+regardless of the new coordinate(s), because Chebyshev basis
+functions form a partition of unity: the barycentric weights
+sum to 1, so replicating tensor values along a new axis
+produces the same result for any coordinate in the new domain.</p>
+
+
+<p><span class="doc-section-title">Parameters:</span></p>
+    <table>
+      <thead>
+        <tr>
+          <th>Name</th>
+          <th>Type</th>
+          <th>Description</th>
+          <th>Default</th>
+        </tr>
+      </thead>
+      <tbody>
+          <tr class="doc-section-item">
+            <td>
+                <code>params</code>
+            </td>
+            <td>
+                  <code>tuple or list of tuples</code>
+            </td>
+            <td>
+              <div class="doc-md-description">
+                <p>Single <code>(dim_index, (lo, hi), n_nodes)</code> or a list of such
+tuples.  <code>dim_index</code> is the position in the <strong>output</strong> space
+(0-indexed).  <code>n_nodes</code> must be &gt;= 2 and <code>lo &lt; hi</code>.</p>
+              </div>
+            </td>
+            <td>
+                <em>required</em>
+            </td>
+          </tr>
+      </tbody>
+    </table>
+
+
+    <p><span class="doc-section-title">Returns:</span></p>
+    <table>
+      <thead>
+        <tr>
+          <th>Type</th>
+          <th>Description</th>
+        </tr>
+      </thead>
+      <tbody>
+          <tr class="doc-section-item">
+            <td>
+                  <code><a class="autorefs autorefs-internal" title="pychebyshev.barycentric.ChebyshevApproximation" href="#pychebyshev.ChebyshevApproximation">ChebyshevApproximation</a></code>
+            </td>
+            <td>
+              <div class="doc-md-description">
+                <p>A new, higher-dimensional interpolant (already built).
+The result has <code>function=None</code> and <code>build_time=0.0</code>.</p>
+              </div>
+            </td>
+          </tr>
+      </tbody>
+    </table>
+
+
+<p><span class="doc-section-title">Raises:</span></p>
+    <table>
+      <thead>
+        <tr>
+          <th>Type</th>
+          <th>Description</th>
+        </tr>
+      </thead>
+      <tbody>
+          <tr class="doc-section-item">
+            <td>
+                  <code><span title="RuntimeError">RuntimeError</span></code>
+            </td>
+            <td>
+              <div class="doc-md-description">
+                <p>If the interpolant has not been built yet.</p>
+              </div>
+            </td>
+          </tr>
+          <tr class="doc-section-item">
+            <td>
+                  <code><span title="TypeError">TypeError</span></code>
+            </td>
+            <td>
+              <div class="doc-md-description">
+                <p>If <code>dim_index</code> is not an integer.</p>
+              </div>
+            </td>
+          </tr>
+          <tr class="doc-section-item">
+            <td>
+                  <code><span title="ValueError">ValueError</span></code>
+            </td>
+            <td>
+              <div class="doc-md-description">
+                <p>If <code>dim_index</code> is out of range, duplicated, <code>lo &gt;= hi</code>,
+or <code>n_nodes &lt; 2</code>.</p>
+              </div>
+            </td>
+          </tr>
+      </tbody>
+    </table>
+
+
+    </div>
+
+</div>
+
+<div class="doc doc-object doc-function">
+
+
+<h2 id="pychebyshev.ChebyshevApproximation.slice" class="doc doc-heading">
+            <code class="highlight language-python"><span class="nb">slice</span><span class="p">(</span><span class="n">params</span><span class="p">)</span></code>
+
+<a href="#pychebyshev.ChebyshevApproximation.slice" class="headerlink" title="Permanent link">&para;</a></h2>
+
+
+    <div class="doc doc-contents ">
+
+        <p>Fix one or more dimensions at given values, reducing dimensionality.</p>
+<p>Contracts the tensor along each sliced dimension using the
+barycentric interpolation formula: for each sliced axis the
+normalized weight vector <code>w_i / (x - x_i) / sum(w_j / (x - x_j))</code>
+is contracted with the tensor via <code>np.tensordot</code>.  When the
+slice value coincides with a Chebyshev node (within 1e-14), the
+contraction reduces to an exact <code>np.take</code> (fast path).</p>
+
+
+<p><span class="doc-section-title">Parameters:</span></p>
+    <table>
+      <thead>
+        <tr>
+          <th>Name</th>
+          <th>Type</th>
+          <th>Description</th>
+          <th>Default</th>
+        </tr>
+      </thead>
+      <tbody>
+          <tr class="doc-section-item">
+            <td>
+                <code>params</code>
+            </td>
+            <td>
+                  <code>tuple or list of tuples</code>
+            </td>
+            <td>
+              <div class="doc-md-description">
+                <p>Single <code>(dim_index, value)</code> or a list of such tuples.
+<code>value</code> must lie within the domain for that dimension.</p>
+              </div>
+            </td>
+            <td>
+                <em>required</em>
+            </td>
+          </tr>
+      </tbody>
+    </table>
+
+
+    <p><span class="doc-section-title">Returns:</span></p>
+    <table>
+      <thead>
+        <tr>
+          <th>Type</th>
+          <th>Description</th>
+        </tr>
+      </thead>
+      <tbody>
+          <tr class="doc-section-item">
+            <td>
+                  <code><a class="autorefs autorefs-internal" title="pychebyshev.barycentric.ChebyshevApproximation" href="#pychebyshev.ChebyshevApproximation">ChebyshevApproximation</a></code>
+            </td>
+            <td>
+              <div class="doc-md-description">
+                <p>A new, lower-dimensional interpolant (already built).
+The result has <code>function=None</code> and <code>build_time=0.0</code>.</p>
+              </div>
+            </td>
+          </tr>
+      </tbody>
+    </table>
+
+
+<p><span class="doc-section-title">Raises:</span></p>
+    <table>
+      <thead>
+        <tr>
+          <th>Type</th>
+          <th>Description</th>
+        </tr>
+      </thead>
+      <tbody>
+          <tr class="doc-section-item">
+            <td>
+                  <code><span title="RuntimeError">RuntimeError</span></code>
+            </td>
+            <td>
+              <div class="doc-md-description">
+                <p>If the interpolant has not been built yet.</p>
+              </div>
+            </td>
+          </tr>
+          <tr class="doc-section-item">
+            <td>
+                  <code><span title="TypeError">TypeError</span></code>
+            </td>
+            <td>
+              <div class="doc-md-description">
+                <p>If <code>dim_index</code> is not an integer.</p>
+              </div>
+            </td>
+          </tr>
+          <tr class="doc-section-item">
+            <td>
+                  <code><span title="ValueError">ValueError</span></code>
+            </td>
+            <td>
+              <div class="doc-md-description">
+                <p>If a slice value is outside the domain, if slicing all
+dimensions, or if <code>dim_index</code> is out of range or duplicated.</p>
+              </div>
+            </td>
+          </tr>
+      </tbody>
+    </table>
+
+
+    </div>
+
+</div>
+
 
 
   </div>
@@ -3771,6 +4179,266 @@ before calling <code>build()</code> again if a rebuild is desired.</p>
                 <p>This method uses :mod:<code>pickle</code> internally. Pickle can execute
 arbitrary code during deserialization. <strong>Only load files you
 trust.</strong></p>
+              </div>
+            </td>
+          </tr>
+      </tbody>
+    </table>
+
+
+    </div>
+
+</div>
+
+<div class="doc doc-object doc-function">
+
+
+<h2 id="pychebyshev.ChebyshevSlider.extrude" class="doc doc-heading">
+            <code class="highlight language-python"><span class="n">extrude</span><span class="p">(</span><span class="n">params</span><span class="p">)</span></code>
+
+<a href="#pychebyshev.ChebyshevSlider.extrude" class="headerlink" title="Permanent link">&para;</a></h2>
+
+
+    <div class="doc doc-contents ">
+
+        <p>Add new dimensions where the function is constant.</p>
+<p>Each new dimension becomes its own single-dim slide group with
+<code>tensor_values = np.full(n, pivot_value)</code>, so that
+<code>s_new(x) - pivot_value = 0</code> for all x (no contribution to
+the sliding sum).  This is the partition-of-unity property:
+the barycentric weights sum to 1, so a constant tensor
+produces the same value for any coordinate.</p>
+<p>Existing slide groups have their dimension indices remapped to
+account for the inserted dimensions.</p>
+
+
+<p><span class="doc-section-title">Parameters:</span></p>
+    <table>
+      <thead>
+        <tr>
+          <th>Name</th>
+          <th>Type</th>
+          <th>Description</th>
+          <th>Default</th>
+        </tr>
+      </thead>
+      <tbody>
+          <tr class="doc-section-item">
+            <td>
+                <code>params</code>
+            </td>
+            <td>
+                  <code>tuple or list of tuples</code>
+            </td>
+            <td>
+              <div class="doc-md-description">
+                <p>Single <code>(dim_index, (lo, hi), n_nodes)</code> or a list of such
+tuples.  <code>dim_index</code> is the position in the <strong>output</strong> space
+(0-indexed).  <code>n_nodes</code> must be &gt;= 2 and <code>lo &lt; hi</code>.</p>
+              </div>
+            </td>
+            <td>
+                <em>required</em>
+            </td>
+          </tr>
+      </tbody>
+    </table>
+
+
+    <p><span class="doc-section-title">Returns:</span></p>
+    <table>
+      <thead>
+        <tr>
+          <th>Type</th>
+          <th>Description</th>
+        </tr>
+      </thead>
+      <tbody>
+          <tr class="doc-section-item">
+            <td>
+                  <code><a class="autorefs autorefs-internal" title="pychebyshev.slider.ChebyshevSlider" href="../../user-guide/sliding/#pychebyshev.slider.ChebyshevSlider">ChebyshevSlider</a></code>
+            </td>
+            <td>
+              <div class="doc-md-description">
+                <p>A new, higher-dimensional slider (already built).
+The result has <code>function=None</code>.</p>
+              </div>
+            </td>
+          </tr>
+      </tbody>
+    </table>
+
+
+<p><span class="doc-section-title">Raises:</span></p>
+    <table>
+      <thead>
+        <tr>
+          <th>Type</th>
+          <th>Description</th>
+        </tr>
+      </thead>
+      <tbody>
+          <tr class="doc-section-item">
+            <td>
+                  <code><span title="RuntimeError">RuntimeError</span></code>
+            </td>
+            <td>
+              <div class="doc-md-description">
+                <p>If the slider has not been built yet.</p>
+              </div>
+            </td>
+          </tr>
+          <tr class="doc-section-item">
+            <td>
+                  <code><span title="TypeError">TypeError</span></code>
+            </td>
+            <td>
+              <div class="doc-md-description">
+                <p>If <code>dim_index</code> is not an integer.</p>
+              </div>
+            </td>
+          </tr>
+          <tr class="doc-section-item">
+            <td>
+                  <code><span title="ValueError">ValueError</span></code>
+            </td>
+            <td>
+              <div class="doc-md-description">
+                <p>If <code>dim_index</code> is out of range, duplicated, <code>lo &gt;= hi</code>,
+or <code>n_nodes &lt; 2</code>.</p>
+              </div>
+            </td>
+          </tr>
+      </tbody>
+    </table>
+
+
+    </div>
+
+</div>
+
+<div class="doc doc-object doc-function">
+
+
+<h2 id="pychebyshev.ChebyshevSlider.slice" class="doc doc-heading">
+            <code class="highlight language-python"><span class="nb">slice</span><span class="p">(</span><span class="n">params</span><span class="p">)</span></code>
+
+<a href="#pychebyshev.ChebyshevSlider.slice" class="headerlink" title="Permanent link">&para;</a></h2>
+
+
+    <div class="doc doc-contents ">
+
+        <p>Fix one or more dimensions at given values, reducing dimensionality.</p>
+<p>Two cases per sliced dimension:</p>
+<ul>
+<li><strong>Multi-dim group</strong>: The slide's <code>ChebyshevApproximation</code> is
+  sliced at the local dimension index via barycentric contraction.
+  When the slice value coincides with a Chebyshev node (within
+  1e-14), the contraction reduces to an exact <code>np.take</code>
+  (fast path).  The dimension is removed from the group.</li>
+<li><strong>Single-dim group</strong>: The slide is evaluated at the value,
+  giving a constant <code>s_val</code>.  The shift
+  <code>delta = s_val - pivot_value</code> is absorbed into
+  <code>pivot_value</code> and each remaining slide's
+  <code>tensor_values</code>, and the group is removed entirely.</li>
+</ul>
+<p>Remaining dimension indices in all groups are remapped downward
+to stay contiguous.</p>
+
+
+<p><span class="doc-section-title">Parameters:</span></p>
+    <table>
+      <thead>
+        <tr>
+          <th>Name</th>
+          <th>Type</th>
+          <th>Description</th>
+          <th>Default</th>
+        </tr>
+      </thead>
+      <tbody>
+          <tr class="doc-section-item">
+            <td>
+                <code>params</code>
+            </td>
+            <td>
+                  <code>tuple or list of tuples</code>
+            </td>
+            <td>
+              <div class="doc-md-description">
+                <p>Single <code>(dim_index, value)</code> or a list of such tuples.
+<code>value</code> must lie within the domain for that dimension.</p>
+              </div>
+            </td>
+            <td>
+                <em>required</em>
+            </td>
+          </tr>
+      </tbody>
+    </table>
+
+
+    <p><span class="doc-section-title">Returns:</span></p>
+    <table>
+      <thead>
+        <tr>
+          <th>Type</th>
+          <th>Description</th>
+        </tr>
+      </thead>
+      <tbody>
+          <tr class="doc-section-item">
+            <td>
+                  <code><a class="autorefs autorefs-internal" title="pychebyshev.slider.ChebyshevSlider" href="../../user-guide/sliding/#pychebyshev.slider.ChebyshevSlider">ChebyshevSlider</a></code>
+            </td>
+            <td>
+              <div class="doc-md-description">
+                <p>A new, lower-dimensional slider (already built).
+The result has <code>function=None</code>.</p>
+              </div>
+            </td>
+          </tr>
+      </tbody>
+    </table>
+
+
+<p><span class="doc-section-title">Raises:</span></p>
+    <table>
+      <thead>
+        <tr>
+          <th>Type</th>
+          <th>Description</th>
+        </tr>
+      </thead>
+      <tbody>
+          <tr class="doc-section-item">
+            <td>
+                  <code><span title="RuntimeError">RuntimeError</span></code>
+            </td>
+            <td>
+              <div class="doc-md-description">
+                <p>If the slider has not been built yet.</p>
+              </div>
+            </td>
+          </tr>
+          <tr class="doc-section-item">
+            <td>
+                  <code><span title="TypeError">TypeError</span></code>
+            </td>
+            <td>
+              <div class="doc-md-description">
+                <p>If <code>dim_index</code> is not an integer.</p>
+              </div>
+            </td>
+          </tr>
+          <tr class="doc-section-item">
+            <td>
+                  <code><span title="ValueError">ValueError</span></code>
+            </td>
+            <td>
+              <div class="doc-md-description">
+                <p>If a slice value is outside the domain, if slicing all
+dimensions, or if <code>dim_index</code> is out of range or duplicated.</p>
               </div>
             </td>
           </tr>
@@ -4722,6 +5390,255 @@ before calling <code>build()</code> again if a rebuild is desired.</p>
                 <p>This method uses :mod:<code>pickle</code> internally.  Pickle can execute
 arbitrary code during deserialization.  <strong>Only load files you
 trust.</strong></p>
+              </div>
+            </td>
+          </tr>
+      </tbody>
+    </table>
+
+
+    </div>
+
+</div>
+
+<div class="doc doc-object doc-function">
+
+
+<h2 id="pychebyshev.ChebyshevSpline.extrude" class="doc doc-heading">
+            <code class="highlight language-python"><span class="n">extrude</span><span class="p">(</span><span class="n">params</span><span class="p">)</span></code>
+
+<a href="#pychebyshev.ChebyshevSpline.extrude" class="headerlink" title="Permanent link">&para;</a></h2>
+
+
+    <div class="doc doc-contents ">
+
+        <p>Add new dimensions where the function is constant.</p>
+<p>Each piece is extruded independently via
+:meth:<code>ChebyshevApproximation.extrude</code>.  The extruded spline
+evaluates identically to the original regardless of the new
+coordinate(s), because Chebyshev basis functions form a partition
+of unity.  The new dimension gets <code>knots=[]</code> and a single
+interval <code>(lo, hi)</code>.</p>
+
+
+<p><span class="doc-section-title">Parameters:</span></p>
+    <table>
+      <thead>
+        <tr>
+          <th>Name</th>
+          <th>Type</th>
+          <th>Description</th>
+          <th>Default</th>
+        </tr>
+      </thead>
+      <tbody>
+          <tr class="doc-section-item">
+            <td>
+                <code>params</code>
+            </td>
+            <td>
+                  <code>tuple or list of tuples</code>
+            </td>
+            <td>
+              <div class="doc-md-description">
+                <p>Single <code>(dim_index, (lo, hi), n_nodes)</code> or a list of such
+tuples.  <code>dim_index</code> is the position in the <strong>output</strong> space
+(0-indexed).  <code>n_nodes</code> must be &gt;= 2 and <code>lo &lt; hi</code>.</p>
+              </div>
+            </td>
+            <td>
+                <em>required</em>
+            </td>
+          </tr>
+      </tbody>
+    </table>
+
+
+    <p><span class="doc-section-title">Returns:</span></p>
+    <table>
+      <thead>
+        <tr>
+          <th>Type</th>
+          <th>Description</th>
+        </tr>
+      </thead>
+      <tbody>
+          <tr class="doc-section-item">
+            <td>
+                  <code><a class="autorefs autorefs-internal" title="pychebyshev.spline.ChebyshevSpline" href="../../user-guide/spline/#pychebyshev.spline.ChebyshevSpline">ChebyshevSpline</a></code>
+            </td>
+            <td>
+              <div class="doc-md-description">
+                <p>A new, higher-dimensional spline (already built).
+The result has <code>function=None</code> and <code>build_time=0.0</code>.</p>
+              </div>
+            </td>
+          </tr>
+      </tbody>
+    </table>
+
+
+<p><span class="doc-section-title">Raises:</span></p>
+    <table>
+      <thead>
+        <tr>
+          <th>Type</th>
+          <th>Description</th>
+        </tr>
+      </thead>
+      <tbody>
+          <tr class="doc-section-item">
+            <td>
+                  <code><span title="RuntimeError">RuntimeError</span></code>
+            </td>
+            <td>
+              <div class="doc-md-description">
+                <p>If the spline has not been built yet.</p>
+              </div>
+            </td>
+          </tr>
+          <tr class="doc-section-item">
+            <td>
+                  <code><span title="TypeError">TypeError</span></code>
+            </td>
+            <td>
+              <div class="doc-md-description">
+                <p>If <code>dim_index</code> is not an integer.</p>
+              </div>
+            </td>
+          </tr>
+          <tr class="doc-section-item">
+            <td>
+                  <code><span title="ValueError">ValueError</span></code>
+            </td>
+            <td>
+              <div class="doc-md-description">
+                <p>If <code>dim_index</code> is out of range, duplicated, <code>lo &gt;= hi</code>,
+or <code>n_nodes &lt; 2</code>.</p>
+              </div>
+            </td>
+          </tr>
+      </tbody>
+    </table>
+
+
+    </div>
+
+</div>
+
+<div class="doc doc-object doc-function">
+
+
+<h2 id="pychebyshev.ChebyshevSpline.slice" class="doc doc-heading">
+            <code class="highlight language-python"><span class="nb">slice</span><span class="p">(</span><span class="n">params</span><span class="p">)</span></code>
+
+<a href="#pychebyshev.ChebyshevSpline.slice" class="headerlink" title="Permanent link">&para;</a></h2>
+
+
+    <div class="doc doc-contents ">
+
+        <p>Fix one or more dimensions at given values, reducing dimensionality.</p>
+<p>For each sliced dimension, only the pieces whose interval contains
+the slice value survive.  Each surviving piece is then sliced via
+:meth:<code>ChebyshevApproximation.slice</code>, which contracts the tensor
+along that axis using the barycentric interpolation formula.  When
+the slice value coincides with a Chebyshev node (within 1e-14),
+the contraction reduces to an exact <code>np.take</code> (fast path).</p>
+
+
+<p><span class="doc-section-title">Parameters:</span></p>
+    <table>
+      <thead>
+        <tr>
+          <th>Name</th>
+          <th>Type</th>
+          <th>Description</th>
+          <th>Default</th>
+        </tr>
+      </thead>
+      <tbody>
+          <tr class="doc-section-item">
+            <td>
+                <code>params</code>
+            </td>
+            <td>
+                  <code>tuple or list of tuples</code>
+            </td>
+            <td>
+              <div class="doc-md-description">
+                <p>Single <code>(dim_index, value)</code> or a list of such tuples.
+<code>value</code> must lie within the domain for that dimension.</p>
+              </div>
+            </td>
+            <td>
+                <em>required</em>
+            </td>
+          </tr>
+      </tbody>
+    </table>
+
+
+    <p><span class="doc-section-title">Returns:</span></p>
+    <table>
+      <thead>
+        <tr>
+          <th>Type</th>
+          <th>Description</th>
+        </tr>
+      </thead>
+      <tbody>
+          <tr class="doc-section-item">
+            <td>
+                  <code><a class="autorefs autorefs-internal" title="pychebyshev.spline.ChebyshevSpline" href="../../user-guide/spline/#pychebyshev.spline.ChebyshevSpline">ChebyshevSpline</a></code>
+            </td>
+            <td>
+              <div class="doc-md-description">
+                <p>A new, lower-dimensional spline (already built).
+The result has <code>function=None</code> and <code>build_time=0.0</code>.</p>
+              </div>
+            </td>
+          </tr>
+      </tbody>
+    </table>
+
+
+<p><span class="doc-section-title">Raises:</span></p>
+    <table>
+      <thead>
+        <tr>
+          <th>Type</th>
+          <th>Description</th>
+        </tr>
+      </thead>
+      <tbody>
+          <tr class="doc-section-item">
+            <td>
+                  <code><span title="RuntimeError">RuntimeError</span></code>
+            </td>
+            <td>
+              <div class="doc-md-description">
+                <p>If the spline has not been built yet.</p>
+              </div>
+            </td>
+          </tr>
+          <tr class="doc-section-item">
+            <td>
+                  <code><span title="TypeError">TypeError</span></code>
+            </td>
+            <td>
+              <div class="doc-md-description">
+                <p>If <code>dim_index</code> is not an integer.</p>
+              </div>
+            </td>
+          </tr>
+          <tr class="doc-section-item">
+            <td>
+                  <code><span title="ValueError">ValueError</span></code>
+            </td>
+            <td>
+              <div class="doc-md-description">
+                <p>If a slice value is outside the domain, if slicing all
+dimensions, or if <code>dim_index</code> is out of range or duplicated.</p>
               </div>
             </td>
           </tr>
