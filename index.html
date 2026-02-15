@@ -583,6 +583,34 @@
   
   
     <li class="md-nav__item">
+      <a href="user-guide/spline/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Chebyshev Splines
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
       <a href="user-guide/tensor-train/" class="md-nav__link">
         
   
@@ -785,15 +813,17 @@
 
 <h1 id="pychebyshev">PyChebyshev<a class="headerlink" href="#pychebyshev" title="Permanent link">&para;</a></h1>
 <p><strong>Fast multi-dimensional Chebyshev tensor interpolation with analytical derivatives.</strong></p>
-<p>PyChebyshev builds a Chebyshev interpolant of any smooth function in up to N dimensions, then evaluates it and its derivatives in microseconds using vectorized NumPy operations. Three classes cover different use cases:</p>
+<p>PyChebyshev builds a Chebyshev interpolant of any smooth function in up to N dimensions, then evaluates it and its derivatives in microseconds using vectorized NumPy operations. Four classes cover different use cases:</p>
 <ul>
 <li><strong><a href="user-guide/usage/"><code>ChebyshevApproximation</code></a></strong> — full tensor interpolation with analytical derivatives (up to ~5 dimensions)</li>
+<li><strong><a href="user-guide/spline/"><code>ChebyshevSpline</code></a></strong> — piecewise Chebyshev interpolation with knots at known singularities (kinks, discontinuities)</li>
 <li><strong><a href="user-guide/tensor-train/"><code>ChebyshevTT</code></a></strong> — Tensor Train format via TT-Cross for 5+ dimensions</li>
 <li><strong><a href="user-guide/sliding/"><code>ChebyshevSlider</code></a></strong> — additive decomposition for separable high-dimensional functions</li>
 </ul>
 <h2 id="key-features">Key Features<a class="headerlink" href="#key-features" title="Permanent link">&para;</a></h2>
 <ul>
 <li><strong>Spectral accuracy</strong> — exponential error decay as node count increases</li>
+<li><strong>Chebyshev Splines</strong> — piecewise interpolation at kinks restores spectral convergence for non-smooth functions</li>
 <li><strong>Analytical derivatives</strong> — via spectral differentiation matrices (no finite differences)</li>
 <li><strong>Tensor Train</strong> — TT-Cross builds from O(d·n·r²) evaluations instead of O(n^d)</li>
 <li><strong>Fast evaluation</strong> — ~0.065 ms per query (price), ~0.29 ms for price + 5 Greeks</li>

@@ -685,6 +685,34 @@
   
   
     <li class="md-nav__item">
+      <a href="../user-guide/spline/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Chebyshev Splines
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
       <a href="../user-guide/tensor-train/" class="md-nav__link">
         
   
@@ -1073,10 +1101,17 @@ to separate calls.</p>
 <tbody>
 <tr>
 <td><a href="../user-guide/usage/"><code>ChebyshevApproximation</code></a></td>
-<td>1–5</td>
+<td>1--5</td>
 <td><span class="arithmatex">\(n^d\)</span> evals</td>
 <td>Analytical</td>
 <td>Full accuracy with spectral derivatives</td>
+</tr>
+<tr>
+<td><a href="../user-guide/spline/"><code>ChebyshevSpline</code></a></td>
+<td>1--5</td>
+<td><span class="arithmatex">\(\text{pieces} \times n^d\)</span> evals</td>
+<td>Analytical (per piece)</td>
+<td>Functions with kinks at known locations</td>
 </tr>
 <tr>
 <td><a href="../user-guide/tensor-train/"><code>ChebyshevTT</code></a></td>
