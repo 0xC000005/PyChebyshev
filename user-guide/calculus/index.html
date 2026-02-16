@@ -724,6 +724,17 @@
 </li>
         
           <li class="md-nav__item">
+  <a href="#sub-interval-integration" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Sub-Interval Integration
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
   <a href="#integrate-api" class="md-nav__link">
     <span class="md-ellipsis">
       
@@ -1075,6 +1086,17 @@
 </li>
         
           <li class="md-nav__item">
+  <a href="#sub-interval-integration" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Sub-Interval Integration
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
   <a href="#integrate-api" class="md-nav__link">
     <span class="md-ellipsis">
       
@@ -1380,6 +1402,80 @@ integration along each dimension is a tensor contraction via
 <a id="__codelineno-0-19" name="__codelineno-0-19" href="#__codelineno-0-19"></a><span class="n">cheb_3d</span><span class="o">.</span><span class="n">build</span><span class="p">()</span>
 <a id="__codelineno-0-20" name="__codelineno-0-20" href="#__codelineno-0-20"></a><span class="n">cheb_1d</span> <span class="o">=</span> <span class="n">cheb_3d</span><span class="o">.</span><span class="n">integrate</span><span class="p">(</span><span class="n">dims</span><span class="o">=</span><span class="p">[</span><span class="mi">0</span><span class="p">,</span> <span class="mi">2</span><span class="p">])</span>
 </code></pre></div>
+<h3 id="sub-interval-integration">Sub-Interval Integration<a class="headerlink" href="#sub-interval-integration" title="Permanent link">&para;</a></h3>
+<p>By default, <code>integrate()</code> integrates over the full domain of each
+dimension.  The <code>bounds</code> parameter restricts integration to a
+sub-interval <span class="arithmatex">\([a', b'] \subseteq [a, b]\)</span>.</p>
+<p><strong>Domain mapping.</strong>  Physical bounds <span class="arithmatex">\([a', b']\)</span> on domain <span class="arithmatex">\([a, b]\)</span> are
+mapped to reference coordinates via the standard affine transformation:</p>
+<div class="arithmatex">\[
+t_a = \frac{2(a' - a)}{b - a} - 1, \qquad t_b = \frac{2(b' - a)}{b - a} - 1
+\]</div>
+<p>so that <span class="arithmatex">\([a', b'] \mapsto [t_a, t_b] \subseteq [-1, 1]\)</span>.</p>
+<p><strong>Theory.</strong>  Fejér-1 weights use moments <span class="arithmatex">\(I_k = \int_{-1}^{1} T_k(t)\,dt\)</span>.
+For a sub-interval <span class="arithmatex">\([t_a, t_b] \subseteq [-1, 1]\)</span>, replace with
+sub-interval moments:</p>
+<div class="arithmatex">\[
+I_k = \int_{t_a}^{t_b} T_k(t)\,dt
+\]</div>
+<p>These are computed in closed form via the Chebyshev polynomial
+antiderivative (Trefethen 2013, Ch. 19):</p>
+<div class="arithmatex">\[
+\int T_k(x)\,dx = \frac{T_{k+1}(x)}{2(k+1)} - \frac{T_{k-1}(x)}{2(k-1)} + C \quad (k \geq 2)
+\]</div>
+<p>with special cases <span class="arithmatex">\(\int T_0\,dx = x\)</span> and <span class="arithmatex">\(\int T_1\,dx = x^2/2\)</span>.</p>
+<details class="note">
+<summary>Proof sketch</summary>
+<p>Since <span class="arithmatex">\(\frac{d}{dx}T_n(x) = n\,U_{n-1}(x)\)</span> and the Chebyshev
+identity <span class="arithmatex">\(U_k(x) - U_{k-2}(x) = 2\,T_k(x)\)</span> holds, differentiating
+the right-hand side gives:</p>
+<div class="arithmatex">\[
+\frac{d}{dx}\!\left[\frac{T_{k+1}}{2(k+1)} - \frac{T_{k-1}}{2(k-1)}\right]
+= \frac{(k+1)\,U_k}{2(k+1)} - \frac{(k-1)\,U_{k-2}}{2(k-1)}
+= \frac{U_k - U_{k-2}}{2} = T_k \quad\checkmark
+\]</div>
+</details>
+<p>The sub-interval moments are then:</p>
+<ul>
+<li><span class="arithmatex">\(k = 0\)</span>: <span class="arithmatex">\(I_0 = t_b - t_a\)</span></li>
+<li><span class="arithmatex">\(k = 1\)</span>: <span class="arithmatex">\(I_1 = (t_b^2 - t_a^2) / 2\)</span></li>
+<li><span class="arithmatex">\(k \geq 2\)</span>: <span class="arithmatex">\(I_k = \frac{1}{2}\!\left[\frac{T_{k+1}(t_b) - T_{k+1}(t_a)}{k+1} - \frac{T_{k-1}(t_b) - T_{k-1}(t_a)}{k-1}\right]\)</span></li>
+</ul>
+<p>where <span class="arithmatex">\(T_j\)</span> values are evaluated via the three-term recurrence
+<span class="arithmatex">\(T_{k+1}(x) = 2x\,T_k(x) - T_{k-1}(x)\)</span>, which is stable for
+<span class="arithmatex">\(|x| \leq 1\)</span>.</p>
+<p>The moments vector is then processed through the same DCT-III →
+weights pipeline as full-domain Fejér-1 (Waldvogel 2006).  When
+<span class="arithmatex">\([t_a, t_b] = [-1, 1]\)</span>, the moments reduce to the standard Fejér-1
+moments exactly (since <span class="arithmatex">\(I_k = 2/(1-k^2)\)</span> for even <span class="arithmatex">\(k\)</span>, <span class="arithmatex">\(0\)</span> for odd <span class="arithmatex">\(k\)</span>).</p>
+<p><strong>Additivity.</strong>  Sub-interval integration satisfies the interval
+additivity property: for any <span class="arithmatex">\(a \leq c \leq b\)</span>,</p>
+<div class="arithmatex">\[
+\int_a^c f + \int_c^b f = \int_a^b f
+\]</div>
+<p>This follows from the linearity of the DCT-III pipeline and the
+additivity of the Chebyshev antiderivative over adjacent sub-intervals.</p>
+<p><strong>Splines.</strong> For splines, each piece's sub-domain is clipped against
+the requested bounds.  Pieces with no overlap are skipped; pieces with
+partial overlap receive sub-interval bounds; pieces fully contained use
+standard Fejér-1 weights.</p>
+<div class="highlight"><pre><span></span><code><a id="__codelineno-1-1" name="__codelineno-1-1" href="#__codelineno-1-1"></a><span class="kn">import</span><span class="w"> </span><span class="nn">math</span>
+<a id="__codelineno-1-2" name="__codelineno-1-2" href="#__codelineno-1-2"></a><span class="kn">from</span><span class="w"> </span><span class="nn">pychebyshev</span><span class="w"> </span><span class="kn">import</span> <span class="n">ChebyshevApproximation</span>
+<a id="__codelineno-1-3" name="__codelineno-1-3" href="#__codelineno-1-3"></a>
+<a id="__codelineno-1-4" name="__codelineno-1-4" href="#__codelineno-1-4"></a><span class="n">cheb</span> <span class="o">=</span> <span class="n">ChebyshevApproximation</span><span class="p">(</span><span class="k">lambda</span> <span class="n">x</span><span class="p">,</span> <span class="n">_</span><span class="p">:</span> <span class="n">math</span><span class="o">.</span><span class="n">sin</span><span class="p">(</span><span class="n">x</span><span class="p">[</span><span class="mi">0</span><span class="p">]),</span> <span class="mi">1</span><span class="p">,</span> <span class="p">[[</span><span class="mi">0</span><span class="p">,</span> <span class="mi">2</span> <span class="o">*</span> <span class="n">math</span><span class="o">.</span><span class="n">pi</span><span class="p">]],</span> <span class="p">[</span><span class="mi">25</span><span class="p">])</span>
+<a id="__codelineno-1-5" name="__codelineno-1-5" href="#__codelineno-1-5"></a><span class="n">cheb</span><span class="o">.</span><span class="n">build</span><span class="p">()</span>
+<a id="__codelineno-1-6" name="__codelineno-1-6" href="#__codelineno-1-6"></a>
+<a id="__codelineno-1-7" name="__codelineno-1-7" href="#__codelineno-1-7"></a><span class="c1"># Sub-interval: first half-period</span>
+<a id="__codelineno-1-8" name="__codelineno-1-8" href="#__codelineno-1-8"></a><span class="n">half</span> <span class="o">=</span> <span class="n">cheb</span><span class="o">.</span><span class="n">integrate</span><span class="p">(</span><span class="n">bounds</span><span class="o">=</span><span class="p">(</span><span class="mf">0.0</span><span class="p">,</span> <span class="n">math</span><span class="o">.</span><span class="n">pi</span><span class="p">))</span>   <span class="c1"># ≈ 2.0</span>
+<a id="__codelineno-1-9" name="__codelineno-1-9" href="#__codelineno-1-9"></a>
+<a id="__codelineno-1-10" name="__codelineno-1-10" href="#__codelineno-1-10"></a><span class="c1"># Per-dimension bounds for multi-D</span>
+<a id="__codelineno-1-11" name="__codelineno-1-11" href="#__codelineno-1-11"></a><span class="n">cheb_2d</span> <span class="o">=</span> <span class="n">ChebyshevApproximation</span><span class="p">(</span>
+<a id="__codelineno-1-12" name="__codelineno-1-12" href="#__codelineno-1-12"></a>    <span class="k">lambda</span> <span class="n">x</span><span class="p">,</span> <span class="n">_</span><span class="p">:</span> <span class="n">x</span><span class="p">[</span><span class="mi">0</span><span class="p">]</span> <span class="o">**</span> <span class="mi">2</span> <span class="o">+</span> <span class="n">math</span><span class="o">.</span><span class="n">cos</span><span class="p">(</span><span class="n">x</span><span class="p">[</span><span class="mi">1</span><span class="p">]),</span>
+<a id="__codelineno-1-13" name="__codelineno-1-13" href="#__codelineno-1-13"></a>    <span class="mi">2</span><span class="p">,</span> <span class="p">[[</span><span class="o">-</span><span class="mi">1</span><span class="p">,</span> <span class="mi">1</span><span class="p">],</span> <span class="p">[</span><span class="o">-</span><span class="mi">1</span><span class="p">,</span> <span class="mi">1</span><span class="p">]],</span> <span class="p">[</span><span class="mi">11</span><span class="p">,</span> <span class="mi">11</span><span class="p">],</span>
+<a id="__codelineno-1-14" name="__codelineno-1-14" href="#__codelineno-1-14"></a><span class="p">)</span>
+<a id="__codelineno-1-15" name="__codelineno-1-15" href="#__codelineno-1-15"></a><span class="n">cheb_2d</span><span class="o">.</span><span class="n">build</span><span class="p">()</span>
+<a id="__codelineno-1-16" name="__codelineno-1-16" href="#__codelineno-1-16"></a><span class="n">result</span> <span class="o">=</span> <span class="n">cheb_2d</span><span class="o">.</span><span class="n">integrate</span><span class="p">(</span><span class="n">dims</span><span class="o">=</span><span class="p">[</span><span class="mi">0</span><span class="p">,</span> <span class="mi">1</span><span class="p">],</span> <span class="n">bounds</span><span class="o">=</span><span class="p">[(</span><span class="mf">0.0</span><span class="p">,</span> <span class="mf">1.0</span><span class="p">),</span> <span class="kc">None</span><span class="p">])</span>
+</code></pre></div>
 <h3 id="integrate-api"><code>integrate()</code> API<a class="headerlink" href="#integrate-api" title="Permanent link">&para;</a></h3>
 <table>
 <thead>
@@ -1395,6 +1491,11 @@ integration along each dimension is a tensor contraction via
 <td><code>int</code>, <code>list[int]</code>, or <code>None</code></td>
 <td>Dimensions to integrate out. <code>None</code> = all.</td>
 </tr>
+<tr>
+<td><code>bounds</code></td>
+<td><code>tuple</code>, <code>list[tuple/None]</code>, or <code>None</code></td>
+<td>Sub-interval bounds. <code>None</code> = full domain. Single <code>(lo, hi)</code> for one dim, or list with positional correspondence to <code>dims</code>.</td>
+</tr>
 </tbody>
 </table>
 <p><strong>Returns</strong>: <code>float</code> if all dimensions are integrated; otherwise a
@@ -1403,7 +1504,8 @@ lower-dimensional interpolant of the same type (<code>ChebyshevApproximation</co
 <p><strong>Errors</strong>:</p>
 <ul>
 <li><code>RuntimeError</code> if <code>build()</code> has not been called</li>
-<li><code>ValueError</code> if any dimension index is out of range or duplicated</li>
+<li><code>ValueError</code> if any dimension index is out of range, duplicated, or
+  bounds are outside the domain</li>
 </ul>
 <h2 id="rootfinding">Rootfinding<a class="headerlink" href="#rootfinding" title="Permanent link">&para;</a></h2>
 <h3 id="theory_1">Theory<a class="headerlink" href="#theory_1" title="Permanent link">&para;</a></h3>
@@ -1421,21 +1523,21 @@ using the existing <code>slice()</code> infrastructure (see
 <a href="../extrude-slice/">Extrusion &amp; Slicing</a>), then rootfinding proceeds on the
 resulting 1-D polynomial.</p>
 <h3 id="usage_1">Usage<a class="headerlink" href="#usage_1" title="Permanent link">&para;</a></h3>
-<div class="highlight"><pre><span></span><code><a id="__codelineno-1-1" name="__codelineno-1-1" href="#__codelineno-1-1"></a><span class="kn">import</span><span class="w"> </span><span class="nn">math</span>
-<a id="__codelineno-1-2" name="__codelineno-1-2" href="#__codelineno-1-2"></a><span class="kn">from</span><span class="w"> </span><span class="nn">pychebyshev</span><span class="w"> </span><span class="kn">import</span> <span class="n">ChebyshevApproximation</span>
-<a id="__codelineno-1-3" name="__codelineno-1-3" href="#__codelineno-1-3"></a>
-<a id="__codelineno-1-4" name="__codelineno-1-4" href="#__codelineno-1-4"></a><span class="c1"># 1D roots</span>
-<a id="__codelineno-1-5" name="__codelineno-1-5" href="#__codelineno-1-5"></a><span class="n">cheb</span> <span class="o">=</span> <span class="n">ChebyshevApproximation</span><span class="p">(</span><span class="k">lambda</span> <span class="n">x</span><span class="p">,</span> <span class="n">_</span><span class="p">:</span> <span class="n">math</span><span class="o">.</span><span class="n">sin</span><span class="p">(</span><span class="n">x</span><span class="p">[</span><span class="mi">0</span><span class="p">]),</span> <span class="mi">1</span><span class="p">,</span> <span class="p">[[</span><span class="o">-</span><span class="mi">4</span><span class="p">,</span> <span class="mi">4</span><span class="p">]],</span> <span class="p">[</span><span class="mi">25</span><span class="p">])</span>
-<a id="__codelineno-1-6" name="__codelineno-1-6" href="#__codelineno-1-6"></a><span class="n">cheb</span><span class="o">.</span><span class="n">build</span><span class="p">()</span>
-<a id="__codelineno-1-7" name="__codelineno-1-7" href="#__codelineno-1-7"></a><span class="n">roots</span> <span class="o">=</span> <span class="n">cheb</span><span class="o">.</span><span class="n">roots</span><span class="p">()</span>  <span class="c1"># array([-pi, 0, pi])</span>
-<a id="__codelineno-1-8" name="__codelineno-1-8" href="#__codelineno-1-8"></a>
-<a id="__codelineno-1-9" name="__codelineno-1-9" href="#__codelineno-1-9"></a><span class="c1"># Multi-D: fix other dims, find roots along dim 0</span>
-<a id="__codelineno-1-10" name="__codelineno-1-10" href="#__codelineno-1-10"></a><span class="n">cheb_2d</span> <span class="o">=</span> <span class="n">ChebyshevApproximation</span><span class="p">(</span>
-<a id="__codelineno-1-11" name="__codelineno-1-11" href="#__codelineno-1-11"></a>    <span class="k">lambda</span> <span class="n">x</span><span class="p">,</span> <span class="n">_</span><span class="p">:</span> <span class="n">math</span><span class="o">.</span><span class="n">sin</span><span class="p">(</span><span class="n">x</span><span class="p">[</span><span class="mi">0</span><span class="p">])</span> <span class="o">*</span> <span class="n">math</span><span class="o">.</span><span class="n">cos</span><span class="p">(</span><span class="n">x</span><span class="p">[</span><span class="mi">1</span><span class="p">]),</span>
-<a id="__codelineno-1-12" name="__codelineno-1-12" href="#__codelineno-1-12"></a>    <span class="mi">2</span><span class="p">,</span> <span class="p">[[</span><span class="o">-</span><span class="mi">4</span><span class="p">,</span> <span class="mi">4</span><span class="p">],</span> <span class="p">[</span><span class="o">-</span><span class="mi">2</span><span class="p">,</span> <span class="mi">2</span><span class="p">]],</span> <span class="p">[</span><span class="mi">25</span><span class="p">,</span> <span class="mi">15</span><span class="p">],</span>
-<a id="__codelineno-1-13" name="__codelineno-1-13" href="#__codelineno-1-13"></a><span class="p">)</span>
-<a id="__codelineno-1-14" name="__codelineno-1-14" href="#__codelineno-1-14"></a><span class="n">cheb_2d</span><span class="o">.</span><span class="n">build</span><span class="p">()</span>
-<a id="__codelineno-1-15" name="__codelineno-1-15" href="#__codelineno-1-15"></a><span class="n">roots</span> <span class="o">=</span> <span class="n">cheb_2d</span><span class="o">.</span><span class="n">roots</span><span class="p">(</span><span class="n">dim</span><span class="o">=</span><span class="mi">0</span><span class="p">,</span> <span class="n">fixed</span><span class="o">=</span><span class="p">{</span><span class="mi">1</span><span class="p">:</span> <span class="mf">0.5</span><span class="p">})</span>
+<div class="highlight"><pre><span></span><code><a id="__codelineno-2-1" name="__codelineno-2-1" href="#__codelineno-2-1"></a><span class="kn">import</span><span class="w"> </span><span class="nn">math</span>
+<a id="__codelineno-2-2" name="__codelineno-2-2" href="#__codelineno-2-2"></a><span class="kn">from</span><span class="w"> </span><span class="nn">pychebyshev</span><span class="w"> </span><span class="kn">import</span> <span class="n">ChebyshevApproximation</span>
+<a id="__codelineno-2-3" name="__codelineno-2-3" href="#__codelineno-2-3"></a>
+<a id="__codelineno-2-4" name="__codelineno-2-4" href="#__codelineno-2-4"></a><span class="c1"># 1D roots</span>
+<a id="__codelineno-2-5" name="__codelineno-2-5" href="#__codelineno-2-5"></a><span class="n">cheb</span> <span class="o">=</span> <span class="n">ChebyshevApproximation</span><span class="p">(</span><span class="k">lambda</span> <span class="n">x</span><span class="p">,</span> <span class="n">_</span><span class="p">:</span> <span class="n">math</span><span class="o">.</span><span class="n">sin</span><span class="p">(</span><span class="n">x</span><span class="p">[</span><span class="mi">0</span><span class="p">]),</span> <span class="mi">1</span><span class="p">,</span> <span class="p">[[</span><span class="o">-</span><span class="mi">4</span><span class="p">,</span> <span class="mi">4</span><span class="p">]],</span> <span class="p">[</span><span class="mi">25</span><span class="p">])</span>
+<a id="__codelineno-2-6" name="__codelineno-2-6" href="#__codelineno-2-6"></a><span class="n">cheb</span><span class="o">.</span><span class="n">build</span><span class="p">()</span>
+<a id="__codelineno-2-7" name="__codelineno-2-7" href="#__codelineno-2-7"></a><span class="n">roots</span> <span class="o">=</span> <span class="n">cheb</span><span class="o">.</span><span class="n">roots</span><span class="p">()</span>  <span class="c1"># array([-pi, 0, pi])</span>
+<a id="__codelineno-2-8" name="__codelineno-2-8" href="#__codelineno-2-8"></a>
+<a id="__codelineno-2-9" name="__codelineno-2-9" href="#__codelineno-2-9"></a><span class="c1"># Multi-D: fix other dims, find roots along dim 0</span>
+<a id="__codelineno-2-10" name="__codelineno-2-10" href="#__codelineno-2-10"></a><span class="n">cheb_2d</span> <span class="o">=</span> <span class="n">ChebyshevApproximation</span><span class="p">(</span>
+<a id="__codelineno-2-11" name="__codelineno-2-11" href="#__codelineno-2-11"></a>    <span class="k">lambda</span> <span class="n">x</span><span class="p">,</span> <span class="n">_</span><span class="p">:</span> <span class="n">math</span><span class="o">.</span><span class="n">sin</span><span class="p">(</span><span class="n">x</span><span class="p">[</span><span class="mi">0</span><span class="p">])</span> <span class="o">*</span> <span class="n">math</span><span class="o">.</span><span class="n">cos</span><span class="p">(</span><span class="n">x</span><span class="p">[</span><span class="mi">1</span><span class="p">]),</span>
+<a id="__codelineno-2-12" name="__codelineno-2-12" href="#__codelineno-2-12"></a>    <span class="mi">2</span><span class="p">,</span> <span class="p">[[</span><span class="o">-</span><span class="mi">4</span><span class="p">,</span> <span class="mi">4</span><span class="p">],</span> <span class="p">[</span><span class="o">-</span><span class="mi">2</span><span class="p">,</span> <span class="mi">2</span><span class="p">]],</span> <span class="p">[</span><span class="mi">25</span><span class="p">,</span> <span class="mi">15</span><span class="p">],</span>
+<a id="__codelineno-2-13" name="__codelineno-2-13" href="#__codelineno-2-13"></a><span class="p">)</span>
+<a id="__codelineno-2-14" name="__codelineno-2-14" href="#__codelineno-2-14"></a><span class="n">cheb_2d</span><span class="o">.</span><span class="n">build</span><span class="p">()</span>
+<a id="__codelineno-2-15" name="__codelineno-2-15" href="#__codelineno-2-15"></a><span class="n">roots</span> <span class="o">=</span> <span class="n">cheb_2d</span><span class="o">.</span><span class="n">roots</span><span class="p">(</span><span class="n">dim</span><span class="o">=</span><span class="mi">0</span><span class="p">,</span> <span class="n">fixed</span><span class="o">=</span><span class="p">{</span><span class="mi">1</span><span class="p">:</span> <span class="mf">0.5</span><span class="p">})</span>
 </code></pre></div>
 <h3 id="roots-api"><code>roots()</code> API<a class="headerlink" href="#roots-api" title="Permanent link">&para;</a></h3>
 <table>
@@ -1481,22 +1583,22 @@ PyChebyshev:</p>
 <p>For multi-dimensional interpolants, the interpolant is first sliced to 1-D
 (same as rootfinding), then optimization proceeds on the 1-D polynomial.</p>
 <h3 id="usage_2">Usage<a class="headerlink" href="#usage_2" title="Permanent link">&para;</a></h3>
-<div class="highlight"><pre><span></span><code><a id="__codelineno-2-1" name="__codelineno-2-1" href="#__codelineno-2-1"></a><span class="kn">import</span><span class="w"> </span><span class="nn">math</span>
-<a id="__codelineno-2-2" name="__codelineno-2-2" href="#__codelineno-2-2"></a><span class="kn">from</span><span class="w"> </span><span class="nn">pychebyshev</span><span class="w"> </span><span class="kn">import</span> <span class="n">ChebyshevApproximation</span>
-<a id="__codelineno-2-3" name="__codelineno-2-3" href="#__codelineno-2-3"></a>
-<a id="__codelineno-2-4" name="__codelineno-2-4" href="#__codelineno-2-4"></a><span class="n">cheb</span> <span class="o">=</span> <span class="n">ChebyshevApproximation</span><span class="p">(</span><span class="k">lambda</span> <span class="n">x</span><span class="p">,</span> <span class="n">_</span><span class="p">:</span> <span class="n">math</span><span class="o">.</span><span class="n">sin</span><span class="p">(</span><span class="n">x</span><span class="p">[</span><span class="mi">0</span><span class="p">]),</span> <span class="mi">1</span><span class="p">,</span> <span class="p">[[</span><span class="o">-</span><span class="mi">4</span><span class="p">,</span> <span class="mi">4</span><span class="p">]],</span> <span class="p">[</span><span class="mi">25</span><span class="p">])</span>
-<a id="__codelineno-2-5" name="__codelineno-2-5" href="#__codelineno-2-5"></a><span class="n">cheb</span><span class="o">.</span><span class="n">build</span><span class="p">()</span>
-<a id="__codelineno-2-6" name="__codelineno-2-6" href="#__codelineno-2-6"></a>
-<a id="__codelineno-2-7" name="__codelineno-2-7" href="#__codelineno-2-7"></a><span class="n">val</span><span class="p">,</span> <span class="n">loc</span> <span class="o">=</span> <span class="n">cheb</span><span class="o">.</span><span class="n">minimize</span><span class="p">()</span>   <span class="c1"># (-1.0, -pi/2)</span>
-<a id="__codelineno-2-8" name="__codelineno-2-8" href="#__codelineno-2-8"></a><span class="n">val</span><span class="p">,</span> <span class="n">loc</span> <span class="o">=</span> <span class="n">cheb</span><span class="o">.</span><span class="n">maximize</span><span class="p">()</span>   <span class="c1"># (1.0, pi/2)</span>
-<a id="__codelineno-2-9" name="__codelineno-2-9" href="#__codelineno-2-9"></a>
-<a id="__codelineno-2-10" name="__codelineno-2-10" href="#__codelineno-2-10"></a><span class="c1"># Multi-D: fix other dims</span>
-<a id="__codelineno-2-11" name="__codelineno-2-11" href="#__codelineno-2-11"></a><span class="n">cheb_2d</span> <span class="o">=</span> <span class="n">ChebyshevApproximation</span><span class="p">(</span>
-<a id="__codelineno-2-12" name="__codelineno-2-12" href="#__codelineno-2-12"></a>    <span class="k">lambda</span> <span class="n">x</span><span class="p">,</span> <span class="n">_</span><span class="p">:</span> <span class="n">x</span><span class="p">[</span><span class="mi">0</span><span class="p">]</span> <span class="o">**</span> <span class="mi">2</span> <span class="o">+</span> <span class="n">x</span><span class="p">[</span><span class="mi">1</span><span class="p">],</span>
-<a id="__codelineno-2-13" name="__codelineno-2-13" href="#__codelineno-2-13"></a>    <span class="mi">2</span><span class="p">,</span> <span class="p">[[</span><span class="o">-</span><span class="mi">1</span><span class="p">,</span> <span class="mi">1</span><span class="p">],</span> <span class="p">[</span><span class="o">-</span><span class="mi">1</span><span class="p">,</span> <span class="mi">1</span><span class="p">]],</span> <span class="p">[</span><span class="mi">11</span><span class="p">,</span> <span class="mi">11</span><span class="p">],</span>
-<a id="__codelineno-2-14" name="__codelineno-2-14" href="#__codelineno-2-14"></a><span class="p">)</span>
-<a id="__codelineno-2-15" name="__codelineno-2-15" href="#__codelineno-2-15"></a><span class="n">cheb_2d</span><span class="o">.</span><span class="n">build</span><span class="p">()</span>
-<a id="__codelineno-2-16" name="__codelineno-2-16" href="#__codelineno-2-16"></a><span class="n">val</span><span class="p">,</span> <span class="n">loc</span> <span class="o">=</span> <span class="n">cheb_2d</span><span class="o">.</span><span class="n">minimize</span><span class="p">(</span><span class="n">dim</span><span class="o">=</span><span class="mi">0</span><span class="p">,</span> <span class="n">fixed</span><span class="o">=</span><span class="p">{</span><span class="mi">1</span><span class="p">:</span> <span class="mf">0.5</span><span class="p">})</span>  <span class="c1"># (0.5, 0.0)</span>
+<div class="highlight"><pre><span></span><code><a id="__codelineno-3-1" name="__codelineno-3-1" href="#__codelineno-3-1"></a><span class="kn">import</span><span class="w"> </span><span class="nn">math</span>
+<a id="__codelineno-3-2" name="__codelineno-3-2" href="#__codelineno-3-2"></a><span class="kn">from</span><span class="w"> </span><span class="nn">pychebyshev</span><span class="w"> </span><span class="kn">import</span> <span class="n">ChebyshevApproximation</span>
+<a id="__codelineno-3-3" name="__codelineno-3-3" href="#__codelineno-3-3"></a>
+<a id="__codelineno-3-4" name="__codelineno-3-4" href="#__codelineno-3-4"></a><span class="n">cheb</span> <span class="o">=</span> <span class="n">ChebyshevApproximation</span><span class="p">(</span><span class="k">lambda</span> <span class="n">x</span><span class="p">,</span> <span class="n">_</span><span class="p">:</span> <span class="n">math</span><span class="o">.</span><span class="n">sin</span><span class="p">(</span><span class="n">x</span><span class="p">[</span><span class="mi">0</span><span class="p">]),</span> <span class="mi">1</span><span class="p">,</span> <span class="p">[[</span><span class="o">-</span><span class="mi">4</span><span class="p">,</span> <span class="mi">4</span><span class="p">]],</span> <span class="p">[</span><span class="mi">25</span><span class="p">])</span>
+<a id="__codelineno-3-5" name="__codelineno-3-5" href="#__codelineno-3-5"></a><span class="n">cheb</span><span class="o">.</span><span class="n">build</span><span class="p">()</span>
+<a id="__codelineno-3-6" name="__codelineno-3-6" href="#__codelineno-3-6"></a>
+<a id="__codelineno-3-7" name="__codelineno-3-7" href="#__codelineno-3-7"></a><span class="n">val</span><span class="p">,</span> <span class="n">loc</span> <span class="o">=</span> <span class="n">cheb</span><span class="o">.</span><span class="n">minimize</span><span class="p">()</span>   <span class="c1"># (-1.0, -pi/2)</span>
+<a id="__codelineno-3-8" name="__codelineno-3-8" href="#__codelineno-3-8"></a><span class="n">val</span><span class="p">,</span> <span class="n">loc</span> <span class="o">=</span> <span class="n">cheb</span><span class="o">.</span><span class="n">maximize</span><span class="p">()</span>   <span class="c1"># (1.0, pi/2)</span>
+<a id="__codelineno-3-9" name="__codelineno-3-9" href="#__codelineno-3-9"></a>
+<a id="__codelineno-3-10" name="__codelineno-3-10" href="#__codelineno-3-10"></a><span class="c1"># Multi-D: fix other dims</span>
+<a id="__codelineno-3-11" name="__codelineno-3-11" href="#__codelineno-3-11"></a><span class="n">cheb_2d</span> <span class="o">=</span> <span class="n">ChebyshevApproximation</span><span class="p">(</span>
+<a id="__codelineno-3-12" name="__codelineno-3-12" href="#__codelineno-3-12"></a>    <span class="k">lambda</span> <span class="n">x</span><span class="p">,</span> <span class="n">_</span><span class="p">:</span> <span class="n">x</span><span class="p">[</span><span class="mi">0</span><span class="p">]</span> <span class="o">**</span> <span class="mi">2</span> <span class="o">+</span> <span class="n">x</span><span class="p">[</span><span class="mi">1</span><span class="p">],</span>
+<a id="__codelineno-3-13" name="__codelineno-3-13" href="#__codelineno-3-13"></a>    <span class="mi">2</span><span class="p">,</span> <span class="p">[[</span><span class="o">-</span><span class="mi">1</span><span class="p">,</span> <span class="mi">1</span><span class="p">],</span> <span class="p">[</span><span class="o">-</span><span class="mi">1</span><span class="p">,</span> <span class="mi">1</span><span class="p">]],</span> <span class="p">[</span><span class="mi">11</span><span class="p">,</span> <span class="mi">11</span><span class="p">],</span>
+<a id="__codelineno-3-14" name="__codelineno-3-14" href="#__codelineno-3-14"></a><span class="p">)</span>
+<a id="__codelineno-3-15" name="__codelineno-3-15" href="#__codelineno-3-15"></a><span class="n">cheb_2d</span><span class="o">.</span><span class="n">build</span><span class="p">()</span>
+<a id="__codelineno-3-16" name="__codelineno-3-16" href="#__codelineno-3-16"></a><span class="n">val</span><span class="p">,</span> <span class="n">loc</span> <span class="o">=</span> <span class="n">cheb_2d</span><span class="o">.</span><span class="n">minimize</span><span class="p">(</span><span class="n">dim</span><span class="o">=</span><span class="mi">0</span><span class="p">,</span> <span class="n">fixed</span><span class="o">=</span><span class="p">{</span><span class="mi">1</span><span class="p">:</span> <span class="mf">0.5</span><span class="p">})</span>  <span class="c1"># (0.5, 0.0)</span>
 </code></pre></div>
 <h3 id="minimize-maximize-api"><code>minimize()</code> / <code>maximize()</code> API<a class="headerlink" href="#minimize-maximize-api" title="Permanent link">&para;</a></h3>
 <table>
@@ -1539,17 +1641,17 @@ and its coordinate in the target dimension.</p>
 <li><strong>Optimization</strong>: computes per-piece extrema and returns the global
   minimum or maximum across all pieces.</li>
 </ul>
-<div class="highlight"><pre><span></span><code><a id="__codelineno-3-1" name="__codelineno-3-1" href="#__codelineno-3-1"></a><span class="kn">from</span><span class="w"> </span><span class="nn">pychebyshev</span><span class="w"> </span><span class="kn">import</span> <span class="n">ChebyshevSpline</span>
-<a id="__codelineno-3-2" name="__codelineno-3-2" href="#__codelineno-3-2"></a>
-<a id="__codelineno-3-3" name="__codelineno-3-3" href="#__codelineno-3-3"></a><span class="n">spline</span> <span class="o">=</span> <span class="n">ChebyshevSpline</span><span class="p">(</span>
-<a id="__codelineno-3-4" name="__codelineno-3-4" href="#__codelineno-3-4"></a>    <span class="k">lambda</span> <span class="n">x</span><span class="p">,</span> <span class="n">_</span><span class="p">:</span> <span class="nb">abs</span><span class="p">(</span><span class="n">x</span><span class="p">[</span><span class="mi">0</span><span class="p">])</span> <span class="o">-</span> <span class="mf">0.3</span><span class="p">,</span>
-<a id="__codelineno-3-5" name="__codelineno-3-5" href="#__codelineno-3-5"></a>    <span class="mi">1</span><span class="p">,</span> <span class="p">[[</span><span class="o">-</span><span class="mi">1</span><span class="p">,</span> <span class="mi">1</span><span class="p">]],</span> <span class="p">[</span><span class="mi">15</span><span class="p">],</span> <span class="p">[[</span><span class="mf">0.0</span><span class="p">]],</span>
-<a id="__codelineno-3-6" name="__codelineno-3-6" href="#__codelineno-3-6"></a><span class="p">)</span>
-<a id="__codelineno-3-7" name="__codelineno-3-7" href="#__codelineno-3-7"></a><span class="n">spline</span><span class="o">.</span><span class="n">build</span><span class="p">()</span>
-<a id="__codelineno-3-8" name="__codelineno-3-8" href="#__codelineno-3-8"></a>
-<a id="__codelineno-3-9" name="__codelineno-3-9" href="#__codelineno-3-9"></a><span class="n">integral</span> <span class="o">=</span> <span class="n">spline</span><span class="o">.</span><span class="n">integrate</span><span class="p">()</span>
-<a id="__codelineno-3-10" name="__codelineno-3-10" href="#__codelineno-3-10"></a><span class="n">roots</span> <span class="o">=</span> <span class="n">spline</span><span class="o">.</span><span class="n">roots</span><span class="p">()</span>          <span class="c1"># array([-0.3, 0.3])</span>
-<a id="__codelineno-3-11" name="__codelineno-3-11" href="#__codelineno-3-11"></a><span class="n">val</span><span class="p">,</span> <span class="n">loc</span> <span class="o">=</span> <span class="n">spline</span><span class="o">.</span><span class="n">minimize</span><span class="p">()</span>    <span class="c1"># (-0.3, 0.0)</span>
+<div class="highlight"><pre><span></span><code><a id="__codelineno-4-1" name="__codelineno-4-1" href="#__codelineno-4-1"></a><span class="kn">from</span><span class="w"> </span><span class="nn">pychebyshev</span><span class="w"> </span><span class="kn">import</span> <span class="n">ChebyshevSpline</span>
+<a id="__codelineno-4-2" name="__codelineno-4-2" href="#__codelineno-4-2"></a>
+<a id="__codelineno-4-3" name="__codelineno-4-3" href="#__codelineno-4-3"></a><span class="n">spline</span> <span class="o">=</span> <span class="n">ChebyshevSpline</span><span class="p">(</span>
+<a id="__codelineno-4-4" name="__codelineno-4-4" href="#__codelineno-4-4"></a>    <span class="k">lambda</span> <span class="n">x</span><span class="p">,</span> <span class="n">_</span><span class="p">:</span> <span class="nb">abs</span><span class="p">(</span><span class="n">x</span><span class="p">[</span><span class="mi">0</span><span class="p">])</span> <span class="o">-</span> <span class="mf">0.3</span><span class="p">,</span>
+<a id="__codelineno-4-5" name="__codelineno-4-5" href="#__codelineno-4-5"></a>    <span class="mi">1</span><span class="p">,</span> <span class="p">[[</span><span class="o">-</span><span class="mi">1</span><span class="p">,</span> <span class="mi">1</span><span class="p">]],</span> <span class="p">[</span><span class="mi">15</span><span class="p">],</span> <span class="p">[[</span><span class="mf">0.0</span><span class="p">]],</span>
+<a id="__codelineno-4-6" name="__codelineno-4-6" href="#__codelineno-4-6"></a><span class="p">)</span>
+<a id="__codelineno-4-7" name="__codelineno-4-7" href="#__codelineno-4-7"></a><span class="n">spline</span><span class="o">.</span><span class="n">build</span><span class="p">()</span>
+<a id="__codelineno-4-8" name="__codelineno-4-8" href="#__codelineno-4-8"></a>
+<a id="__codelineno-4-9" name="__codelineno-4-9" href="#__codelineno-4-9"></a><span class="n">integral</span> <span class="o">=</span> <span class="n">spline</span><span class="o">.</span><span class="n">integrate</span><span class="p">()</span>
+<a id="__codelineno-4-10" name="__codelineno-4-10" href="#__codelineno-4-10"></a><span class="n">roots</span> <span class="o">=</span> <span class="n">spline</span><span class="o">.</span><span class="n">roots</span><span class="p">()</span>          <span class="c1"># array([-0.3, 0.3])</span>
+<a id="__codelineno-4-11" name="__codelineno-4-11" href="#__codelineno-4-11"></a><span class="n">val</span><span class="p">,</span> <span class="n">loc</span> <span class="o">=</span> <span class="n">spline</span><span class="o">.</span><span class="n">minimize</span><span class="p">()</span>    <span class="c1"># (-0.3, 0.0)</span>
 </code></pre></div>
 <p>The API signatures and return types are identical to <code>ChebyshevApproximation</code>.
 Partial integration on a spline returns a lower-dimensional <code>ChebyshevSpline</code>.</p>
@@ -1566,14 +1668,14 @@ work on the result:</p>
 <li><strong>Further calculus</strong>: you can call <code>integrate()</code>, <code>roots()</code>,
   <code>minimize()</code>, or <code>maximize()</code> on the result.</li>
 </ul>
-<div class="highlight"><pre><span></span><code><a id="__codelineno-4-1" name="__codelineno-4-1" href="#__codelineno-4-1"></a><span class="c1"># Partial integrate, then take derivatives and estimate error</span>
-<a id="__codelineno-4-2" name="__codelineno-4-2" href="#__codelineno-4-2"></a><span class="n">cheb_2d</span> <span class="o">=</span> <span class="n">ChebyshevApproximation</span><span class="p">(</span><span class="n">f</span><span class="p">,</span> <span class="mi">2</span><span class="p">,</span> <span class="p">[[</span><span class="o">-</span><span class="mi">1</span><span class="p">,</span> <span class="mi">1</span><span class="p">],</span> <span class="p">[</span><span class="o">-</span><span class="mi">1</span><span class="p">,</span> <span class="mi">1</span><span class="p">]],</span> <span class="p">[</span><span class="mi">15</span><span class="p">,</span> <span class="mi">15</span><span class="p">])</span>
-<a id="__codelineno-4-3" name="__codelineno-4-3" href="#__codelineno-4-3"></a><span class="n">cheb_2d</span><span class="o">.</span><span class="n">build</span><span class="p">()</span>
-<a id="__codelineno-4-4" name="__codelineno-4-4" href="#__codelineno-4-4"></a>
-<a id="__codelineno-4-5" name="__codelineno-4-5" href="#__codelineno-4-5"></a><span class="n">cheb_1d</span> <span class="o">=</span> <span class="n">cheb_2d</span><span class="o">.</span><span class="n">integrate</span><span class="p">(</span><span class="n">dims</span><span class="o">=</span><span class="p">[</span><span class="mi">0</span><span class="p">])</span>
-<a id="__codelineno-4-6" name="__codelineno-4-6" href="#__codelineno-4-6"></a><span class="n">deriv</span> <span class="o">=</span> <span class="n">cheb_1d</span><span class="o">.</span><span class="n">vectorized_eval</span><span class="p">([</span><span class="mf">0.5</span><span class="p">],</span> <span class="p">[</span><span class="mi">1</span><span class="p">])</span>
-<a id="__codelineno-4-7" name="__codelineno-4-7" href="#__codelineno-4-7"></a><span class="n">err</span> <span class="o">=</span> <span class="n">cheb_1d</span><span class="o">.</span><span class="n">error_estimate</span><span class="p">()</span>
-<a id="__codelineno-4-8" name="__codelineno-4-8" href="#__codelineno-4-8"></a><span class="n">cheb_1d</span><span class="o">.</span><span class="n">save</span><span class="p">(</span><span class="s2">&quot;partial_integral.pkl&quot;</span><span class="p">)</span>
+<div class="highlight"><pre><span></span><code><a id="__codelineno-5-1" name="__codelineno-5-1" href="#__codelineno-5-1"></a><span class="c1"># Partial integrate, then take derivatives and estimate error</span>
+<a id="__codelineno-5-2" name="__codelineno-5-2" href="#__codelineno-5-2"></a><span class="n">cheb_2d</span> <span class="o">=</span> <span class="n">ChebyshevApproximation</span><span class="p">(</span><span class="n">f</span><span class="p">,</span> <span class="mi">2</span><span class="p">,</span> <span class="p">[[</span><span class="o">-</span><span class="mi">1</span><span class="p">,</span> <span class="mi">1</span><span class="p">],</span> <span class="p">[</span><span class="o">-</span><span class="mi">1</span><span class="p">,</span> <span class="mi">1</span><span class="p">]],</span> <span class="p">[</span><span class="mi">15</span><span class="p">,</span> <span class="mi">15</span><span class="p">])</span>
+<a id="__codelineno-5-3" name="__codelineno-5-3" href="#__codelineno-5-3"></a><span class="n">cheb_2d</span><span class="o">.</span><span class="n">build</span><span class="p">()</span>
+<a id="__codelineno-5-4" name="__codelineno-5-4" href="#__codelineno-5-4"></a>
+<a id="__codelineno-5-5" name="__codelineno-5-5" href="#__codelineno-5-5"></a><span class="n">cheb_1d</span> <span class="o">=</span> <span class="n">cheb_2d</span><span class="o">.</span><span class="n">integrate</span><span class="p">(</span><span class="n">dims</span><span class="o">=</span><span class="p">[</span><span class="mi">0</span><span class="p">])</span>
+<a id="__codelineno-5-6" name="__codelineno-5-6" href="#__codelineno-5-6"></a><span class="n">deriv</span> <span class="o">=</span> <span class="n">cheb_1d</span><span class="o">.</span><span class="n">vectorized_eval</span><span class="p">([</span><span class="mf">0.5</span><span class="p">],</span> <span class="p">[</span><span class="mi">1</span><span class="p">])</span>
+<a id="__codelineno-5-7" name="__codelineno-5-7" href="#__codelineno-5-7"></a><span class="n">err</span> <span class="o">=</span> <span class="n">cheb_1d</span><span class="o">.</span><span class="n">error_estimate</span><span class="p">()</span>
+<a id="__codelineno-5-8" name="__codelineno-5-8" href="#__codelineno-5-8"></a><span class="n">cheb_1d</span><span class="o">.</span><span class="n">save</span><span class="p">(</span><span class="s2">&quot;partial_integral.pkl&quot;</span><span class="p">)</span>
 </code></pre></div>
 <p><code>roots()</code>, <code>minimize()</code>, and <code>maximize()</code> return scalar values (arrays or
 tuples), so derivatives/serialization are not applicable to their outputs.</p>
@@ -1624,9 +1726,6 @@ matrices, and barycentric evaluation.</p>
   Calculus on Tensor Train interpolants would require TT-specific
   coefficient extraction; slider calculus would need per-slide integration
   with additive recombination.</li>
-<li><strong>Sub-interval integration</strong> (partial domain bounds) is deferred to a
-  future version. Currently, <code>integrate()</code> integrates over the full domain
-  of each dimension.</li>
 <li><strong>Multi-D rootfinding</strong> (2D Bezout resultants) is not implemented. Only
   1-D slices are supported via the <code>dim</code> + <code>fixed</code> interface.</li>
 <li><strong>Result has <code>function=None</code></strong> -- partial integration results cannot call

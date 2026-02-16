@@ -3228,7 +3228,7 @@ dimensions, or if <code>dim_index</code> is out of range or duplicated.</p>
 
 
 <h2 id="pychebyshev.spline.ChebyshevSpline.integrate" class="doc doc-heading">
-            <code class="highlight language-python"><span class="n">integrate</span><span class="p">(</span><span class="n">dims</span><span class="o">=</span><span class="kc">None</span><span class="p">)</span></code>
+            <code class="highlight language-python"><span class="n">integrate</span><span class="p">(</span><span class="n">dims</span><span class="o">=</span><span class="kc">None</span><span class="p">,</span> <span class="n">bounds</span><span class="o">=</span><span class="kc">None</span><span class="p">)</span></code>
 
 <a href="#pychebyshev.spline.ChebyshevSpline.integrate" class="headerlink" title="Permanent link">&para;</a></h2>
 
@@ -3264,6 +3264,26 @@ lower-dimensional spline.</p>
               <div class="doc-md-description">
                 <p>Dimensions to integrate out.  If <code>None</code>, integrates over
 <strong>all</strong> dimensions and returns a scalar.</p>
+              </div>
+            </td>
+            <td>
+                  <code>None</code>
+            </td>
+          </tr>
+          <tr class="doc-section-item">
+            <td>
+                <code>bounds</code>
+            </td>
+            <td>
+                  <code>tuple, list of tuple/None, or None</code>
+            </td>
+            <td>
+              <div class="doc-md-description">
+                <p>Sub-interval bounds for integration.  <code>None</code> (default)
+integrates over the full domain of each dimension.  A single
+tuple <code>(lo, hi)</code> applies to a single <em>dims</em> entry.  A list
+of tuples/<code>None</code> provides per-dimension bounds with
+positional correspondence to <em>dims</em>.</p>
               </div>
             </td>
             <td>
@@ -3323,7 +3343,8 @@ partial integration.</p>
             </td>
             <td>
               <div class="doc-md-description">
-                <p>If any dimension index is out of range or duplicated.</p>
+                <p>If any dimension index is out of range or duplicated, or if
+bounds are outside the domain.</p>
               </div>
             </td>
           </tr>
