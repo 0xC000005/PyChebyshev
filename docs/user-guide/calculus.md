@@ -108,11 +108,104 @@ cheb_3d.build()
 cheb_1d = cheb_3d.integrate(dims=[0, 2])
 ```
 
+### Sub-Interval Integration
+
+By default, `integrate()` integrates over the full domain of each
+dimension.  The `bounds` parameter restricts integration to a
+sub-interval $[a', b'] \subseteq [a, b]$.
+
+**Domain mapping.**  Physical bounds $[a', b']$ on domain $[a, b]$ are
+mapped to reference coordinates via the standard affine transformation:
+
+$$
+t_a = \frac{2(a' - a)}{b - a} - 1, \qquad t_b = \frac{2(b' - a)}{b - a} - 1
+$$
+
+so that $[a', b'] \mapsto [t_a, t_b] \subseteq [-1, 1]$.
+
+**Theory.**  Fejér-1 weights use moments $I_k = \int_{-1}^{1} T_k(t)\,dt$.
+For a sub-interval $[t_a, t_b] \subseteq [-1, 1]$, replace with
+sub-interval moments:
+
+$$
+I_k = \int_{t_a}^{t_b} T_k(t)\,dt
+$$
+
+These are computed in closed form via the Chebyshev polynomial
+antiderivative (Trefethen 2013, Ch. 19):
+
+$$
+\int T_k(x)\,dx = \frac{T_{k+1}(x)}{2(k+1)} - \frac{T_{k-1}(x)}{2(k-1)} + C \quad (k \geq 2)
+$$
+
+with special cases $\int T_0\,dx = x$ and $\int T_1\,dx = x^2/2$.
+
+??? note "Proof sketch"
+    Since $\frac{d}{dx}T_n(x) = n\,U_{n-1}(x)$ and the Chebyshev
+    identity $U_k(x) - U_{k-2}(x) = 2\,T_k(x)$ holds, differentiating
+    the right-hand side gives:
+
+    $$
+    \frac{d}{dx}\!\left[\frac{T_{k+1}}{2(k+1)} - \frac{T_{k-1}}{2(k-1)}\right]
+    = \frac{(k+1)\,U_k}{2(k+1)} - \frac{(k-1)\,U_{k-2}}{2(k-1)}
+    = \frac{U_k - U_{k-2}}{2} = T_k \quad\checkmark
+    $$
+
+The sub-interval moments are then:
+
+- $k = 0$: $I_0 = t_b - t_a$
+- $k = 1$: $I_1 = (t_b^2 - t_a^2) / 2$
+- $k \geq 2$: $I_k = \frac{1}{2}\!\left[\frac{T_{k+1}(t_b) - T_{k+1}(t_a)}{k+1} - \frac{T_{k-1}(t_b) - T_{k-1}(t_a)}{k-1}\right]$
+
+where $T_j$ values are evaluated via the three-term recurrence
+$T_{k+1}(x) = 2x\,T_k(x) - T_{k-1}(x)$, which is stable for
+$|x| \leq 1$.
+
+The moments vector is then processed through the same DCT-III →
+weights pipeline as full-domain Fejér-1 (Waldvogel 2006).  When
+$[t_a, t_b] = [-1, 1]$, the moments reduce to the standard Fejér-1
+moments exactly (since $I_k = 2/(1-k^2)$ for even $k$, $0$ for odd $k$).
+
+**Additivity.**  Sub-interval integration satisfies the interval
+additivity property: for any $a \leq c \leq b$,
+
+$$
+\int_a^c f + \int_c^b f = \int_a^b f
+$$
+
+This follows from the linearity of the DCT-III pipeline and the
+additivity of the Chebyshev antiderivative over adjacent sub-intervals.
+
+**Splines.** For splines, each piece's sub-domain is clipped against
+the requested bounds.  Pieces with no overlap are skipped; pieces with
+partial overlap receive sub-interval bounds; pieces fully contained use
+standard Fejér-1 weights.
+
+```python
+import math
+from pychebyshev import ChebyshevApproximation
+
+cheb = ChebyshevApproximation(lambda x, _: math.sin(x[0]), 1, [[0, 2 * math.pi]], [25])
+cheb.build()
+
+# Sub-interval: first half-period
+half = cheb.integrate(bounds=(0.0, math.pi))   # ≈ 2.0
+
+# Per-dimension bounds for multi-D
+cheb_2d = ChebyshevApproximation(
+    lambda x, _: x[0] ** 2 + math.cos(x[1]),
+    2, [[-1, 1], [-1, 1]], [11, 11],
+)
+cheb_2d.build()
+result = cheb_2d.integrate(dims=[0, 1], bounds=[(0.0, 1.0), None])
+```
+
 ### `integrate()` API
 
 | Parameter | Type | Description |
 |-----------|------|-------------|
 | `dims` | `int`, `list[int]`, or `None` | Dimensions to integrate out. `None` = all. |
+| `bounds` | `tuple`, `list[tuple/None]`, or `None` | Sub-interval bounds. `None` = full domain. Single `(lo, hi)` for one dim, or list with positional correspondence to `dims`. |
 
 **Returns**: `float` if all dimensions are integrated; otherwise a
 lower-dimensional interpolant of the same type (`ChebyshevApproximation` or
@@ -121,7 +214,8 @@ lower-dimensional interpolant of the same type (`ChebyshevApproximation` or
 **Errors**:
 
 - `RuntimeError` if `build()` has not been called
-- `ValueError` if any dimension index is out of range or duplicated
+- `ValueError` if any dimension index is out of range, duplicated, or
+  bounds are outside the domain
 
 ## Rootfinding
 
@@ -310,9 +404,6 @@ matrices, and barycentric evaluation.
   Calculus on Tensor Train interpolants would require TT-specific
   coefficient extraction; slider calculus would need per-slide integration
   with additive recombination.
-- **Sub-interval integration** (partial domain bounds) is deferred to a
-  future version. Currently, `integrate()` integrates over the full domain
-  of each dimension.
 - **Multi-D rootfinding** (2D Bezout resultants) is not implemented. Only
   1-D slices are supported via the `dim` + `fixed` interface.
 - **Result has `function=None`** -- partial integration results cannot call

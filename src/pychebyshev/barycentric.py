@@ -920,7 +920,7 @@ class ChebyshevApproximation:
     # Calculus: integration, roots, optimization
     # ------------------------------------------------------------------
 
-    def integrate(self, dims=None):
+    def integrate(self, dims=None, bounds=None):
         """Integrate the interpolant over one or more dimensions.
 
         Uses Fejér-1 quadrature weights (Waldvogel 2006) at Chebyshev
@@ -932,6 +932,12 @@ class ChebyshevApproximation:
         dims : int, list of int, or None
             Dimensions to integrate out.  If ``None``, integrates over
             **all** dimensions and returns a scalar.
+        bounds : tuple, list of tuple/None, or None
+            Sub-interval bounds for integration.  ``None`` (default)
+            integrates over the full domain of each dimension.  A single
+            tuple ``(lo, hi)`` applies to a single *dims* entry.  A list
+            of tuples/``None`` provides per-dimension bounds with
+            positional correspondence to *dims*.
 
         Returns
         -------
@@ -944,7 +950,8 @@ class ChebyshevApproximation:
         RuntimeError
             If ``build()`` has not been called.
         ValueError
-            If any dimension index is out of range or duplicated.
+            If any dimension index is out of range or duplicated, or if
+            bounds are outside the domain.
 
         References
         ----------
@@ -956,6 +963,8 @@ class ChebyshevApproximation:
 
         from pychebyshev._calculus import (
             _compute_fejer1_weights,
+            _compute_sub_interval_weights,
+            _normalize_bounds,
         )
 
         # Normalize dims
@@ -971,6 +980,9 @@ class ChebyshevApproximation:
                     f"dim {d} out of range [0, {self.num_dimensions - 1}]"
                 )
 
+        per_dim_bounds = _normalize_bounds(dims, bounds, self.domain)
+        dim_to_idx = {d: i for i, d in enumerate(dims)}
+
         tensor = self.tensor_values.copy()
         nodes = list(self.nodes)
         wts = list(self.weights)
@@ -982,7 +994,13 @@ class ChebyshevApproximation:
         for d in sorted(dims, reverse=True):
             a, b = domain[d]
             scale = (b - a) / 2.0
-            quad_w = _compute_fejer1_weights(n_nodes[d])
+            bd = per_dim_bounds[dim_to_idx[d]]
+            if bd is None:
+                quad_w = _compute_fejer1_weights(n_nodes[d])
+            else:
+                t_lo = 2.0 * (bd[0] - a) / (b - a) - 1.0
+                t_hi = 2.0 * (bd[1] - a) / (b - a) - 1.0
+                quad_w = _compute_sub_interval_weights(n_nodes[d], t_lo, t_hi)
             tensor = np.tensordot(tensor, quad_w * scale, axes=([d], [0]))
             del nodes[d]
             del wts[d]

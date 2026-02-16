@@ -1,4 +1,4 @@
-"""Tests for Chebyshev calculus operations: integrate, roots, minimize, maximize (v0.9.0)."""
+"""Tests for Chebyshev calculus operations: integrate, roots, minimize, maximize."""
 
 from __future__ import annotations
 
@@ -560,3 +560,247 @@ class TestMinMaxSpline:
         assert len(result) == 2, f"Expected 2 elements, got {len(result)}"
         assert isinstance(result[0], float), f"Value not float: {type(result[0])}"
         assert isinstance(result[1], float), f"Location not float: {type(result[1])}"
+
+
+# ======================================================================
+# TestSubIntervalIntegrateApprox
+# ======================================================================
+
+class TestSubIntervalIntegrateApprox:
+    """Tests for ChebyshevApproximation.integrate() with bounds."""
+
+    def test_constant_half_domain(self):
+        """Integral of constant 5 on [0, 1] sub-interval of [-1, 1] = 5."""
+        def f(x, _): return 5.0
+        cheb = ChebyshevApproximation(f, 1, [[-1, 1]], [4])
+        cheb.build(verbose=False)
+        result = cheb.integrate(bounds=(0.0, 1.0))
+        assert abs(result - 5.0) < 1e-10, f"Expected 5.0, got {result}"
+
+    def test_x_squared_sub_interval(self):
+        """Integral of x^2 on [0, 1] sub-interval of [-1, 1] = 1/3."""
+        def f(x, _): return x[0] ** 2
+        cheb = ChebyshevApproximation(f, 1, [[-1, 1]], [10])
+        cheb.build(verbose=False)
+        result = cheb.integrate(bounds=(0.0, 1.0))
+        expected = 1.0 / 3.0
+        assert abs(result - expected) < 1e-10, f"Expected {expected}, got {result}"
+
+    def test_sin_half_period(self):
+        """Integral of sin(x) on [0, pi] sub-interval of [0, 2*pi] = 2."""
+        def f(x, _): return math.sin(x[0])
+        cheb = ChebyshevApproximation(f, 1, [[0, 2 * math.pi]], [25])
+        cheb.build(verbose=False)
+        result = cheb.integrate(bounds=(0.0, math.pi))
+        assert abs(result - 2.0) < 1e-8, f"Expected 2.0, got {result}"
+
+    def test_exp_sub_interval(self):
+        """Integral of exp(x) on [0, 1] sub-interval of [-1, 1] = e - 1."""
+        def f(x, _): return math.exp(x[0])
+        cheb = ChebyshevApproximation(f, 1, [[-1, 1]], [15])
+        cheb.build(verbose=False)
+        result = cheb.integrate(bounds=(0.0, 1.0))
+        expected = math.e - 1.0
+        assert abs(result - expected) < 1e-10, f"Expected {expected}, got {result}"
+
+    def test_bounds_equal_domain(self):
+        """bounds == domain should match integrate() with no bounds."""
+        def f(x, _): return math.sin(x[0])
+        cheb = ChebyshevApproximation(f, 1, [[-1, 1]], [15])
+        cheb.build(verbose=False)
+        no_bounds = cheb.integrate()
+        with_bounds = cheb.integrate(bounds=(-1.0, 1.0))
+        assert abs(no_bounds - with_bounds) < 1e-12, \
+            f"No bounds {no_bounds} vs with bounds {with_bounds}"
+
+    def test_degenerate_lo_eq_hi(self):
+        """bounds lo == hi should give integral = 0."""
+        def f(x, _): return math.exp(x[0])
+        cheb = ChebyshevApproximation(f, 1, [[-1, 1]], [10])
+        cheb.build(verbose=False)
+        result = cheb.integrate(bounds=(0.5, 0.5))
+        assert abs(result) < 1e-14, f"Expected 0.0, got {result}"
+
+    def test_scipy_cross_validation(self):
+        """Cross-validate with scipy.integrate.quad."""
+        from scipy.integrate import quad
+
+        def f_py(x):
+            return math.sin(x) ** 2
+
+        def f(x, _):
+            return math.sin(x[0]) ** 2
+
+        cheb = ChebyshevApproximation(f, 1, [[-2, 3]], [25])
+        cheb.build(verbose=False)
+        result = cheb.integrate(bounds=(0.5, 2.0))
+        expected, _ = quad(f_py, 0.5, 2.0)
+        assert abs(result - expected) < 1e-8, f"Cheb {result} vs scipy {expected}"
+
+    def test_polynomial_exactness(self):
+        """Integral of x^4 on [-0.5, 0.5] sub-interval of [-1, 1] = 1/80."""
+        def f(x, _): return x[0] ** 4
+        cheb = ChebyshevApproximation(f, 1, [[-1, 1]], [10])
+        cheb.build(verbose=False)
+        result = cheb.integrate(bounds=(-0.5, 0.5))
+        expected = 1.0 / 80.0  # 2 * (0.5^5 / 5) = 0.0125
+        assert abs(result - expected) < 1e-12, f"Expected {expected}, got {result}"
+
+    def test_adjacent_sub_intervals_sum(self):
+        """Adjacent sub-intervals sum to full integral: ∫_a^c + ∫_c^b = ∫_a^b."""
+        def f(x, _): return math.sin(x[0]) * math.exp(x[0] / 3.0)
+        cheb = ChebyshevApproximation(f, 1, [[-2, 2]], [20])
+        cheb.build(verbose=False)
+        full = cheb.integrate()
+        left = cheb.integrate(bounds=(-2.0, 0.5))
+        right = cheb.integrate(bounds=(0.5, 2.0))
+        assert abs(left + right - full) < 1e-10, \
+            f"Sum {left + right} != full {full}"
+
+    def test_2d_partial_sub_interval(self):
+        """2D: integrate dim 0 on sub-interval, dim 1 full."""
+        def f(x, _): return x[0] ** 2 + math.cos(x[1])
+        cheb = ChebyshevApproximation(f, 2, [[-1, 1], [-1, 1]], [11, 11])
+        cheb.build(verbose=False)
+        # Integrate dim 0 on [0, 1]: int_0^1 x^2 dx = 1/3
+        # Result should be 1/3 + cos(y)
+        result = cheb.integrate(dims=[0], bounds=[(0.0, 1.0)])
+        assert isinstance(result, ChebyshevApproximation)
+        assert result.num_dimensions == 1
+        for y in [-0.5, 0.0, 0.7]:
+            val = result.vectorized_eval([y], [0])
+            expected = 1.0 / 3.0 + math.cos(y)
+            assert abs(val - expected) < 1e-8, f"At y={y}: {val} vs {expected}"
+
+    def test_2d_mixed_bounds(self):
+        """2D: bounds=[tuple, None] for per-dim control."""
+        def f(x, _): return x[0] ** 2 + x[1] ** 2
+        cheb = ChebyshevApproximation(f, 2, [[-1, 1], [-1, 1]], [10, 10])
+        cheb.build(verbose=False)
+        # Integrate both dims: dim 0 on [0, 1], dim 1 full
+        result = cheb.integrate(dims=[0, 1], bounds=[(0.0, 1.0), None])
+        # int_0^1 x^2 dx * int_{-1}^1 1 dy + int_0^1 1 dx * int_{-1}^1 y^2 dy
+        # = (1/3)*2 + 1*(2/3) = 2/3 + 2/3 = 4/3
+        expected = 4.0 / 3.0
+        assert abs(result - expected) < 1e-8, f"Expected {expected}, got {result}"
+
+    def test_bounds_out_of_domain_raises(self):
+        """bounds outside domain raises ValueError."""
+        def f(x, _): return x[0]
+        cheb = ChebyshevApproximation(f, 1, [[-1, 1]], [5])
+        cheb.build(verbose=False)
+        with pytest.raises(ValueError, match="outside domain"):
+            cheb.integrate(bounds=(-2.0, 0.5))
+
+    def test_bounds_lo_gt_hi_raises(self):
+        """bounds lo > hi raises ValueError."""
+        def f(x, _): return x[0]
+        cheb = ChebyshevApproximation(f, 1, [[-1, 1]], [5])
+        cheb.build(verbose=False)
+        with pytest.raises(ValueError, match="lo=.*> hi="):
+            cheb.integrate(bounds=(0.5, -0.5))
+
+    def test_bounds_length_mismatch_raises(self):
+        """bounds list length != dims length raises ValueError."""
+        def f(x, _): return x[0] + x[1]
+        cheb = ChebyshevApproximation(f, 2, [[-1, 1], [-1, 1]], [5, 5])
+        cheb.build(verbose=False)
+        with pytest.raises(ValueError, match="bounds length"):
+            cheb.integrate(dims=[0], bounds=[(0.0, 0.5), (0.0, 0.5)])
+
+
+# ======================================================================
+# TestSubIntervalIntegrateSpline
+# ======================================================================
+
+class TestSubIntervalIntegrateSpline:
+    """Tests for ChebyshevSpline.integrate() with bounds."""
+
+    def test_within_one_piece(self):
+        """Integral of |x| on [0.2, 0.8] (within right piece) = 0.3."""
+        def f(x, _): return abs(x[0])
+        sp = ChebyshevSpline(f, 1, [[-1, 1]], [11], [[0.0]])
+        sp.build(verbose=False)
+        result = sp.integrate(bounds=(0.2, 0.8))
+        expected = 0.3  # (0.8^2 - 0.2^2)/2 = (0.64 - 0.04)/2 = 0.3
+        assert abs(result - expected) < 1e-10, f"Expected {expected}, got {result}"
+
+    def test_spanning_knot(self):
+        """Integral of |x| on [-0.3, 0.5] spans knot at 0: = 0.17."""
+        def f(x, _): return abs(x[0])
+        sp = ChebyshevSpline(f, 1, [[-1, 1]], [11], [[0.0]])
+        sp.build(verbose=False)
+        result = sp.integrate(bounds=(-0.3, 0.5))
+        # int_{-0.3}^{0} |x| dx + int_{0}^{0.5} |x| dx
+        # = 0.3^2/2 + 0.5^2/2 = 0.045 + 0.125 = 0.17
+        expected = 0.17
+        assert abs(result - expected) < 1e-10, f"Expected {expected}, got {result}"
+
+    def test_scipy_cross_validation(self):
+        """Cross-validate spline sub-interval with scipy."""
+        from scipy.integrate import quad
+
+        def f(x, _): return abs(x[0]) ** 1.5
+        sp = ChebyshevSpline(f, 1, [[-2, 2]], [15], [[0.0]])
+        sp.build(verbose=False)
+        result = sp.integrate(bounds=(-0.5, 1.5))
+        expected, _ = quad(lambda x: abs(x) ** 1.5, -0.5, 1.5)
+        assert abs(result - expected) < 1e-5, f"Cheb {result} vs scipy {expected}"
+
+    def test_full_domain_matches_no_bounds(self):
+        """bounds == full domain matches integrate() with no bounds."""
+        def f(x, _): return abs(x[0])
+        sp = ChebyshevSpline(f, 1, [[-1, 1]], [11], [[0.0]])
+        sp.build(verbose=False)
+        no_bounds = sp.integrate()
+        with_bounds = sp.integrate(bounds=(-1.0, 1.0))
+        assert abs(no_bounds - with_bounds) < 1e-12, \
+            f"No bounds {no_bounds} vs with bounds {with_bounds}"
+
+    def test_non_overlapping_pieces_excluded(self):
+        """Sub-interval entirely within one piece ignores others."""
+        def f(x, _): return abs(x[0])
+        sp = ChebyshevSpline(f, 1, [[-1, 1]], [11], [[0.0]])
+        sp.build(verbose=False)
+        # Only integrates right piece [0, 1], left piece [-1, 0] excluded
+        result = sp.integrate(bounds=(0.0, 1.0))
+        expected = 0.5  # int_0^1 x dx = 0.5
+        assert abs(result - expected) < 1e-10, f"Expected {expected}, got {result}"
+
+    def test_2d_partial_sub_interval(self):
+        """2D spline: integrate dim 0 on sub-interval with knot."""
+        def f(x, _): return abs(x[0]) + x[1] ** 2
+        sp = ChebyshevSpline(f, 2, [[-1, 1], [-1, 1]], [11, 11], [[0.0], []])
+        sp.build(verbose=False)
+        # int_{-0.5}^{0.5} (|x| + y^2) dx
+        #   = int_{-0.5}^{0} (-x) dx + int_{0}^{0.5} x dx + int_{-0.5}^{0.5} y^2 dx
+        #   = 0.5^2/2 + 0.5^2/2 + y^2*1.0
+        #   = 0.125 + 0.125 + y^2 = 0.25 + y^2
+        result = sp.integrate(dims=[0], bounds=[(-0.5, 0.5)])
+        assert isinstance(result, ChebyshevSpline)
+        assert result.num_dimensions == 1
+        for y in [-0.5, 0.0, 0.7]:
+            val = result.eval([y], [0])
+            expected = 0.25 + y ** 2
+            assert abs(val - expected) < 1e-8, f"At y={y}: {val} vs {expected}"
+
+    def test_adjacent_sub_intervals_sum(self):
+        """Adjacent sub-intervals on spline sum to full integral."""
+        def f(x, _): return abs(x[0])
+        sp = ChebyshevSpline(f, 1, [[-1, 1]], [11], [[0.0]])
+        sp.build(verbose=False)
+        full = sp.integrate()
+        left = sp.integrate(bounds=(-1.0, 0.3))
+        right = sp.integrate(bounds=(0.3, 1.0))
+        assert abs(left + right - full) < 1e-10, \
+            f"Sum {left + right} != full {full}"
+
+    def test_knot_boundary_precision(self):
+        """Sub-interval endpoint exactly at knot is handled correctly."""
+        def f(x, _): return abs(x[0])
+        sp = ChebyshevSpline(f, 1, [[-1, 1]], [11], [[0.0]])
+        sp.build(verbose=False)
+        # [0.0, 0.5] — left boundary is exactly at knot
+        result = sp.integrate(bounds=(0.0, 0.5))
+        expected = 0.125  # int_0^0.5 x dx = 0.5^2/2
+        assert abs(result - expected) < 1e-10, f"Expected {expected}, got {result}"

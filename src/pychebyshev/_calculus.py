@@ -73,6 +73,121 @@ def _integrate_tensor_along_dim(tensor: np.ndarray, dim: int,
     return np.tensordot(tensor, weights * scale, axes=([dim], [0]))
 
 
+def _compute_sub_interval_weights(n: int, t_lo: float,
+                                   t_hi: float) -> np.ndarray:
+    """Compute quadrature weights for a sub-interval ``[t_lo, t_hi] ⊂ [-1, 1]``.
+
+    Generalizes Fejér-1 weights by replacing full-domain moments
+    ``I_k = ∫_{-1}^{1} T_k(t) dt`` with sub-interval moments
+    ``I_k = ∫_{t_lo}^{t_hi} T_k(t) dt``, then applying the same DCT-III
+    → weights pipeline (Waldvogel 2006).
+
+    Parameters
+    ----------
+    n : int
+        Number of Chebyshev Type I nodes.
+    t_lo, t_hi : float
+        Sub-interval bounds in reference coordinates, ``-1 ≤ t_lo ≤ t_hi ≤ 1``.
+
+    Returns
+    -------
+    ndarray of shape (n,)
+        Quadrature weights in ascending node order.
+
+    References
+    ----------
+    Waldvogel (2006), "Fast Construction of the Fejér and Clenshaw–Curtis
+    Quadrature Rules", BIT Numer. Math. 46(2):195–202.
+
+    Trefethen (2013), "Approximation Theory and Approximation Practice",
+    SIAM, Chapter 19 — Chebyshev polynomial antiderivatives.
+    """
+    from scipy.fft import dct
+
+    # Compute T_k(t_lo) and T_k(t_hi) for k = 0, ..., n via recurrence
+    T_lo = np.zeros(n + 1)
+    T_hi = np.zeros(n + 1)
+    T_lo[0], T_lo[1] = 1.0, t_lo
+    T_hi[0], T_hi[1] = 1.0, t_hi
+    for k in range(2, n + 1):
+        T_lo[k] = 2.0 * t_lo * T_lo[k - 1] - T_lo[k - 2]
+        T_hi[k] = 2.0 * t_hi * T_hi[k - 1] - T_hi[k - 2]
+
+    # Sub-interval moments: I_k = ∫_{t_lo}^{t_hi} T_k(t) dt
+    #   k=0: t_hi - t_lo
+    #   k=1: (t_hi² - t_lo²) / 2
+    #   k≥2: (1/2) * [(T_{k+1}(t_hi) - T_{k+1}(t_lo))/(k+1)
+    #                  - (T_{k-1}(t_hi) - T_{k-1}(t_lo))/(k-1)]
+    moments = np.zeros(n)
+    moments[0] = t_hi - t_lo
+    if n > 1:
+        moments[1] = (t_hi ** 2 - t_lo ** 2) / 2.0
+    for k in range(2, n):
+        moments[k] = 0.5 * (
+            (T_hi[k + 1] - T_lo[k + 1]) / (k + 1)
+            - (T_hi[k - 1] - T_lo[k - 1]) / (k - 1)
+        )
+
+    # DCT-III → weights (descending node order), then reverse
+    weights_desc = dct(moments, type=3) / n
+    return weights_desc[::-1].copy()
+
+
+def _normalize_bounds(dims, bounds, domain):
+    """Normalize and validate the *bounds* parameter for ``integrate()``.
+
+    Parameters
+    ----------
+    dims : list of int
+        Sorted list of dimensions being integrated.
+    bounds : None, tuple, or list
+        User-provided bounds specification.
+    domain : list
+        Per-dimension ``[lo, hi]`` bounds.
+
+    Returns
+    -------
+    list of (lo, hi) or None
+        One entry per dim in *dims*.  ``None`` means full domain.
+
+    Raises
+    ------
+    ValueError
+        If bounds are outside domain, ``lo > hi``, or length mismatch.
+    """
+    if bounds is None:
+        return [None] * len(dims)
+
+    # Single tuple for a single dim
+    if isinstance(bounds, tuple) and len(bounds) == 2 and not isinstance(bounds[0], (list, tuple)):
+        bounds = [bounds]
+
+    if len(bounds) != len(dims):
+        raise ValueError(
+            f"bounds length {len(bounds)} != dims length {len(dims)}"
+        )
+
+    result = []
+    for i, bd in enumerate(bounds):
+        if bd is None:
+            result.append(None)
+            continue
+        lo, hi = bd
+        if lo > hi:
+            raise ValueError(f"bounds lo={lo} > hi={hi} for dim {dims[i]}")
+        d = dims[i]
+        dom_lo, dom_hi = domain[d]
+        if lo < dom_lo - 1e-14 or hi > dom_hi + 1e-14:
+            raise ValueError(
+                f"bounds ({lo}, {hi}) outside domain [{dom_lo}, {dom_hi}] "
+                f"for dim {d}"
+            )
+        lo = max(lo, dom_lo)
+        hi = min(hi, dom_hi)
+        result.append((lo, hi))
+    return result
+
+
 def _roots_1d(values: np.ndarray, domain: tuple) -> np.ndarray:
     """Find all real roots of a 1-D Chebyshev interpolant within its domain.
 

@@ -719,7 +719,7 @@ class ChebyshevSpline:
     # Calculus: integration, roots, optimization
     # ------------------------------------------------------------------
 
-    def integrate(self, dims=None):
+    def integrate(self, dims=None, bounds=None):
         """Integrate the spline over one or more dimensions.
 
         For full integration, sums the integrals of each piece (pieces
@@ -732,6 +732,12 @@ class ChebyshevSpline:
         dims : int, list of int, or None
             Dimensions to integrate out.  If ``None``, integrates over
             **all** dimensions and returns a scalar.
+        bounds : tuple, list of tuple/None, or None
+            Sub-interval bounds for integration.  ``None`` (default)
+            integrates over the full domain of each dimension.  A single
+            tuple ``(lo, hi)`` applies to a single *dims* entry.  A list
+            of tuples/``None`` provides per-dimension bounds with
+            positional correspondence to *dims*.
 
         Returns
         -------
@@ -744,10 +750,13 @@ class ChebyshevSpline:
         RuntimeError
             If ``build()`` has not been called.
         ValueError
-            If any dimension index is out of range or duplicated.
+            If any dimension index is out of range or duplicated, or if
+            bounds are outside the domain.
         """
         if not self._built:
             raise RuntimeError("Call build() first")
+
+        from pychebyshev._calculus import _normalize_bounds
 
         # Normalize dims
         if dims is None:
@@ -762,9 +771,39 @@ class ChebyshevSpline:
                     f"dim {d} out of range [0, {self.num_dimensions - 1}]"
                 )
 
-        # Full integration: sum piece integrals
+        per_dim_bounds = _normalize_bounds(dims, bounds, self.domain)
+        dim_to_idx = {d: i for i, d in enumerate(dims)}
+
+        # Full integration: sum piece integrals (with bounds)
         if len(dims) == self.num_dimensions:
-            return sum(piece.integrate() for piece in self._pieces)
+            total = 0.0
+            pieces_arr = np.array(self._pieces, dtype=object).reshape(self._shape)
+            for idx in np.ndindex(*self._shape):
+                piece = pieces_arr[idx]
+                piece_bounds = []
+                skip = False
+                for d in range(self.num_dimensions):
+                    bd = per_dim_bounds[dim_to_idx[d]]
+                    if bd is None:
+                        piece_bounds.append(None)
+                    else:
+                        piece_lo, piece_hi = self._intervals[d][idx[d]]
+                        overlap_lo = max(bd[0], piece_lo)
+                        overlap_hi = min(bd[1], piece_hi)
+                        if overlap_lo >= overlap_hi:
+                            skip = True
+                            break
+                        if abs(overlap_lo - piece_lo) < 1e-14 and abs(overlap_hi - piece_hi) < 1e-14:
+                            piece_bounds.append(None)
+                        else:
+                            piece_bounds.append((overlap_lo, overlap_hi))
+                if skip:
+                    continue
+                if all(b is None for b in piece_bounds):
+                    total += piece.integrate()
+                else:
+                    total += piece.integrate(bounds=piece_bounds)
+            return total
 
         # Partial integration
         pieces_arr = np.array(self._pieces, dtype=object).reshape(self._shape)
@@ -775,6 +814,7 @@ class ChebyshevSpline:
         n_nodes = list(self.n_nodes)
 
         for d in sorted(dims, reverse=True):
+            bd = per_dim_bounds[dim_to_idx[d]]
             # Integrate each piece along dim d, then sum along that axis
             new_shape = [s for i, s in enumerate(pieces_arr.shape) if i != d]
             new_pieces = np.empty(new_shape, dtype=object) if new_shape else np.empty((), dtype=object)
@@ -784,13 +824,44 @@ class ChebyshevSpline:
                     full_idx = list(idx)
                     full_idx.insert(d, slice(None))
                     dim_pieces = pieces_arr[tuple(full_idx)]
-                    integrated = [p.integrate(dims=[d]) for p in dim_pieces.ravel()]
+                    integrated = []
+                    for piece_idx, p in enumerate(dim_pieces.ravel()):
+                        if bd is None:
+                            integrated.append(p.integrate(dims=[d]))
+                        else:
+                            piece_lo, piece_hi = intervals[d][piece_idx]
+                            overlap_lo = max(bd[0], piece_lo)
+                            overlap_hi = min(bd[1], piece_hi)
+                            if overlap_lo >= overlap_hi:
+                                continue
+                            if abs(overlap_lo - piece_lo) < 1e-14 and abs(overlap_hi - piece_hi) < 1e-14:
+                                integrated.append(p.integrate(dims=[d]))
+                            else:
+                                integrated.append(p.integrate(dims=[d], bounds=[(overlap_lo, overlap_hi)]))
+                    if not integrated:
+                        # Zero contribution: build a zero piece
+                        integrated.append(dim_pieces.ravel()[0].integrate(dims=[d]) * 0.0)
                     result = integrated[0]
                     for other in integrated[1:]:
                         result = result + other
                     new_pieces[idx] = result
             else:
-                integrated = [p.integrate(dims=[d]) for p in pieces_arr.ravel()]
+                integrated = []
+                for piece_idx, p in enumerate(pieces_arr.ravel()):
+                    if bd is None:
+                        integrated.append(p.integrate(dims=[d]))
+                    else:
+                        piece_lo, piece_hi = intervals[d][piece_idx]
+                        overlap_lo = max(bd[0], piece_lo)
+                        overlap_hi = min(bd[1], piece_hi)
+                        if overlap_lo >= overlap_hi:
+                            continue
+                        if abs(overlap_lo - piece_lo) < 1e-14 and abs(overlap_hi - piece_hi) < 1e-14:
+                            integrated.append(p.integrate(dims=[d]))
+                        else:
+                            integrated.append(p.integrate(dims=[d], bounds=[(overlap_lo, overlap_hi)]))
+                if not integrated:
+                    integrated.append(pieces_arr.ravel()[0].integrate(dims=[d]) * 0.0)
                 result = integrated[0]
                 for other in integrated[1:]:
                     result = result + other

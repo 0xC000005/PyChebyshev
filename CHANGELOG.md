@@ -5,6 +5,21 @@ All notable changes to PyChebyshev will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [0.9.5] - 2026-02-15
+
+### Added
+
+- Sub-interval integration via `bounds` parameter on `integrate()` for both
+  `ChebyshevApproximation` and `ChebyshevSpline`. Uses generalized Fejér-1
+  quadrature with sub-interval Chebyshev moments computed from closed-form
+  antiderivatives (Trefethen 2013, Ch. 19).
+- Spline sub-interval integration with automatic piece overlap clipping:
+  pieces with no overlap are skipped, partial overlaps receive sub-interval
+  bounds, fully contained pieces use standard Fejér-1 weights.
+- 22 new tests for sub-interval integration (14 for ChebyshevApproximation,
+  8 for ChebyshevSpline), including polynomial exactness, scipy cross-validation,
+  additivity, and error handling.
+
 ## [0.9.0] - 2026-02-15
 
 ### Added

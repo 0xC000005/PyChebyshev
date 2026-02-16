@@ -45,7 +45,7 @@ The installable package. Public classes: `ChebyshevApproximation`, `ChebyshevSpl
 - **`tensor_train.py`** — `ChebyshevTT` class for Tensor Train Chebyshev interpolation. TT-Cross builds from O(d·n·r²) evaluations with maxvol pivoting, eval caching, and SVD-based adaptive rank. Vectorized batch eval via numpy einsum. FD derivatives.
 - **`_algebra.py`** — Shared helpers for Chebyshev arithmetic operators (compatibility validation, operator dispatch).
 - **`_extrude_slice.py`** — Shared helpers for extrusion and slicing (parameter validation, tensor manipulation, barycentric contraction).
-- **`_calculus.py`** — Shared helpers for Chebyshev calculus (Fejér-1 quadrature weights via DCT-III, companion-matrix rootfinding, 1-D optimization). References: Waldvogel (2006), Trefethen (2013).
+- **`_calculus.py`** — Shared helpers for Chebyshev calculus (Fejér-1 quadrature weights via DCT-III, sub-interval quadrature weights via Chebyshev antiderivatives, companion-matrix rootfinding, 1-D optimization). References: Waldvogel (2006), Trefethen (2013).
 - **`_jit.py`** — Deprecated Numba JIT kernel with pure NumPy fallback. Used only by deprecated `fast_eval()`.
 - **`_version.py`** — Single source of truth for version string.
 
@@ -72,7 +72,7 @@ Not part of the library. Compare Chebyshev barycentric against alternative metho
 - `test_tensor_train.py` — 35 tests: TT-Cross/TT-SVD accuracy, batch eval, FD derivatives, rank control, serialization, error estimation.
 - `test_algebra.py` — 77 tests: arithmetic operators for ChebyshevApproximation, ChebyshevSpline, and ChebyshevSlider; batch/multi eval; compatibility error handling; portfolio use cases.
 - `test_extrude_slice.py` — 63 tests: extrusion and slicing for ChebyshevApproximation, ChebyshevSpline, and ChebyshevSlider; round-trip identity; derivatives; serialization; portfolio via extrude+algebra; edge cases (min nodes, boundary slicing, batch/multi eval, error estimates).
-- `test_calculus.py` — 52 tests: integration, rootfinding, and optimization for ChebyshevApproximation and ChebyshevSpline; 1-D and multi-D; partial integration; spline piece merging; edge cases.
+- `test_calculus.py` — 74 tests: integration (full-domain and sub-interval), rootfinding, and optimization for ChebyshevApproximation and ChebyshevSpline; 1-D and multi-D; partial integration; spline piece merging and overlap clipping; edge cases.
 
 ### CI/CD (`.github/workflows/`)
 
