@@ -715,6 +715,264 @@ class ChebyshevSpline:
         obj._cached_error_estimate = None
         return obj
 
+    # ------------------------------------------------------------------
+    # Calculus: integration, roots, optimization
+    # ------------------------------------------------------------------
+
+    def integrate(self, dims=None):
+        """Integrate the spline over one or more dimensions.
+
+        For full integration, sums the integrals of each piece (pieces
+        cover disjoint sub-domains).  For partial integration, pieces
+        along the integrated dimension are summed and the result is a
+        lower-dimensional spline.
+
+        Parameters
+        ----------
+        dims : int, list of int, or None
+            Dimensions to integrate out.  If ``None``, integrates over
+            **all** dimensions and returns a scalar.
+
+        Returns
+        -------
+        float or ChebyshevSpline
+            Scalar for full integration; lower-dimensional spline for
+            partial integration.
+
+        Raises
+        ------
+        RuntimeError
+            If ``build()`` has not been called.
+        ValueError
+            If any dimension index is out of range or duplicated.
+        """
+        if not self._built:
+            raise RuntimeError("Call build() first")
+
+        # Normalize dims
+        if dims is None:
+            dims = list(range(self.num_dimensions))
+        elif isinstance(dims, int):
+            dims = [dims]
+        dims = sorted(set(dims))
+
+        for d in dims:
+            if d < 0 or d >= self.num_dimensions:
+                raise ValueError(
+                    f"dim {d} out of range [0, {self.num_dimensions - 1}]"
+                )
+
+        # Full integration: sum piece integrals
+        if len(dims) == self.num_dimensions:
+            return sum(piece.integrate() for piece in self._pieces)
+
+        # Partial integration
+        pieces_arr = np.array(self._pieces, dtype=object).reshape(self._shape)
+        knots = [list(k) for k in self.knots]
+        intervals = [list(iv) for iv in self._intervals]
+        shape = list(self._shape)
+        domain = [list(b) for b in self.domain]
+        n_nodes = list(self.n_nodes)
+
+        for d in sorted(dims, reverse=True):
+            # Integrate each piece along dim d, then sum along that axis
+            new_shape = [s for i, s in enumerate(pieces_arr.shape) if i != d]
+            new_pieces = np.empty(new_shape, dtype=object) if new_shape else np.empty((), dtype=object)
+
+            if new_shape:
+                for idx in np.ndindex(*new_shape):
+                    full_idx = list(idx)
+                    full_idx.insert(d, slice(None))
+                    dim_pieces = pieces_arr[tuple(full_idx)]
+                    integrated = [p.integrate(dims=[d]) for p in dim_pieces.ravel()]
+                    result = integrated[0]
+                    for other in integrated[1:]:
+                        result = result + other
+                    new_pieces[idx] = result
+            else:
+                integrated = [p.integrate(dims=[d]) for p in pieces_arr.ravel()]
+                result = integrated[0]
+                for other in integrated[1:]:
+                    result = result + other
+                new_pieces[()] = result
+
+            pieces_arr = new_pieces
+            del knots[d]
+            del intervals[d]
+            del shape[d]
+            del domain[d]
+            del n_nodes[d]
+
+        # If 0D result, return float
+        if len(shape) == 0:
+            return float(pieces_arr.item().integrate())
+
+        new_ndim = self.num_dimensions - len(dims)
+        obj = object.__new__(ChebyshevSpline)
+        obj.function = None
+        obj.num_dimensions = new_ndim
+        obj.domain = domain
+        obj.n_nodes = n_nodes
+        obj.max_derivative_order = self.max_derivative_order
+        obj.knots = knots
+        obj._intervals = intervals
+        obj._shape = tuple(shape)
+        obj._pieces = list(pieces_arr.ravel())
+        obj._built = True
+        obj._build_time = 0.0
+        obj._cached_error_estimate = None
+        return obj
+
+    def roots(self, dim=None, fixed=None):
+        """Find all roots of the spline along a specified dimension.
+
+        Slices the spline to 1-D, then finds roots in each piece and
+        merges the results.
+
+        Parameters
+        ----------
+        dim : int or None
+            Dimension along which to find roots.
+        fixed : dict or None
+            For multi-D, dict ``{dim_index: value}`` for all other dims.
+
+        Returns
+        -------
+        ndarray
+            Sorted array of root locations in the physical domain.
+
+        Raises
+        ------
+        RuntimeError
+            If ``build()`` has not been called.
+        ValueError
+            If *dim* / *fixed* validation fails.
+        """
+        if not self._built:
+            raise RuntimeError("Call build() first")
+
+        from pychebyshev._calculus import _roots_1d, _validate_calculus_args
+
+        dim, slice_params = _validate_calculus_args(
+            self.num_dimensions, dim, fixed, self.domain
+        )
+
+        # Slice to 1D spline
+        if slice_params:
+            sliced = self.slice(slice_params)
+        else:
+            sliced = self
+
+        # Find roots in each piece
+        all_roots = []
+        for piece in sliced._pieces:
+            piece_roots = _roots_1d(piece.tensor_values, piece.domain[0])
+            all_roots.append(piece_roots)
+
+        if not all_roots:
+            return np.array([], dtype=float)
+
+        combined = np.concatenate(all_roots)
+        combined = np.sort(combined)
+
+        # Deduplicate near knot boundaries
+        if len(combined) > 1:
+            domain_scale = abs(self.domain[dim][1] - self.domain[dim][0]) + 1
+            mask = np.concatenate([[True], np.diff(combined) > 1e-10 * domain_scale])
+            combined = combined[mask]
+
+        return combined
+
+    def minimize(self, dim=None, fixed=None):
+        """Find the minimum value of the spline along a dimension.
+
+        Parameters
+        ----------
+        dim : int or None
+            Dimension along which to minimize.
+        fixed : dict or None
+            For multi-D, dict ``{dim_index: value}`` for all other dims.
+
+        Returns
+        -------
+        (value, location) : (float, float)
+
+        Raises
+        ------
+        RuntimeError
+            If ``build()`` has not been called.
+        ValueError
+            If *dim* / *fixed* validation fails.
+        """
+        if not self._built:
+            raise RuntimeError("Call build() first")
+
+        from pychebyshev._calculus import _optimize_1d, _validate_calculus_args
+
+        dim, slice_params = _validate_calculus_args(
+            self.num_dimensions, dim, fixed, self.domain
+        )
+
+        if slice_params:
+            sliced = self.slice(slice_params)
+        else:
+            sliced = self
+
+        best_val, best_loc = float("inf"), 0.0
+        for piece in sliced._pieces:
+            val, loc = _optimize_1d(
+                piece.tensor_values, piece.nodes[0], piece.weights[0],
+                piece.diff_matrices[0], piece.domain[0], mode="min",
+            )
+            if val < best_val:
+                best_val, best_loc = val, loc
+        return best_val, best_loc
+
+    def maximize(self, dim=None, fixed=None):
+        """Find the maximum value of the spline along a dimension.
+
+        Parameters
+        ----------
+        dim : int or None
+            Dimension along which to maximize.
+        fixed : dict or None
+            For multi-D, dict ``{dim_index: value}`` for all other dims.
+
+        Returns
+        -------
+        (value, location) : (float, float)
+
+        Raises
+        ------
+        RuntimeError
+            If ``build()`` has not been called.
+        ValueError
+            If *dim* / *fixed* validation fails.
+        """
+        if not self._built:
+            raise RuntimeError("Call build() first")
+
+        from pychebyshev._calculus import _optimize_1d, _validate_calculus_args
+
+        dim, slice_params = _validate_calculus_args(
+            self.num_dimensions, dim, fixed, self.domain
+        )
+
+        if slice_params:
+            sliced = self.slice(slice_params)
+        else:
+            sliced = self
+
+        best_val, best_loc = float("-inf"), 0.0
+        for piece in sliced._pieces:
+            val, loc = _optimize_1d(
+                piece.tensor_values, piece.nodes[0], piece.weights[0],
+                piece.diff_matrices[0], piece.domain[0], mode="max",
+            )
+            if val > best_val:
+                best_val, best_loc = val, loc
+        return best_val, best_loc
+
     def _check_spline_compatible(self, other):
         """Validate that two splines can be combined arithmetically."""
         from pychebyshev._algebra import _check_compatible

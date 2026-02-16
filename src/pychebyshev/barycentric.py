@@ -917,6 +917,255 @@ class ChebyshevApproximation:
         return obj
 
     # ------------------------------------------------------------------
+    # Calculus: integration, roots, optimization
+    # ------------------------------------------------------------------
+
+    def integrate(self, dims=None):
+        """Integrate the interpolant over one or more dimensions.
+
+        Uses Fejér-1 quadrature weights (Waldvogel 2006) at Chebyshev
+        Type I nodes, computed in O(n log n) via DCT-III.  For multi-D
+        tensors, each dimension is contracted via ``np.tensordot``.
+
+        Parameters
+        ----------
+        dims : int, list of int, or None
+            Dimensions to integrate out.  If ``None``, integrates over
+            **all** dimensions and returns a scalar.
+
+        Returns
+        -------
+        float or ChebyshevApproximation
+            If all dimensions are integrated, returns the scalar integral.
+            Otherwise returns a lower-dimensional interpolant.
+
+        Raises
+        ------
+        RuntimeError
+            If ``build()`` has not been called.
+        ValueError
+            If any dimension index is out of range or duplicated.
+
+        References
+        ----------
+        Waldvogel (2006), "Fast Construction of the Fejér and
+        Clenshaw–Curtis Quadrature Rules", BIT Numer. Math. 46(2):195–202.
+        """
+        if self.tensor_values is None:
+            raise RuntimeError("Call build() first")
+
+        from pychebyshev._calculus import (
+            _compute_fejer1_weights,
+        )
+
+        # Normalize dims
+        if dims is None:
+            dims = list(range(self.num_dimensions))
+        elif isinstance(dims, int):
+            dims = [dims]
+        dims = sorted(set(dims))
+
+        for d in dims:
+            if d < 0 or d >= self.num_dimensions:
+                raise ValueError(
+                    f"dim {d} out of range [0, {self.num_dimensions - 1}]"
+                )
+
+        tensor = self.tensor_values.copy()
+        nodes = list(self.nodes)
+        wts = list(self.weights)
+        diff_matrices = list(self.diff_matrices)
+        domain = [list(b) for b in self.domain]
+        n_nodes = list(self.n_nodes)
+
+        # Process dimensions in descending order to avoid index shift
+        for d in sorted(dims, reverse=True):
+            a, b = domain[d]
+            scale = (b - a) / 2.0
+            quad_w = _compute_fejer1_weights(n_nodes[d])
+            tensor = np.tensordot(tensor, quad_w * scale, axes=([d], [0]))
+            del nodes[d]
+            del wts[d]
+            del diff_matrices[d]
+            del domain[d]
+            del n_nodes[d]
+
+        new_ndim = self.num_dimensions - len(dims)
+        if new_ndim == 0:
+            return float(tensor)
+
+        obj = object.__new__(ChebyshevApproximation)
+        obj.function = None
+        obj.num_dimensions = new_ndim
+        obj.domain = domain
+        obj.n_nodes = n_nodes
+        obj.max_derivative_order = self.max_derivative_order
+        obj.nodes = nodes
+        obj.weights = wts
+        obj.diff_matrices = diff_matrices
+        obj.tensor_values = tensor
+        obj.build_time = 0.0
+        obj.n_evaluations = 0
+        obj._cached_error_estimate = None
+        obj._eval_cache = {}
+        for d in range(new_ndim - 1, 0, -1):
+            shape = tuple(n_nodes[i] for i in range(d))
+            obj._eval_cache[d] = np.zeros(shape)
+        return obj
+
+    def roots(self, dim=None, fixed=None):
+        """Find all roots of the interpolant along a specified dimension.
+
+        Uses the colleague matrix eigenvalue method (Good 1961) via
+        ``numpy.polynomial.chebyshev.chebroots``.  For multi-D interpolants,
+        all dimensions except the target must be fixed at specific values
+        (the interpolant is sliced to 1-D first).
+
+        Parameters
+        ----------
+        dim : int or None
+            Dimension along which to find roots.  For 1-D interpolants,
+            defaults to 0.
+        fixed : dict or None
+            For multi-D interpolants, a dict ``{dim_index: value}`` for
+            **all** dimensions except *dim*.
+
+        Returns
+        -------
+        ndarray
+            Sorted array of root locations in the physical domain.
+
+        Raises
+        ------
+        RuntimeError
+            If ``build()`` has not been called.
+        ValueError
+            If *dim* / *fixed* validation fails or values are out of domain.
+
+        References
+        ----------
+        Good (1961), "The colleague matrix", Quarterly J. Mech. 14:195–196.
+        Trefethen (2013), "Approximation Theory and Approximation Practice",
+        SIAM, Chapter 18.
+        """
+        if self.tensor_values is None:
+            raise RuntimeError("Call build() first")
+
+        from pychebyshev._calculus import _roots_1d, _validate_calculus_args
+
+        dim, slice_params = _validate_calculus_args(
+            self.num_dimensions, dim, fixed, self.domain
+        )
+
+        # Slice to 1D
+        if slice_params:
+            sliced = self.slice(slice_params)
+        else:
+            sliced = self
+
+        return _roots_1d(sliced.tensor_values, sliced.domain[0])
+
+    def minimize(self, dim=None, fixed=None):
+        """Find the minimum value of the interpolant along a dimension.
+
+        Computes derivative roots to locate critical points, then
+        evaluates the interpolant at all critical points and domain
+        endpoints.
+
+        Parameters
+        ----------
+        dim : int or None
+            Dimension along which to minimize.  Defaults to 0 for 1-D.
+        fixed : dict or None
+            For multi-D, dict ``{dim_index: value}`` for all other dims.
+
+        Returns
+        -------
+        (value, location) : (float, float)
+            The minimum value and its coordinate in the target dimension.
+
+        Raises
+        ------
+        RuntimeError
+            If ``build()`` has not been called.
+        ValueError
+            If *dim* / *fixed* validation fails.
+
+        References
+        ----------
+        Trefethen (2013), "Approximation Theory and Approximation Practice",
+        SIAM, Chapter 18.
+        """
+        if self.tensor_values is None:
+            raise RuntimeError("Call build() first")
+
+        from pychebyshev._calculus import _optimize_1d, _validate_calculus_args
+
+        dim, slice_params = _validate_calculus_args(
+            self.num_dimensions, dim, fixed, self.domain
+        )
+
+        if slice_params:
+            sliced = self.slice(slice_params)
+        else:
+            sliced = self
+
+        return _optimize_1d(
+            sliced.tensor_values, sliced.nodes[0], sliced.weights[0],
+            sliced.diff_matrices[0], sliced.domain[0], mode="min",
+        )
+
+    def maximize(self, dim=None, fixed=None):
+        """Find the maximum value of the interpolant along a dimension.
+
+        Computes derivative roots to locate critical points, then
+        evaluates the interpolant at all critical points and domain
+        endpoints.
+
+        Parameters
+        ----------
+        dim : int or None
+            Dimension along which to maximize.  Defaults to 0 for 1-D.
+        fixed : dict or None
+            For multi-D, dict ``{dim_index: value}`` for all other dims.
+
+        Returns
+        -------
+        (value, location) : (float, float)
+            The maximum value and its coordinate in the target dimension.
+
+        Raises
+        ------
+        RuntimeError
+            If ``build()`` has not been called.
+        ValueError
+            If *dim* / *fixed* validation fails.
+
+        References
+        ----------
+        Trefethen (2013), "Approximation Theory and Approximation Practice",
+        SIAM, Chapter 18.
+        """
+        if self.tensor_values is None:
+            raise RuntimeError("Call build() first")
+
+        from pychebyshev._calculus import _optimize_1d, _validate_calculus_args
+
+        dim, slice_params = _validate_calculus_args(
+            self.num_dimensions, dim, fixed, self.domain
+        )
+
+        if slice_params:
+            sliced = self.slice(slice_params)
+        else:
+            sliced = self
+
+        return _optimize_1d(
+            sliced.tensor_values, sliced.nodes[0], sliced.weights[0],
+            sliced.diff_matrices[0], sliced.domain[0], mode="max",
+        )
+
+    # ------------------------------------------------------------------
     # Arithmetic operators
     # ------------------------------------------------------------------
 

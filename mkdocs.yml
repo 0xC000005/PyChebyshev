@@ -57,6 +57,7 @@ nav:
       - Tensor Train: user-guide/tensor-train.md
       - Chebyshev Algebra: user-guide/algebra.md
       - Extrusion & Slicing: user-guide/extrude-slice.md
+      - Chebyshev Calculus: user-guide/calculus.md
       - Error Estimation: user-guide/error-estimation.md
   - API Reference: api/reference.md
   - Benchmarks: benchmarks.md

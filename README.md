@@ -69,6 +69,7 @@ The convergence plots demonstrate exponential error decay as node count increase
 - **Sliding technique** via `ChebyshevSlider` — additive decomposition for separable high-dimensional functions
 - **Arithmetic operators** (`+`, `-`, `*`, `/`) — combine interpolants into portfolio-level proxies with no re-evaluation
 - **Extrusion & slicing** — add or fix dimensions to combine interpolants across different risk-factor sets
+- **Integration, rootfinding & optimization** — spectral calculus directly on interpolants, no re-evaluation needed
 - **Analytical derivatives** via spectral differentiation matrices (no finite differences)
 - **Vectorized evaluation** using BLAS matrix-vector products (~0.065ms/query)
 - **Pure Python** — NumPy + SciPy only, no compiled extensions needed

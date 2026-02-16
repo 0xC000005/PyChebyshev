@@ -5,6 +5,26 @@ All notable changes to PyChebyshev will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [0.9.0] - 2026-02-15
+
+### Added
+
+- `integrate()` method on `ChebyshevApproximation` and `ChebyshevSpline` for
+  definite integration via Fejér-1 quadrature (Waldvogel 2006), with O(n log n)
+  weight computation via DCT-III and O(n^d) multi-D contraction via BLAS.
+- `roots()` method on `ChebyshevApproximation` and `ChebyshevSpline` for finding
+  all real roots along a dimension via companion matrix eigenvalues
+  (`numpy.polynomial.chebyshev.chebroots`).
+- `minimize()` / `maximize()` methods on `ChebyshevApproximation` and
+  `ChebyshevSpline` for global optimization via derivative rootfinding and
+  endpoint evaluation.
+- Partial integration returns a lower-dimensional `ChebyshevApproximation`
+  (analogous to `slice()`).
+- Internal `_calculus.py` module with shared helpers for Fejér-1 weights,
+  1-D rootfinding, and 1-D optimization.
+- New documentation page: Chebyshev Calculus (integration, roots, optimization).
+- 52 new tests for calculus operations (test_calculus.py).
+
 ## [0.8.0] - 2026-02-15
 
 ### Added

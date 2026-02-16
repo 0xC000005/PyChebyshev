@@ -252,3 +252,34 @@ def algebra_slider_g():
                          [[0], [1], [2]], [0.0, 0.0, 0.0])
     sl.build(verbose=False)
     return sl
+
+
+# ---------------------------------------------------------------------------
+# Calculus Fixtures
+# ---------------------------------------------------------------------------
+
+@pytest.fixture(scope="module")
+def calculus_cheb_sin_1d():
+    """1D sin(x) on [0, pi], 15 nodes — integral = 2."""
+    def f(x, _): return math.sin(x[0])
+    cheb = ChebyshevApproximation(f, 1, [[0, math.pi]], [15])
+    cheb.build(verbose=False)
+    return cheb
+
+
+@pytest.fixture(scope="module")
+def calculus_cheb_2d():
+    """2D sin(x)+cos(y) on [-1,1]^2, [11,11] nodes."""
+    def f(x, _): return math.sin(x[0]) + math.cos(x[1])
+    cheb = ChebyshevApproximation(f, 2, [[-1, 1], [-1, 1]], [11, 11])
+    cheb.build(verbose=False)
+    return cheb
+
+
+@pytest.fixture(scope="module")
+def calculus_spline_abs():
+    """1D |x| on [-1,1] with knot at 0, 11 nodes — integral = 1."""
+    def f(x, _): return abs(x[0])
+    sp = ChebyshevSpline(f, 1, [[-1, 1]], [11], [[0.0]])
+    sp.build(verbose=False)
+    return sp

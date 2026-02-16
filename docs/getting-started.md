@@ -118,6 +118,7 @@ See [Saving & Loading](user-guide/serialization.md) for details.
 - [Computing Greeks](user-guide/greeks.md) -- analytical derivatives for pricing
 - [Chebyshev Algebra](user-guide/algebra.md) -- combine interpolants via `+`, `-`, `*`, `/`
 - [Extrusion & Slicing](user-guide/extrude-slice.md) -- add/fix dimensions to combine interpolants on different risk-factor sets
+- [Chebyshev Calculus](user-guide/calculus.md) -- integration, rootfinding & optimization on interpolants
 - [Error Estimation](user-guide/error-estimation.md) -- validate accuracy without test points
 - [Saving & Loading](user-guide/serialization.md) -- persist built interpolants
 - [Benchmarks](benchmarks.md) -- performance comparison with MoCaX C++

@@ -12,7 +12,7 @@ PyChebyshev is a pip-installable Python library for multi-dimensional Chebyshev 
 # Setup
 uv sync
 
-# Run tests (~318 tests, ~120s due to 5D Black-Scholes builds)
+# Run tests (~370 tests, ~120s due to 5D Black-Scholes builds)
 uv run pytest tests/ -v
 
 # Run a single test
@@ -37,14 +37,15 @@ uv run python compare_methods_time_accuracy.py
 
 ### Library (`src/pychebyshev/`)
 
-The installable package. Public classes: `ChebyshevApproximation`, `ChebyshevSpline`, `ChebyshevSlider`, and `ChebyshevTT`. Arithmetic operators (`+`, `-`, `*`, `/`) enable algebraic combination of interpolants sharing the same grid. `extrude()` and `slice()` enable dimension manipulation for combining interpolants across different risk-factor sets.
+The installable package. Public classes: `ChebyshevApproximation`, `ChebyshevSpline`, `ChebyshevSlider`, and `ChebyshevTT`. Arithmetic operators (`+`, `-`, `*`, `/`) enable algebraic combination of interpolants sharing the same grid. `extrude()` and `slice()` enable dimension manipulation for combining interpolants across different risk-factor sets. `integrate()`, `roots()`, `minimize()`, `maximize()` provide spectral calculus operations.
 
-- **`barycentric.py`** — Core implementation. `ChebyshevApproximation` class with `build()`, `eval()`, `vectorized_eval()`, `vectorized_eval_multi()`. Key insight: barycentric weights depend only on node positions (not function values), enabling full pre-computation. `vectorized_eval()` uses a reshape trick to route N-D tensor contractions through BLAS GEMV (~0.065ms/query). `vectorized_eval_multi()` shares barycentric weight computation across price + derivatives (~0.29ms for 6 outputs). `fast_eval()` exists but is deprecated (JIT path, ~150x slower than BLAS).
-- **`spline.py`** — `ChebyshevSpline` class for piecewise Chebyshev interpolation with user-specified knots at singularities. Partitions the domain into sub-intervals and builds an independent `ChebyshevApproximation` on each piece. Restores spectral convergence for functions with kinks or discontinuities.
+- **`barycentric.py`** — Core implementation. `ChebyshevApproximation` class with `build()`, `eval()`, `vectorized_eval()`, `vectorized_eval_multi()`, `integrate()`, `roots()`, `minimize()`, `maximize()`. Key insight: barycentric weights depend only on node positions (not function values), enabling full pre-computation. `vectorized_eval()` uses a reshape trick to route N-D tensor contractions through BLAS GEMV (~0.065ms/query). `vectorized_eval_multi()` shares barycentric weight computation across price + derivatives (~0.29ms for 6 outputs). `fast_eval()` exists but is deprecated (JIT path, ~150x slower than BLAS).
+- **`spline.py`** — `ChebyshevSpline` class for piecewise Chebyshev interpolation with user-specified knots at singularities. Partitions the domain into sub-intervals and builds an independent `ChebyshevApproximation` on each piece. Restores spectral convergence for functions with kinks or discontinuities. Supports `integrate()`, `roots()`, `minimize()`, `maximize()` across pieces.
 - **`slider.py`** — `ChebyshevSlider` class for high-dimensional approximation via the Sliding Technique.
 - **`tensor_train.py`** — `ChebyshevTT` class for Tensor Train Chebyshev interpolation. TT-Cross builds from O(d·n·r²) evaluations with maxvol pivoting, eval caching, and SVD-based adaptive rank. Vectorized batch eval via numpy einsum. FD derivatives.
 - **`_algebra.py`** — Shared helpers for Chebyshev arithmetic operators (compatibility validation, operator dispatch).
 - **`_extrude_slice.py`** — Shared helpers for extrusion and slicing (parameter validation, tensor manipulation, barycentric contraction).
+- **`_calculus.py`** — Shared helpers for Chebyshev calculus (Fejér-1 quadrature weights via DCT-III, companion-matrix rootfinding, 1-D optimization). References: Waldvogel (2006), Trefethen (2013).
 - **`_jit.py`** — Deprecated Numba JIT kernel with pure NumPy fallback. Used only by deprecated `fast_eval()`.
 - **`_version.py`** — Single source of truth for version string.
 
@@ -71,6 +72,7 @@ Not part of the library. Compare Chebyshev barycentric against alternative metho
 - `test_tensor_train.py` — 35 tests: TT-Cross/TT-SVD accuracy, batch eval, FD derivatives, rank control, serialization, error estimation.
 - `test_algebra.py` — 77 tests: arithmetic operators for ChebyshevApproximation, ChebyshevSpline, and ChebyshevSlider; batch/multi eval; compatibility error handling; portfolio use cases.
 - `test_extrude_slice.py` — 63 tests: extrusion and slicing for ChebyshevApproximation, ChebyshevSpline, and ChebyshevSlider; round-trip identity; derivatives; serialization; portfolio via extrude+algebra; edge cases (min nodes, boundary slicing, batch/multi eval, error estimates).
+- `test_calculus.py` — 52 tests: integration, rootfinding, and optimization for ChebyshevApproximation and ChebyshevSpline; 1-D and multi-D; partial integration; spline piece merging; edge cases.
 
 ### CI/CD (`.github/workflows/`)
 
