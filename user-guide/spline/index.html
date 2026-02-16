@@ -958,6 +958,50 @@
   
 </li>
       
+        <li class="md-nav__item">
+  <a href="#pychebyshev.spline.ChebyshevSpline.integrate" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        integrate
+      
+    </span>
+  </a>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#pychebyshev.spline.ChebyshevSpline.roots" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        roots
+      
+    </span>
+  </a>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#pychebyshev.spline.ChebyshevSpline.minimize" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        minimize
+      
+    </span>
+  </a>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#pychebyshev.spline.ChebyshevSpline.maximize" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        maximize
+      
+    </span>
+  </a>
+  
+</li>
+      
     </ul>
   
 </nav>
@@ -1038,6 +1082,34 @@
     
   
     Extrusion & Slicing
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../calculus/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Chebyshev Calculus
   
 
     
@@ -1563,6 +1635,50 @@
     <span class="md-ellipsis">
       
         slice
+      
+    </span>
+  </a>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#pychebyshev.spline.ChebyshevSpline.integrate" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        integrate
+      
+    </span>
+  </a>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#pychebyshev.spline.ChebyshevSpline.roots" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        roots
+      
+    </span>
+  </a>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#pychebyshev.spline.ChebyshevSpline.minimize" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        minimize
+      
+    </span>
+  </a>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#pychebyshev.spline.ChebyshevSpline.maximize" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        maximize
       
     </span>
   </a>
@@ -3097,6 +3213,482 @@ The result has <code>function=None</code> and <code>build_time=0.0</code>.</p>
               <div class="doc-md-description">
                 <p>If a slice value is outside the domain, if slicing all
 dimensions, or if <code>dim_index</code> is out of range or duplicated.</p>
+              </div>
+            </td>
+          </tr>
+      </tbody>
+    </table>
+
+
+    </div>
+
+</div>
+
+<div class="doc doc-object doc-function">
+
+
+<h2 id="pychebyshev.spline.ChebyshevSpline.integrate" class="doc doc-heading">
+            <code class="highlight language-python"><span class="n">integrate</span><span class="p">(</span><span class="n">dims</span><span class="o">=</span><span class="kc">None</span><span class="p">)</span></code>
+
+<a href="#pychebyshev.spline.ChebyshevSpline.integrate" class="headerlink" title="Permanent link">&para;</a></h2>
+
+
+    <div class="doc doc-contents ">
+
+        <p>Integrate the spline over one or more dimensions.</p>
+<p>For full integration, sums the integrals of each piece (pieces
+cover disjoint sub-domains).  For partial integration, pieces
+along the integrated dimension are summed and the result is a
+lower-dimensional spline.</p>
+
+
+<p><span class="doc-section-title">Parameters:</span></p>
+    <table>
+      <thead>
+        <tr>
+          <th>Name</th>
+          <th>Type</th>
+          <th>Description</th>
+          <th>Default</th>
+        </tr>
+      </thead>
+      <tbody>
+          <tr class="doc-section-item">
+            <td>
+                <code>dims</code>
+            </td>
+            <td>
+                  <code>int, list of int, or None</code>
+            </td>
+            <td>
+              <div class="doc-md-description">
+                <p>Dimensions to integrate out.  If <code>None</code>, integrates over
+<strong>all</strong> dimensions and returns a scalar.</p>
+              </div>
+            </td>
+            <td>
+                  <code>None</code>
+            </td>
+          </tr>
+      </tbody>
+    </table>
+
+
+    <p><span class="doc-section-title">Returns:</span></p>
+    <table>
+      <thead>
+        <tr>
+          <th>Type</th>
+          <th>Description</th>
+        </tr>
+      </thead>
+      <tbody>
+          <tr class="doc-section-item">
+            <td>
+                  <code><span title="float">float</span> or <a class="autorefs autorefs-internal" title="pychebyshev.spline.ChebyshevSpline" href="#pychebyshev.spline.ChebyshevSpline">ChebyshevSpline</a></code>
+            </td>
+            <td>
+              <div class="doc-md-description">
+                <p>Scalar for full integration; lower-dimensional spline for
+partial integration.</p>
+              </div>
+            </td>
+          </tr>
+      </tbody>
+    </table>
+
+
+<p><span class="doc-section-title">Raises:</span></p>
+    <table>
+      <thead>
+        <tr>
+          <th>Type</th>
+          <th>Description</th>
+        </tr>
+      </thead>
+      <tbody>
+          <tr class="doc-section-item">
+            <td>
+                  <code><span title="RuntimeError">RuntimeError</span></code>
+            </td>
+            <td>
+              <div class="doc-md-description">
+                <p>If <code>build()</code> has not been called.</p>
+              </div>
+            </td>
+          </tr>
+          <tr class="doc-section-item">
+            <td>
+                  <code><span title="ValueError">ValueError</span></code>
+            </td>
+            <td>
+              <div class="doc-md-description">
+                <p>If any dimension index is out of range or duplicated.</p>
+              </div>
+            </td>
+          </tr>
+      </tbody>
+    </table>
+
+
+    </div>
+
+</div>
+
+<div class="doc doc-object doc-function">
+
+
+<h2 id="pychebyshev.spline.ChebyshevSpline.roots" class="doc doc-heading">
+            <code class="highlight language-python"><span class="n">roots</span><span class="p">(</span><span class="n">dim</span><span class="o">=</span><span class="kc">None</span><span class="p">,</span> <span class="n">fixed</span><span class="o">=</span><span class="kc">None</span><span class="p">)</span></code>
+
+<a href="#pychebyshev.spline.ChebyshevSpline.roots" class="headerlink" title="Permanent link">&para;</a></h2>
+
+
+    <div class="doc doc-contents ">
+
+        <p>Find all roots of the spline along a specified dimension.</p>
+<p>Slices the spline to 1-D, then finds roots in each piece and
+merges the results.</p>
+
+
+<p><span class="doc-section-title">Parameters:</span></p>
+    <table>
+      <thead>
+        <tr>
+          <th>Name</th>
+          <th>Type</th>
+          <th>Description</th>
+          <th>Default</th>
+        </tr>
+      </thead>
+      <tbody>
+          <tr class="doc-section-item">
+            <td>
+                <code>dim</code>
+            </td>
+            <td>
+                  <code><span title="int">int</span> or None</code>
+            </td>
+            <td>
+              <div class="doc-md-description">
+                <p>Dimension along which to find roots.</p>
+              </div>
+            </td>
+            <td>
+                  <code>None</code>
+            </td>
+          </tr>
+          <tr class="doc-section-item">
+            <td>
+                <code>fixed</code>
+            </td>
+            <td>
+                  <code><span title="dict">dict</span> or None</code>
+            </td>
+            <td>
+              <div class="doc-md-description">
+                <p>For multi-D, dict <code>{dim_index: value}</code> for all other dims.</p>
+              </div>
+            </td>
+            <td>
+                  <code>None</code>
+            </td>
+          </tr>
+      </tbody>
+    </table>
+
+
+    <p><span class="doc-section-title">Returns:</span></p>
+    <table>
+      <thead>
+        <tr>
+          <th>Type</th>
+          <th>Description</th>
+        </tr>
+      </thead>
+      <tbody>
+          <tr class="doc-section-item">
+            <td>
+                  <code><span title="ndarray">ndarray</span></code>
+            </td>
+            <td>
+              <div class="doc-md-description">
+                <p>Sorted array of root locations in the physical domain.</p>
+              </div>
+            </td>
+          </tr>
+      </tbody>
+    </table>
+
+
+<p><span class="doc-section-title">Raises:</span></p>
+    <table>
+      <thead>
+        <tr>
+          <th>Type</th>
+          <th>Description</th>
+        </tr>
+      </thead>
+      <tbody>
+          <tr class="doc-section-item">
+            <td>
+                  <code><span title="RuntimeError">RuntimeError</span></code>
+            </td>
+            <td>
+              <div class="doc-md-description">
+                <p>If <code>build()</code> has not been called.</p>
+              </div>
+            </td>
+          </tr>
+          <tr class="doc-section-item">
+            <td>
+                  <code><span title="ValueError">ValueError</span></code>
+            </td>
+            <td>
+              <div class="doc-md-description">
+                <p>If <em>dim</em> / <em>fixed</em> validation fails.</p>
+              </div>
+            </td>
+          </tr>
+      </tbody>
+    </table>
+
+
+    </div>
+
+</div>
+
+<div class="doc doc-object doc-function">
+
+
+<h2 id="pychebyshev.spline.ChebyshevSpline.minimize" class="doc doc-heading">
+            <code class="highlight language-python"><span class="n">minimize</span><span class="p">(</span><span class="n">dim</span><span class="o">=</span><span class="kc">None</span><span class="p">,</span> <span class="n">fixed</span><span class="o">=</span><span class="kc">None</span><span class="p">)</span></code>
+
+<a href="#pychebyshev.spline.ChebyshevSpline.minimize" class="headerlink" title="Permanent link">&para;</a></h2>
+
+
+    <div class="doc doc-contents ">
+
+        <p>Find the minimum value of the spline along a dimension.</p>
+
+
+<p><span class="doc-section-title">Parameters:</span></p>
+    <table>
+      <thead>
+        <tr>
+          <th>Name</th>
+          <th>Type</th>
+          <th>Description</th>
+          <th>Default</th>
+        </tr>
+      </thead>
+      <tbody>
+          <tr class="doc-section-item">
+            <td>
+                <code>dim</code>
+            </td>
+            <td>
+                  <code><span title="int">int</span> or None</code>
+            </td>
+            <td>
+              <div class="doc-md-description">
+                <p>Dimension along which to minimize.</p>
+              </div>
+            </td>
+            <td>
+                  <code>None</code>
+            </td>
+          </tr>
+          <tr class="doc-section-item">
+            <td>
+                <code>fixed</code>
+            </td>
+            <td>
+                  <code><span title="dict">dict</span> or None</code>
+            </td>
+            <td>
+              <div class="doc-md-description">
+                <p>For multi-D, dict <code>{dim_index: value}</code> for all other dims.</p>
+              </div>
+            </td>
+            <td>
+                  <code>None</code>
+            </td>
+          </tr>
+      </tbody>
+    </table>
+
+
+    <p><span class="doc-section-title">Returns:</span></p>
+    <table>
+      <thead>
+        <tr>
+          <th>Type</th>
+          <th>Description</th>
+        </tr>
+      </thead>
+      <tbody>
+          <tr class="doc-section-item">
+            <td>
+                  <code>(value, location) : (float, float)</code>
+            </td>
+            <td>
+              <div class="doc-md-description">
+                
+              </div>
+            </td>
+          </tr>
+      </tbody>
+    </table>
+
+
+<p><span class="doc-section-title">Raises:</span></p>
+    <table>
+      <thead>
+        <tr>
+          <th>Type</th>
+          <th>Description</th>
+        </tr>
+      </thead>
+      <tbody>
+          <tr class="doc-section-item">
+            <td>
+                  <code><span title="RuntimeError">RuntimeError</span></code>
+            </td>
+            <td>
+              <div class="doc-md-description">
+                <p>If <code>build()</code> has not been called.</p>
+              </div>
+            </td>
+          </tr>
+          <tr class="doc-section-item">
+            <td>
+                  <code><span title="ValueError">ValueError</span></code>
+            </td>
+            <td>
+              <div class="doc-md-description">
+                <p>If <em>dim</em> / <em>fixed</em> validation fails.</p>
+              </div>
+            </td>
+          </tr>
+      </tbody>
+    </table>
+
+
+    </div>
+
+</div>
+
+<div class="doc doc-object doc-function">
+
+
+<h2 id="pychebyshev.spline.ChebyshevSpline.maximize" class="doc doc-heading">
+            <code class="highlight language-python"><span class="n">maximize</span><span class="p">(</span><span class="n">dim</span><span class="o">=</span><span class="kc">None</span><span class="p">,</span> <span class="n">fixed</span><span class="o">=</span><span class="kc">None</span><span class="p">)</span></code>
+
+<a href="#pychebyshev.spline.ChebyshevSpline.maximize" class="headerlink" title="Permanent link">&para;</a></h2>
+
+
+    <div class="doc doc-contents ">
+
+        <p>Find the maximum value of the spline along a dimension.</p>
+
+
+<p><span class="doc-section-title">Parameters:</span></p>
+    <table>
+      <thead>
+        <tr>
+          <th>Name</th>
+          <th>Type</th>
+          <th>Description</th>
+          <th>Default</th>
+        </tr>
+      </thead>
+      <tbody>
+          <tr class="doc-section-item">
+            <td>
+                <code>dim</code>
+            </td>
+            <td>
+                  <code><span title="int">int</span> or None</code>
+            </td>
+            <td>
+              <div class="doc-md-description">
+                <p>Dimension along which to maximize.</p>
+              </div>
+            </td>
+            <td>
+                  <code>None</code>
+            </td>
+          </tr>
+          <tr class="doc-section-item">
+            <td>
+                <code>fixed</code>
+            </td>
+            <td>
+                  <code><span title="dict">dict</span> or None</code>
+            </td>
+            <td>
+              <div class="doc-md-description">
+                <p>For multi-D, dict <code>{dim_index: value}</code> for all other dims.</p>
+              </div>
+            </td>
+            <td>
+                  <code>None</code>
+            </td>
+          </tr>
+      </tbody>
+    </table>
+
+
+    <p><span class="doc-section-title">Returns:</span></p>
+    <table>
+      <thead>
+        <tr>
+          <th>Type</th>
+          <th>Description</th>
+        </tr>
+      </thead>
+      <tbody>
+          <tr class="doc-section-item">
+            <td>
+                  <code>(value, location) : (float, float)</code>
+            </td>
+            <td>
+              <div class="doc-md-description">
+                
+              </div>
+            </td>
+          </tr>
+      </tbody>
+    </table>
+
+
+<p><span class="doc-section-title">Raises:</span></p>
+    <table>
+      <thead>
+        <tr>
+          <th>Type</th>
+          <th>Description</th>
+        </tr>
+      </thead>
+      <tbody>
+          <tr class="doc-section-item">
+            <td>
+                  <code><span title="RuntimeError">RuntimeError</span></code>
+            </td>
+            <td>
+              <div class="doc-md-description">
+                <p>If <code>build()</code> has not been called.</p>
+              </div>
+            </td>
+          </tr>
+          <tr class="doc-section-item">
+            <td>
+                  <code><span title="ValueError">ValueError</span></code>
+            </td>
+            <td>
+              <div class="doc-md-description">
+                <p>If <em>dim</em> / <em>fixed</em> validation fails.</p>
               </div>
             </td>
           </tr>
