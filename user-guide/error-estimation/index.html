@@ -1188,10 +1188,11 @@ when possible.</p>
 </div>
 <h3 id="computing-coefficients-via-dct-ii">Computing coefficients via DCT-II<a class="headerlink" href="#computing-coefficients-via-dct-ii" title="Permanent link">&para;</a></h3>
 <p>PyChebyshev uses <strong>Type I Chebyshev nodes</strong> (roots of <span class="arithmatex">\(T_n\)</span>, also called
-Gauss--Chebyshev nodes):</p>
+Gauss--Chebyshev nodes; see Trefethen 2013, Ch. 3):</p>
 <div class="arithmatex">\[x_i = \cos\!\left(\frac{(2i - 1)\,\pi}{2n}\right), \quad i = 1, \ldots, n\]</div>
 <p>For values sampled at these <span class="arithmatex">\(n\)</span> nodes, the Chebyshev expansion coefficients <span class="arithmatex">\(c_k\)</span> can
-be recovered exactly via the <strong>Discrete Cosine Transform (DCT-II)</strong>.</p>
+be recovered exactly via the <strong>Discrete Cosine Transform (DCT-II)</strong> (Good 1961;
+Trefethen 2013, Ch. 3).</p>
 <p><strong>Why DCT-II works.</strong> The connection comes from the orthogonality of Chebyshev
 polynomials. Evaluating <span class="arithmatex">\(T_k(x_i)\)</span> at the Type I nodes and exploiting the identity
 <span class="arithmatex">\(T_k(\cos\theta) = \cos(k\theta)\)</span> turns the coefficient formula into a discrete
@@ -1208,7 +1209,8 @@ cosine sum -- precisely the DCT-II. The computation runs in <span class="arithma
 <h3 id="reference">Reference<a class="headerlink" href="#reference" title="Permanent link">&para;</a></h3>
 <p>This error estimation approach follows the <em>ex ante</em> method described in
 Ruiz &amp; Zeron, <em>Machine Learning for Risk Calculations</em>, Wiley Finance, 2021,
-Section 3.4.</p>
+Section 3.4. For the underlying Chebyshev coefficient theory, see Trefethen
+(2013), Chapters 3--4.</p>
 <h2 id="multi-dimensional-error">Multi-Dimensional Error<a class="headerlink" href="#multi-dimensional-error" title="Permanent link">&para;</a></h2>
 <p>For a <span class="arithmatex">\(D\)</span>-dimensional interpolant on a tensor grid with <span class="arithmatex">\(n_d\)</span> nodes in dimension
 <span class="arithmatex">\(d\)</span>, the error estimate generalizes as follows:</p>
@@ -1225,10 +1227,10 @@ Section 3.4.</p>
 </ol>
 <div class="arithmatex">\[\hat{E} = \sum_{d=1}^{D} \max_{\text{slices along } d} |c_{n_d - 1}|\]</div>
 <p><strong>Why sum across dimensions?</strong> PyChebyshev evaluates a multi-dimensional interpolant
-via <em>dimensional decomposition</em> -- contracting one axis at a time (see
-<a href="../concepts/#multi-dimensional-extension">Multi-Dimensional Extension</a>). At each
-contraction step, the 1-D interpolation error for that dimension is injected into
-the remaining computation. In the worst case, these per-dimension errors add up.
+via <em>dimensional decomposition</em> -- contracting one axis at a time (Berrut &amp;
+Trefethen 2004; see also <a href="../concepts/#multi-dimensional-extension">Multi-Dimensional Extension</a>).
+At each contraction step, the 1-D interpolation error for that dimension is injected
+into the remaining computation. In the worst case, these per-dimension errors add up.
 The summation therefore represents a <strong>conservative heuristic</strong>: the total error is
 at most the sum of the worst per-dimension errors, assuming the errors do not cancel.</p>
 <div class="admonition note">

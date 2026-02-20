@@ -772,6 +772,17 @@
 </li>
       
         <li class="md-nav__item">
+  <a href="#references" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        References
+      
+    </span>
+  </a>
+  
+</li>
+      
+        <li class="md-nav__item">
   <a href="#limitations" class="md-nav__link">
     <span class="md-ellipsis">
       
@@ -1505,6 +1516,17 @@
 </li>
       
         <li class="md-nav__item">
+  <a href="#references" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        References
+      
+    </span>
+  </a>
+  
+</li>
+      
+        <li class="md-nav__item">
   <a href="#limitations" class="md-nav__link">
     <span class="md-ellipsis">
       
@@ -1784,8 +1806,8 @@
 target function has a <strong>discontinuity</strong> or a <strong>kink</strong>, this advantage disappears.</p>
 <p><strong>Jump discontinuities.</strong>  For a function <span class="arithmatex">\(f\)</span> with a jump discontinuity at
 <span class="arithmatex">\(c \in (a, b)\)</span>, the Chebyshev interpolant converges only as <span class="arithmatex">\(O(1/n)\)</span> pointwise
-away from <span class="arithmatex">\(c\)</span>.  Near <span class="arithmatex">\(c\)</span>, oscillations persist regardless of how many nodes you
-add -- this is the classical <strong>Gibbs phenomenon</strong>.</p>
+away from <span class="arithmatex">\(c\)</span> (Trefethen 2013, Ch. 9).  Near <span class="arithmatex">\(c\)</span>, oscillations persist
+regardless of how many nodes you add -- this is the classical <strong>Gibbs phenomenon</strong>.</p>
 <p><strong>Kinks.</strong>  For a function that is continuous but whose derivative is discontinuous
 at <span class="arithmatex">\(c\)</span> -- for example <span class="arithmatex">\(|x|\)</span> at <span class="arithmatex">\(x = 0\)</span> or a call payoff
 <span class="arithmatex">\(\max(S - K, 0)\)</span> at <span class="arithmatex">\(S = K\)</span> -- the situation is better but still algebraic:
@@ -1805,7 +1827,7 @@ interpolation to such functions wastes nodes fighting the Gibbs oscillations ins
 of refining the smooth parts of the function.</p>
 <h2 id="why-piecewise-chebyshev-restores-spectral-convergence">Why Piecewise Chebyshev Restores Spectral Convergence<a class="headerlink" href="#why-piecewise-chebyshev-restores-spectral-convergence" title="Permanent link">&para;</a></h2>
 <p>The key to understanding why piecewise interpolation helps lies in the
-<strong>Bernstein ellipse theorem</strong>.</p>
+<strong>Bernstein ellipse theorem</strong> (Trefethen 2013, Ch. 8).</p>
 <h3 id="the-bernstein-ellipse">The Bernstein ellipse<a class="headerlink" href="#the-bernstein-ellipse" title="Permanent link">&para;</a></h3>
 <p>For a function <span class="arithmatex">\(f\)</span> analytic in the interior of the <strong>Bernstein ellipse</strong>
 <span class="arithmatex">\(\mathcal{E}_\rho\)</span> -- the ellipse in the complex plane with foci at <span class="arithmatex">\(\pm 1\)</span>
@@ -2082,6 +2104,13 @@ step and groups points by piece:</p>
 <p>The original function is <strong>not</strong> saved -- only the numerical data needed for
 evaluation.  Assign a new function before calling <code>build()</code> again if a rebuild
 is desired.</p>
+<h2 id="references">References<a class="headerlink" href="#references" title="Permanent link">&para;</a></h2>
+<ul>
+<li>Ruiz, G. &amp; Zeron, M. (2021). <em>Machine Learning for Risk Calculations.</em>
+  Wiley Finance. Section 3.8.</li>
+<li>Trefethen, L. N. (2013). <em>Approximation Theory and Approximation Practice.</em>
+  SIAM. Chapters 8--9.</li>
+</ul>
 <h2 id="limitations">Limitations<a class="headerlink" href="#limitations" title="Permanent link">&para;</a></h2>
 <ul>
 <li>

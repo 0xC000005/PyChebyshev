@@ -1344,9 +1344,11 @@ along <span class="arithmatex">\(k\)</span>:</p>
 <span class="arithmatex">\(\sum_j v \cdot \ell_j(x^*) = v \cdot 1 = v\)</span>.</p>
 <h3 id="error-bounds">Error Bounds<a class="headerlink" href="#error-bounds" title="Permanent link">&para;</a></h3>
 <ul>
-<li><strong>Extrusion</strong>: No approximation error introduced (exact operation).</li>
+<li><strong>Extrusion</strong>: No approximation error introduced (exact operation), following
+  directly from the partition of unity (Berrut &amp; Trefethen 2004).</li>
 <li><strong>Slicing</strong>: The sliced CT evaluates the polynomial interpolant at <span class="arithmatex">\(x_k = x^*\)</span>.
-  No additional error beyond the original approximation error:
+  No additional error beyond the original approximation error
+  (Trefethen 2013, Ch. 8):
   if <span class="arithmatex">\(\|f - p\|_\infty \leq \epsilon\)</span>, then
   <span class="arithmatex">\(\|f(\cdot, x^*) - p(\cdot, x^*)\|_\infty \leq \epsilon\)</span>.</li>
 </ul>

@@ -1446,9 +1446,11 @@ depends only on the node positions:</p>
 </tr>
 </tbody>
 </table>
-<p>The function values appear only in <code>tensor_values</code>.  Since <code>from_values()</code>
-computes all of the above from the same node formula as <code>build()</code>, the
-resulting interpolant is <strong>bit-identical</strong> to one built the traditional way.</p>
+<p>The function values appear only in <code>tensor_values</code>.  The Chebyshev nodes are
+the zeros of <span class="arithmatex">\(T_n(x)\)</span>, mapped to each dimension's domain (Trefethen 2013,
+Ch. 3).  Since <code>from_values()</code> computes all of the above from the same node
+formula as <code>build()</code>, the resulting interpolant is <strong>bit-identical</strong> to one
+built the traditional way.</p>
 <h2 id="examples">Examples<a class="headerlink" href="#examples" title="Permanent link">&para;</a></h2>
 <h3 id="1-d-sinx-on-0-pi">1-D: sin(x) on [0, pi]<a class="headerlink" href="#1-d-sinx-on-0-pi" title="Permanent link">&para;</a></h3>
 <div class="highlight"><pre><span></span><code><a id="__codelineno-2-1" name="__codelineno-2-1" href="#__codelineno-2-1"></a><span class="kn">import</span><span class="w"> </span><span class="nn">numpy</span><span class="w"> </span><span class="k">as</span><span class="w"> </span><span class="nn">np</span>

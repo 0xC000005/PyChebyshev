@@ -650,6 +650,17 @@
 </li>
       
         <li class="md-nav__item">
+  <a href="#references" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        References
+      
+    </span>
+  </a>
+  
+</li>
+      
+        <li class="md-nav__item">
   <a href="#api-reference" class="md-nav__link">
     <span class="md-ellipsis">
       
@@ -1207,6 +1218,17 @@
 </li>
       
         <li class="md-nav__item">
+  <a href="#references" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        References
+      
+    </span>
+  </a>
+  
+</li>
+      
+        <li class="md-nav__item">
   <a href="#api-reference" class="md-nav__link">
     <span class="md-ellipsis">
       
@@ -1375,7 +1397,7 @@
 <p>A full tensor Chebyshev interpolant on <span class="arithmatex">\(n\)</span> dimensions with <span class="arithmatex">\(m\)</span> nodes per dimension requires <span class="arithmatex">\(m^n\)</span> function evaluations. For <span class="arithmatex">\(n = 10\)</span> and <span class="arithmatex">\(m = 11\)</span>, that is over 25 billion evaluations — clearly infeasible.</p>
 <p>The sliding technique partitions the dimensions into small groups and builds a separate Chebyshev interpolant (a <strong>slide</strong>) for each group, with all other dimensions fixed at a <strong>pivot point</strong>. The total cost becomes the <em>sum</em> of the group grid sizes rather than their <em>product</em>.</p>
 <h2 id="algorithm">Algorithm<a class="headerlink" href="#algorithm" title="Permanent link">&para;</a></h2>
-<p>Given <span class="arithmatex">\(f: \mathbb{R}^n \to \mathbb{R}\)</span>, a pivot point <span class="arithmatex">\(\mathbf{z} = (z_1, \ldots, z_n)\)</span>, and a partition of dimensions into <span class="arithmatex">\(k\)</span> groups:</p>
+<p>Given <span class="arithmatex">\(f: \mathbb{R}^n \to \mathbb{R}\)</span>, a pivot point <span class="arithmatex">\(\mathbf{z} = (z_1, \ldots, z_n)\)</span>, and a partition of dimensions into <span class="arithmatex">\(k\)</span> groups (Ruiz &amp; Zeron 2021, Ch. 7):</p>
 <ol>
 <li>Evaluate the <strong>pivot value</strong> <span class="arithmatex">\(v = f(\mathbf{z})\)</span>.</li>
 <li>For each group <span class="arithmatex">\(i\)</span>, build a <strong>slide</strong> <span class="arithmatex">\(s_i\)</span> — a Chebyshev interpolant on the group's dimensions, with all other dimensions fixed at their pivot values.</li>
@@ -1478,7 +1500,12 @@ differences for derivatives instead of analytical spectral differentiation.</p>
 </ul>
 <p>This is mathematically correct for the sliding approximation, but may differ from the true function's cross-derivatives. If cross-group sensitivities matter, group those variables together or use full tensor interpolation.</p>
 <h3 id="accuracy-degrades-far-from-pivot">Accuracy degrades far from pivot<a class="headerlink" href="#accuracy-degrades-far-from-pivot" title="Permanent link">&para;</a></h3>
-<p>The sliding approximation is most accurate near the pivot point. As the evaluation point moves away from the pivot in multiple dimensions simultaneously, cross-coupling errors accumulate. For strongly coupled functions like Black-Scholes, this can produce 20-50% errors at domain boundaries.</p>
+<p>The sliding approximation is most accurate near the pivot point. As the evaluation point moves away from the pivot in multiple dimensions simultaneously, cross-coupling errors accumulate. For strongly coupled functions like Black-Scholes, errors of 20--50% at domain boundaries have been observed in numerical experiments (see <code>compare_methods_time_accuracy.py</code> in the repository).</p>
+<h2 id="references">References<a class="headerlink" href="#references" title="Permanent link">&para;</a></h2>
+<ul>
+<li>Ruiz, G. &amp; Zeron, M. (2021). <em>Machine Learning for Risk Calculations.</em>
+  Wiley Finance. Chapter 7.</li>
+</ul>
 <h2 id="api-reference">API Reference<a class="headerlink" href="#api-reference" title="Permanent link">&para;</a></h2>
 
 

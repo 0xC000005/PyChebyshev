@@ -487,6 +487,17 @@
   
 </li>
       
+        <li class="md-nav__item">
+  <a href="#references" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        References
+      
+    </span>
+  </a>
+  
+</li>
+      
     </ul>
   
 </nav>
@@ -963,6 +974,17 @@
   
 </li>
       
+        <li class="md-nav__item">
+  <a href="#references" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        References
+      
+    </span>
+  </a>
+  
+</li>
+      
     </ul>
   
 </nav>
@@ -985,9 +1007,9 @@
 
 <h1 id="mathematical-concepts">Mathematical Concepts<a class="headerlink" href="#mathematical-concepts" title="Permanent link">&para;</a></h1>
 <h2 id="why-chebyshev-interpolation">Why Chebyshev Interpolation?<a class="headerlink" href="#why-chebyshev-interpolation" title="Permanent link">&para;</a></h2>
-<p>Polynomial interpolation with equally-spaced points suffers from <strong>Runge's phenomenon</strong> — wild oscillations near interval endpoints that worsen as polynomial degree increases. Chebyshev nodes solve this by clustering near boundaries:</p>
+<p>Polynomial interpolation with equally-spaced points suffers from <strong>Runge's phenomenon</strong> (Runge 1901) — wild oscillations near interval endpoints that worsen as polynomial degree increases. Chebyshev nodes solve this by clustering near boundaries:</p>
 <div class="arithmatex">\[x_i = \cos\left(\frac{(2i-1)\pi}{2n}\right), \quad i = 1, \ldots, n\]</div>
-<p>The Lebesgue constant for Chebyshev nodes grows only logarithmically: <span class="arithmatex">\(\Lambda_n \leq \frac{2}{\pi}\log(n+1) + 1\)</span>, versus exponential growth for equidistant points.</p>
+<p>The Lebesgue constant for Chebyshev nodes grows only logarithmically: <span class="arithmatex">\(\Lambda_n \leq \frac{2}{\pi}\log(n+1) + 1\)</span> (Trefethen 2013, Ch. 15), versus exponential growth for equidistant points.</p>
 <h2 id="spectral-convergence">Spectral Convergence<a class="headerlink" href="#spectral-convergence" title="Permanent link">&para;</a></h2>
 <p>For functions analytic in a <strong>Bernstein ellipse</strong> with parameter <span class="arithmatex">\(\rho &gt; 1\)</span>, the interpolation error decays exponentially:</p>
 <div class="arithmatex">\[|f(x) - p_N(x)| = O(\rho^{-N})\]</div>
@@ -1006,10 +1028,11 @@ nearest singularity (pole, branch cut, discontinuity) is from the real interval
 <li>Black-Scholes option prices are analytic in all parameters over typical domains,
   giving large <span class="arithmatex">\(\rho\)</span> and rapid convergence with 10--15 nodes per dimension.</li>
 </ul>
-<p>For the full theory, see Trefethen, <em>Approximation Theory and Approximation
-Practice</em>, SIAM 2019, Chapter 8.</p>
+<p>For the full theory, see Trefethen (2013), <em>Approximation Theory and Approximation
+Practice</em>, SIAM, Chapter 8.</p>
 <h2 id="barycentric-interpolation-formula">Barycentric Interpolation Formula<a class="headerlink" href="#barycentric-interpolation-formula" title="Permanent link">&para;</a></h2>
-<p>The interpolating polynomial is expressed as:</p>
+<p>The interpolating polynomial is expressed in the <strong>second-form barycentric formula</strong>
+(Berrut &amp; Trefethen 2004):</p>
 <div class="arithmatex">\[p(x) = \frac{\sum_{i=0}^{n} \frac{w_i f_i}{x - x_i}}{\sum_{i=0}^{n} \frac{w_i}{x - x_i}}\]</div>
 <p>where the barycentric weights <span class="arithmatex">\(w_i = 1 / \prod_{j \neq i}(x_i - x_j)\)</span> depend <strong>only on node positions</strong>, not on function values. This enables full pre-computation.</p>
 <h2 id="multi-dimensional-extension">Multi-Dimensional Extension<a class="headerlink" href="#multi-dimensional-extension" title="Permanent link">&para;</a></h2>
@@ -1021,9 +1044,19 @@ Practice</em>, SIAM 2019, Chapter 8.</p>
 </ol>
 <p>This avoids the curse of dimensionality in the evaluation step — query cost scales linearly with the number of dimensions.</p>
 <h2 id="analytical-derivatives">Analytical Derivatives<a class="headerlink" href="#analytical-derivatives" title="Permanent link">&para;</a></h2>
-<p>Derivatives are computed using <strong>spectral differentiation matrices</strong> <span class="arithmatex">\(D^{(k)}\)</span>:</p>
+<p>Derivatives are computed using <strong>spectral differentiation matrices</strong> <span class="arithmatex">\(D^{(k)}\)</span>
+(Berrut &amp; Trefethen 2004, §9):</p>
 <div class="arithmatex">\[D^{(1)}_{ij} = \frac{w_j / w_i}{x_i - x_j} \quad (i \neq j), \qquad D^{(1)}_{ii} = -\sum_{k \neq i} D^{(1)}_{ik}\]</div>
 <p>Given function values <span class="arithmatex">\(\mathbf{f}\)</span> at nodes, <span class="arithmatex">\(D^{(1)} \mathbf{f}\)</span> gives exact derivative values at those same nodes. These derivative values are then interpolated to the query point using the barycentric formula.</p>
+<h2 id="references">References<a class="headerlink" href="#references" title="Permanent link">&para;</a></h2>
+<ul>
+<li>Berrut, J.-P. &amp; Trefethen, L. N. (2004). "Barycentric Lagrange Interpolation."
+  <em>SIAM Review</em> 46(3):501--517.</li>
+<li>Runge, C. (1901). "Über empirische Funktionen und die Interpolation zwischen
+  äquidistanten Ordinaten." <em>Zeitschrift für Mathematik und Physik</em> 46:224--243.</li>
+<li>Trefethen, L. N. (2013). <em>Approximation Theory and Approximation Practice.</em>
+  SIAM.</li>
+</ul>
 
 
 

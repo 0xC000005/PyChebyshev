@@ -1006,11 +1006,12 @@ is the derivative order with respect to that dimension.</p>
 <p>This provides <strong>exact derivatives of the interpolating polynomial</strong>. Because the
 differentiation matrix computes derivatives of the degree-<span class="arithmatex">\(n\)</span> polynomial <span class="arithmatex">\(p(x)\)</span>
 exactly (within machine precision), and <span class="arithmatex">\(p(x)\)</span> converges spectrally to <span class="arithmatex">\(f(x)\)</span>,
-the derivative <span class="arithmatex">\(p'(x)\)</span> also converges spectrally to <span class="arithmatex">\(f'(x)\)</span>.</p>
+the derivative <span class="arithmatex">\(p'(x)\)</span> also converges spectrally to <span class="arithmatex">\(f'(x)\)</span>
+(Trefethen 2013, Ch. 11).</p>
 <p>See <a href="https://people.maths.ox.ac.uk/trefethen/barycentric.pdf">Berrut &amp; Trefethen (2004)</a>
 for the derivation of the differentiation matrix formulas. For the full theory of
-spectral differentiation, see Trefethen, <em>Approximation Theory and Approximation
-Practice</em>, SIAM 2019, Chapter 11.</p>
+spectral differentiation, see Trefethen (2013), <em>Approximation Theory and Approximation
+Practice</em>, SIAM, Chapter 11.</p>
 <div class="admonition note">
 <p class="admonition-title">Tensor Train derivatives</p>
 <p><code>ChebyshevTT</code> uses <strong>finite differences</strong> instead of analytical derivatives,

@@ -1164,8 +1164,8 @@ depends on (spot, rate) while Trade B depends on (spot, vol)), use
 <div class="arithmatex">\[
 p_n(\mathbf{x}) = \sum_{i_1, \ldots, i_d} v_{i_1, \ldots, i_d} \prod_{k=1}^{d} \ell^{(k)}_{i_k}(x_k)
 \]</div>
-<p>where <span class="arithmatex">\(\ell^{(k)}_{i_k}\)</span> are the barycentric basis functions.  This is <strong>linear in
-the values</strong> <span class="arithmatex">\(v_{i_1, \ldots, i_d}\)</span>.</p>
+<p>where <span class="arithmatex">\(\ell^{(k)}_{i_k}\)</span> are the barycentric basis functions (Berrut &amp;
+Trefethen 2004).  This is <strong>linear in the values</strong> <span class="arithmatex">\(v_{i_1, \ldots, i_d}\)</span>.</p>
 <p><strong>Theorem (Linearity of CT operations).</strong>  Let <span class="arithmatex">\(T_f\)</span> and <span class="arithmatex">\(T_g\)</span> be two CTs on the
 same grid.  Then:</p>
 <ol>
@@ -1175,7 +1175,7 @@ same grid.  Then:</p>
 </ol>
 <p><em>Proof.</em>  Direct from linearity of the barycentric formula.</p>
 <p><strong>Corollary (Derivatives).</strong>  Since the spectral differentiation matrix
-<span class="arithmatex">\(\mathcal{D}_k\)</span> depends only on grid points:</p>
+<span class="arithmatex">\(\mathcal{D}_k\)</span> depends only on grid points (Berrut &amp; Trefethen 2004, §9):</p>
 <div class="arithmatex">\[
 \mathcal{D}_k (v_f + v_g) = \mathcal{D}_k v_f + \mathcal{D}_k v_g
 \]</div>
