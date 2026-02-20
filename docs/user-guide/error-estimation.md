@@ -85,12 +85,13 @@ errors are small, and the interpolant is well-converged.**
 ### Computing coefficients via DCT-II
 
 PyChebyshev uses **Type I Chebyshev nodes** (roots of $T_n$, also called
-Gauss--Chebyshev nodes):
+Gauss--Chebyshev nodes; see Trefethen 2013, Ch. 3):
 
 $$x_i = \cos\!\left(\frac{(2i - 1)\,\pi}{2n}\right), \quad i = 1, \ldots, n$$
 
 For values sampled at these $n$ nodes, the Chebyshev expansion coefficients $c_k$ can
-be recovered exactly via the **Discrete Cosine Transform (DCT-II)**.
+be recovered exactly via the **Discrete Cosine Transform (DCT-II)** (Good 1961;
+Trefethen 2013, Ch. 3).
 
 **Why DCT-II works.** The connection comes from the orthogonality of Chebyshev
 polynomials. Evaluating $T_k(x_i)$ at the Type I nodes and exploiting the identity
@@ -110,7 +111,8 @@ In practice, the implementation:
 
 This error estimation approach follows the *ex ante* method described in
 Ruiz & Zeron, *Machine Learning for Risk Calculations*, Wiley Finance, 2021,
-Section 3.4.
+Section 3.4. For the underlying Chebyshev coefficient theory, see Trefethen
+(2013), Chapters 3--4.
 
 ## Multi-Dimensional Error
 
@@ -130,10 +132,10 @@ $d$, the error estimate generalizes as follows:
 $$\hat{E} = \sum_{d=1}^{D} \max_{\text{slices along } d} |c_{n_d - 1}|$$
 
 **Why sum across dimensions?** PyChebyshev evaluates a multi-dimensional interpolant
-via *dimensional decomposition* -- contracting one axis at a time (see
-[Multi-Dimensional Extension](concepts.md#multi-dimensional-extension)). At each
-contraction step, the 1-D interpolation error for that dimension is injected into
-the remaining computation. In the worst case, these per-dimension errors add up.
+via *dimensional decomposition* -- contracting one axis at a time (Berrut &
+Trefethen 2004; see also [Multi-Dimensional Extension](concepts.md#multi-dimensional-extension)).
+At each contraction step, the 1-D interpolation error for that dimension is injected
+into the remaining computation. In the worst case, these per-dimension errors add up.
 The summation therefore represents a **conservative heuristic**: the total error is
 at most the sum of the worst per-dimension errors, assuming the errors do not cancel.
 

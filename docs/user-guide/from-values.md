@@ -126,9 +126,11 @@ depends only on the node positions:
 | Differentiation matrices   | nodes, weights      |
 | Fejér quadrature weights   | nodes               |
 
-The function values appear only in `tensor_values`.  Since `from_values()`
-computes all of the above from the same node formula as `build()`, the
-resulting interpolant is **bit-identical** to one built the traditional way.
+The function values appear only in `tensor_values`.  The Chebyshev nodes are
+the zeros of $T_n(x)$, mapped to each dimension's domain (Trefethen 2013,
+Ch. 3).  Since `from_values()` computes all of the above from the same node
+formula as `build()`, the resulting interpolant is **bit-identical** to one
+built the traditional way.
 
 ## Examples
 

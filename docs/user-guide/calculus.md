@@ -419,8 +419,7 @@ matrices, and barycentric evaluation.
    Practice*, SIAM, Chapters 18--21.
 
 3. Good, I.J. (1961), "The colleague matrix, a Chebyshev analogue of the
-   companion matrix", *Quarterly Journal of Mechanics and Applied
-   Mathematics* 14:195--196.
+   companion matrix", *The Quarterly Journal of Mathematics* 12(1):61--68.
 
 4. Berrut, J.-P. & Trefethen, L.N. (2004), "Barycentric Lagrange
    Interpolation", *SIAM Review* 46(3):501--517.

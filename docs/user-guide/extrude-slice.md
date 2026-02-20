@@ -112,9 +112,11 @@ $\sum_j v \cdot \ell_j(x^*) = v \cdot 1 = v$.
 
 ### Error Bounds
 
-- **Extrusion**: No approximation error introduced (exact operation).
+- **Extrusion**: No approximation error introduced (exact operation), following
+  directly from the partition of unity (Berrut & Trefethen 2004).
 - **Slicing**: The sliced CT evaluates the polynomial interpolant at $x_k = x^*$.
-  No additional error beyond the original approximation error:
+  No additional error beyond the original approximation error
+  (Trefethen 2013, Ch. 8):
   if $\|f - p\|_\infty \leq \epsilon$, then
   $\|f(\cdot, x^*) - p(\cdot, x^*)\|_\infty \leq \epsilon$.
 

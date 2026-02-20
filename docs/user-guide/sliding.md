@@ -10,7 +10,7 @@ The sliding technique partitions the dimensions into small groups and builds a s
 
 ## Algorithm
 
-Given \(f: \mathbb{R}^n \to \mathbb{R}\), a pivot point \(\mathbf{z} = (z_1, \ldots, z_n)\), and a partition of dimensions into \(k\) groups:
+Given \(f: \mathbb{R}^n \to \mathbb{R}\), a pivot point \(\mathbf{z} = (z_1, \ldots, z_n)\), and a partition of dimensions into \(k\) groups (Ruiz & Zeron 2021, Ch. 7):
 
 1. Evaluate the **pivot value** \(v = f(\mathbf{z})\).
 2. For each group \(i\), build a **slide** \(s_i\) — a Chebyshev interpolant on the group's dimensions, with all other dimensions fixed at their pivot values.
@@ -134,7 +134,12 @@ This is mathematically correct for the sliding approximation, but may differ fro
 
 ### Accuracy degrades far from pivot
 
-The sliding approximation is most accurate near the pivot point. As the evaluation point moves away from the pivot in multiple dimensions simultaneously, cross-coupling errors accumulate. For strongly coupled functions like Black-Scholes, this can produce 20-50% errors at domain boundaries.
+The sliding approximation is most accurate near the pivot point. As the evaluation point moves away from the pivot in multiple dimensions simultaneously, cross-coupling errors accumulate. For strongly coupled functions like Black-Scholes, errors of 20--50% at domain boundaries have been observed in numerical experiments (see `compare_methods_time_accuracy.py` in the repository).
+
+## References
+
+- Ruiz, G. & Zeron, M. (2021). *Machine Learning for Risk Calculations.*
+  Wiley Finance. Chapter 7.
 
 ## API Reference
 

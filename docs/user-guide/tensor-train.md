@@ -4,9 +4,9 @@
 
 The **Tensor Train (TT)** format enables Chebyshev interpolation of functions with
 5 or more dimensions by decomposing the full coefficient tensor into a chain of
-small 3D cores. Instead of storing and building the full $n^d$ tensor (infeasible
-for $d \geq 6$), TT stores $O(d \cdot n \cdot r^2)$ elements, where $r$ is the
-**TT rank** -- a measure of the function's internal complexity.
+small 3D cores (Oseledets 2011). Instead of storing and building the full $n^d$
+tensor (infeasible for $d \geq 6$), TT stores $O(d \cdot n \cdot r^2)$ elements,
+where $r$ is the **TT rank** -- a measure of the function's internal complexity.
 
 ### When to use which class
 
@@ -67,7 +67,7 @@ represented as a chain of 3D cores:
 
 $$\mathcal{A}(j_1, \ldots, j_d) = G_1(j_1) \cdot G_2(j_2) \cdots G_d(j_d)$$
 
-Each core $G_k$ is a 3D array of shape $(r_{k-1}, n_k, r_k)$, and for a fixed
+(Oseledets 2011, Definition 1). Each core $G_k$ is a 3D array of shape $(r_{k-1}, n_k, r_k)$, and for a fixed
 index $j_k$ the slice $G_k(j_k)$ is an $r_{k-1} \times r_k$ matrix. The product
 of these matrices yields the tensor element. The boundary ranks are $r_0 = r_d = 1$,
 so the result is a scalar.
@@ -80,8 +80,9 @@ are moderate.
 
 The key advantage of `ChebyshevTT` over full tensor interpolation is how it is
 **built**. Instead of evaluating the function at every node combination ($n^d$
-points), the TT-Cross algorithm (Oseledets & Tyrtyshnikov 2010) evaluates at
-strategically selected grid points. For 5D with $n = 11$ and `max_rank=15`:
+points), the TT-Cross algorithm (Oseledets & Tyrtyshnikov 2010; Savostyanov &
+Oseledets 2011) evaluates at strategically selected grid points.
+For 5D with $n = 11$ and `max_rank=15`:
 
 - Full tensor: **161,051** evaluations
 - TT-Cross: **~7,400** unique evaluations (**21.7x fewer**)
@@ -105,10 +106,11 @@ dimension, each containing $r_k$ multi-indices into the "right" dimensions $k+1,
   ($10^{-12} \cdot \sigma_{\max}$). This is further capped by the per-mode
   rank bound (see [Optimizations](#optimizations) below).
 
-- **Maxvol pivot selection.** Apply the maxvol algorithm to the left
-  singular vectors $U$ to select the $r$ rows whose submatrix has
-  approximately maximal determinant. These pivots identify the most
-  "informative" (left, node) index pairs.
+- **Maxvol pivot selection.** Apply the maxvol algorithm (Goreinov,
+  Tyrtyshnikov & Zamarashkin 1997) to the left singular vectors $U$
+  to select the $r$ rows whose submatrix has approximately maximal
+  determinant. These pivots identify the most "informative" (left,
+  node) index pairs.
 
 - **Form the TT core** via cross interpolation:
   $\hat{C} = U \cdot U[\text{pivots}]^{-1}$, then reshape to
@@ -553,17 +555,22 @@ price = tt_loaded.eval([100, 100, 1.0, 0.25, 0.05])
   than $O(n^d)$, a large `max_rank` (say, 50+) can still be expensive for costly
   functions.
 
-## Mathematical Reference
+## References
 
-The TT interpolation approach implemented here follows:
-
-- **Ruiz & Zeron (2021)**, *Machine Learning for Risk Calculations*, Wiley Finance,
-  Chapter 6: Tensor Train decomposition for Chebyshev interpolation.
-- **Oseledets & Tyrtyshnikov (2010)**, "TT-Cross approximation for multidimensional
-  arrays" -- the cross approximation algorithm used to build TT cores from function
-  evaluations.
-- **Goreinov, Tyrtyshnikov & Zamarashkin (1997)** -- maxvol algorithm for pivot
-  selection within TT-Cross.
+- Goreinov, S. A., Tyrtyshnikov, E. E. & Zamarashkin, N. L. (1997).
+  "A theory of pseudoskeleton approximations." *Linear Algebra and its
+  Applications* 261:1--21.
+- Oseledets, I. V. (2011). "Tensor-Train Decomposition." *SIAM Journal on
+  Scientific Computing* 33(5):2295--2317.
+- Oseledets, I. V. & Tyrtyshnikov, E. E. (2010). "TT-cross approximation for
+  multidimensional arrays." *Linear Algebra and its Applications* 432(1):70--88.
+- Ruiz, G. & Zeron, M. (2021). *Machine Learning for Risk Calculations.*
+  Wiley Finance. Chapter 6.
+- Savostyanov, D. V. & Oseledets, I. V. (2011). "Fast adaptive interpolation
+  of multi-dimensional arrays in tensor train format." *Proceedings of the 7th
+  International Workshop on Multidimensional (nD) Systems*, pp. 1--8.
+- Trefethen, L. N. (2013). *Approximation Theory and Approximation Practice.*
+  SIAM. Chapter 4 (Chebyshev series and DCT-II).
 
 ## API Reference
 

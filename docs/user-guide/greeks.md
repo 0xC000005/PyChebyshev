@@ -57,12 +57,13 @@ price, delta, gamma, vega, rho = cheb.vectorized_eval_multi(point, [
 This provides **exact derivatives of the interpolating polynomial**. Because the
 differentiation matrix computes derivatives of the degree-$n$ polynomial $p(x)$
 exactly (within machine precision), and $p(x)$ converges spectrally to $f(x)$,
-the derivative $p'(x)$ also converges spectrally to $f'(x)$.
+the derivative $p'(x)$ also converges spectrally to $f'(x)$
+(Trefethen 2013, Ch. 11).
 
 See [Berrut & Trefethen (2004)](https://people.maths.ox.ac.uk/trefethen/barycentric.pdf)
 for the derivation of the differentiation matrix formulas. For the full theory of
-spectral differentiation, see Trefethen, *Approximation Theory and Approximation
-Practice*, SIAM 2019, Chapter 11.
+spectral differentiation, see Trefethen (2013), *Approximation Theory and Approximation
+Practice*, SIAM, Chapter 11.
 
 !!! note "Tensor Train derivatives"
     `ChebyshevTT` uses **finite differences** instead of analytical derivatives,

@@ -35,8 +35,8 @@ $$
 p_n(\mathbf{x}) = \sum_{i_1, \ldots, i_d} v_{i_1, \ldots, i_d} \prod_{k=1}^{d} \ell^{(k)}_{i_k}(x_k)
 $$
 
-where $\ell^{(k)}_{i_k}$ are the barycentric basis functions.  This is **linear in
-the values** $v_{i_1, \ldots, i_d}$.
+where $\ell^{(k)}_{i_k}$ are the barycentric basis functions (Berrut &
+Trefethen 2004).  This is **linear in the values** $v_{i_1, \ldots, i_d}$.
 
 **Theorem (Linearity of CT operations).**  Let $T_f$ and $T_g$ be two CTs on the
 same grid.  Then:
@@ -48,7 +48,7 @@ same grid.  Then:
 *Proof.*  Direct from linearity of the barycentric formula.
 
 **Corollary (Derivatives).**  Since the spectral differentiation matrix
-$\mathcal{D}_k$ depends only on grid points:
+$\mathcal{D}_k$ depends only on grid points (Berrut & Trefethen 2004, §9):
 
 $$
 \mathcal{D}_k (v_f + v_g) = \mathcal{D}_k v_f + \mathcal{D}_k v_g

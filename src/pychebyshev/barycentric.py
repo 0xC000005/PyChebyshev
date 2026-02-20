@@ -1251,7 +1251,7 @@ class ChebyshevApproximation:
 
         References
         ----------
-        Good (1961), "The colleague matrix", Quarterly J. Mech. 14:195–196.
+        Good (1961), "The colleague matrix", Quarterly J. Math. 12(1):61–68.
         Trefethen (2013), "Approximation Theory and Approximation Practice",
         SIAM, Chapter 18.
         """

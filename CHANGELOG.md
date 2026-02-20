@@ -5,6 +5,27 @@ All notable changes to PyChebyshev will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [0.10.1] - 2026-02-20
+
+### Fixed
+
+- Corrected Good (1961) citation: journal is *The Quarterly Journal of
+  Mathematics* 12(1):61-68, not *Quarterly Journal of Mechanics and Applied
+  Mathematics* 14:195-196. Fixed in `_calculus.py`, `barycentric.py`, and
+  `calculus.md`.
+- Fixed Trefethen book year from "SIAM 2019" to "SIAM 2013" in `concepts.md`
+  and `greeks.md` (2019 is the extended edition; all citations reference the
+  2013 first edition).
+- Fixed TT-Cross attribution in `tensor-train.md`: now correctly cites both
+  Oseledets & Tyrtyshnikov (2010) and Savostyanov & Oseledets (2011).
+- Added 30+ missing inline citations across 11 documentation pages, verified
+  against original sources. Key additions: Runge (1901) for Runge's phenomenon,
+  Berrut & Trefethen (2004) for barycentric formula and differentiation matrices,
+  Trefethen (2013) chapter references for Lebesgue constant, Bernstein ellipse,
+  spectral convergence of derivatives, and Chebyshev node generation.
+- Added formal References sections to `concepts.md`, `spline.md`, `sliding.md`,
+  and `tensor-train.md`.
+
 ## [0.10.0] - 2026-02-20
 
 ### Added

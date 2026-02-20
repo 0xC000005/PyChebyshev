@@ -7,7 +7,7 @@ References
 - Trefethen (2013), "Approximation Theory and Approximation Practice",
   SIAM, Chapters 18–21.
 - Good (1961), "The colleague matrix, a Chebyshev analogue of the companion
-  matrix", Quarterly J. Mech. 14:195–196.
+  matrix", Quarterly J. Math. 12(1):61–68.
 """
 
 from __future__ import annotations

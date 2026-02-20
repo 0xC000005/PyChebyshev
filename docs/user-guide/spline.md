@@ -8,8 +8,8 @@ target function has a **discontinuity** or a **kink**, this advantage disappears
 
 **Jump discontinuities.**  For a function \(f\) with a jump discontinuity at
 \(c \in (a, b)\), the Chebyshev interpolant converges only as \(O(1/n)\) pointwise
-away from \(c\).  Near \(c\), oscillations persist regardless of how many nodes you
-add -- this is the classical **Gibbs phenomenon**.
+away from \(c\) (Trefethen 2013, Ch. 9).  Near \(c\), oscillations persist
+regardless of how many nodes you add -- this is the classical **Gibbs phenomenon**.
 
 **Kinks.**  For a function that is continuous but whose derivative is discontinuous
 at \(c\) -- for example \(|x|\) at \(x = 0\) or a call payoff
@@ -32,7 +32,7 @@ of refining the smooth parts of the function.
 ## Why Piecewise Chebyshev Restores Spectral Convergence
 
 The key to understanding why piecewise interpolation helps lies in the
-**Bernstein ellipse theorem**.
+**Bernstein ellipse theorem** (Trefethen 2013, Ch. 8).
 
 ### The Bernstein ellipse
 
@@ -320,6 +320,13 @@ val = loaded.eval([110.0, 0.5], [0, 0])
 The original function is **not** saved -- only the numerical data needed for
 evaluation.  Assign a new function before calling `build()` again if a rebuild
 is desired.
+
+## References
+
+- Ruiz, G. & Zeron, M. (2021). *Machine Learning for Risk Calculations.*
+  Wiley Finance. Section 3.8.
+- Trefethen, L. N. (2013). *Approximation Theory and Approximation Practice.*
+  SIAM. Chapters 8--9.
 
 ## Limitations
 
