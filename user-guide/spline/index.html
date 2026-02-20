@@ -937,6 +937,28 @@
 </li>
       
         <li class="md-nav__item">
+  <a href="#pychebyshev.spline.ChebyshevSpline.nodes" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        nodes
+      
+    </span>
+  </a>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#pychebyshev.spline.ChebyshevSpline.from_values" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        from_values
+      
+    </span>
+  </a>
+  
+</li>
+      
+        <li class="md-nav__item">
   <a href="#pychebyshev.spline.ChebyshevSpline.extrude" class="md-nav__link">
     <span class="md-ellipsis">
       
@@ -1110,6 +1132,34 @@
     
   
     Chebyshev Calculus
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../from-values/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Pre-computed Values
   
 
     
@@ -1613,6 +1663,28 @@
     <span class="md-ellipsis">
       
         load
+      
+    </span>
+  </a>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#pychebyshev.spline.ChebyshevSpline.nodes" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        nodes
+      
+    </span>
+  </a>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#pychebyshev.spline.ChebyshevSpline.from_values" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        from_values
       
     </span>
   </a>
@@ -2964,6 +3036,338 @@ before calling <code>build()</code> again if a rebuild is desired.</p>
                 <p>This method uses :mod:<code>pickle</code> internally.  Pickle can execute
 arbitrary code during deserialization.  <strong>Only load files you
 trust.</strong></p>
+              </div>
+            </td>
+          </tr>
+      </tbody>
+    </table>
+
+
+    </div>
+
+</div>
+
+<div class="doc doc-object doc-function">
+
+
+<h2 id="pychebyshev.spline.ChebyshevSpline.nodes" class="doc doc-heading">
+            <code class="highlight language-python"><span class="n">nodes</span><span class="p">(</span><span class="n">num_dimensions</span><span class="p">,</span> <span class="n">domain</span><span class="p">,</span> <span class="n">n_nodes</span><span class="p">,</span> <span class="n">knots</span><span class="p">)</span></code>
+
+  <span class="doc doc-labels">
+      <small class="doc doc-label doc-label-staticmethod"><code>staticmethod</code></small>
+  </span>
+
+<a href="#pychebyshev.spline.ChebyshevSpline.nodes" class="headerlink" title="Permanent link">&para;</a></h2>
+
+
+    <div class="doc doc-contents ">
+
+        <p>Generate Chebyshev nodes for every piece without evaluating any function.</p>
+<p>Use this to obtain the per-piece grid points, evaluate your function
+externally, then pass the results to :meth:<code>from_values</code>.</p>
+
+
+<p><span class="doc-section-title">Parameters:</span></p>
+    <table>
+      <thead>
+        <tr>
+          <th>Name</th>
+          <th>Type</th>
+          <th>Description</th>
+          <th>Default</th>
+        </tr>
+      </thead>
+      <tbody>
+          <tr class="doc-section-item">
+            <td>
+                <code>num_dimensions</code>
+            </td>
+            <td>
+                  <code><span title="int">int</span></code>
+            </td>
+            <td>
+              <div class="doc-md-description">
+                <p>Number of dimensions.</p>
+              </div>
+            </td>
+            <td>
+                <em>required</em>
+            </td>
+          </tr>
+          <tr class="doc-section-item">
+            <td>
+                <code>domain</code>
+            </td>
+            <td>
+                  <code>list of (float, float)</code>
+            </td>
+            <td>
+              <div class="doc-md-description">
+                <p>Lower and upper bounds for each dimension.</p>
+              </div>
+            </td>
+            <td>
+                <em>required</em>
+            </td>
+          </tr>
+          <tr class="doc-section-item">
+            <td>
+                <code>n_nodes</code>
+            </td>
+            <td>
+                  <code>list of int</code>
+            </td>
+            <td>
+              <div class="doc-md-description">
+                <p>Number of Chebyshev nodes per dimension <em>per piece</em>.</p>
+              </div>
+            </td>
+            <td>
+                <em>required</em>
+            </td>
+          </tr>
+          <tr class="doc-section-item">
+            <td>
+                <code>knots</code>
+            </td>
+            <td>
+                  <code>list of list of float</code>
+            </td>
+            <td>
+              <div class="doc-md-description">
+                <p>Knot positions for each dimension (may be empty).</p>
+              </div>
+            </td>
+            <td>
+                <em>required</em>
+            </td>
+          </tr>
+      </tbody>
+    </table>
+
+
+    <p><span class="doc-section-title">Returns:</span></p>
+    <table>
+      <thead>
+        <tr>
+          <th>Type</th>
+          <th>Description</th>
+        </tr>
+      </thead>
+      <tbody>
+          <tr class="doc-section-item">
+            <td>
+                  <code><span title="dict">dict</span></code>
+            </td>
+            <td>
+              <div class="doc-md-description">
+                <p><code>'pieces'</code> : list of dicts, one per piece in C-order
+(<code>np.ndindex(*piece_shape)</code>).  Each dict contains:</p>
+<ul>
+<li><code>'piece_index'</code> : tuple — multi-index of this piece</li>
+<li><code>'sub_domain'</code> : list of (float, float) — bounds for this piece</li>
+<li><code>'nodes_per_dim'</code> : list of 1-D arrays</li>
+<li><code>'full_grid'</code> : 2-D array, shape <code>(prod(n_nodes), num_dimensions)</code></li>
+<li><code>'shape'</code> : tuple of int</li>
+</ul>
+<p><code>'num_pieces'</code> : int — total number of pieces.</p>
+<p><code>'piece_shape'</code> : tuple of int — per-dimension piece counts.</p>
+              </div>
+            </td>
+          </tr>
+      </tbody>
+    </table>
+
+
+<p><span class="doc-section-title">Examples:</span></p>
+    <div class="highlight"><pre><span></span><code><a id="__codelineno-0-1" name="__codelineno-0-1" href="#__codelineno-0-1"></a><span class="gp">&gt;&gt;&gt; </span><span class="n">info</span> <span class="o">=</span> <span class="n">ChebyshevSpline</span><span class="o">.</span><span class="n">nodes</span><span class="p">(</span><span class="mi">1</span><span class="p">,</span> <span class="p">[[</span><span class="o">-</span><span class="mi">1</span><span class="p">,</span> <span class="mi">1</span><span class="p">]],</span> <span class="p">[</span><span class="mi">10</span><span class="p">],</span> <span class="p">[[</span><span class="mf">0.0</span><span class="p">]])</span>
+<a id="__codelineno-0-2" name="__codelineno-0-2" href="#__codelineno-0-2"></a><span class="gp">&gt;&gt;&gt; </span><span class="n">info</span><span class="p">[</span><span class="s1">&#39;num_pieces&#39;</span><span class="p">]</span>
+<a id="__codelineno-0-3" name="__codelineno-0-3" href="#__codelineno-0-3"></a><span class="go">2</span>
+<a id="__codelineno-0-4" name="__codelineno-0-4" href="#__codelineno-0-4"></a><span class="gp">&gt;&gt;&gt; </span><span class="n">info</span><span class="p">[</span><span class="s1">&#39;pieces&#39;</span><span class="p">][</span><span class="mi">0</span><span class="p">][</span><span class="s1">&#39;sub_domain&#39;</span><span class="p">]</span>
+<a id="__codelineno-0-5" name="__codelineno-0-5" href="#__codelineno-0-5"></a><span class="go">[(-1, 0.0)]</span>
+</code></pre></div>
+
+
+    </div>
+
+</div>
+
+<div class="doc doc-object doc-function">
+
+
+<h2 id="pychebyshev.spline.ChebyshevSpline.from_values" class="doc doc-heading">
+            <code class="highlight language-python"><span class="n">from_values</span><span class="p">(</span><span class="n">piece_values</span><span class="p">,</span> <span class="n">num_dimensions</span><span class="p">,</span> <span class="n">domain</span><span class="p">,</span> <span class="n">n_nodes</span><span class="p">,</span> <span class="n">knots</span><span class="p">,</span> <span class="n">max_derivative_order</span><span class="o">=</span><span class="mi">2</span><span class="p">)</span></code>
+
+  <span class="doc doc-labels">
+      <small class="doc doc-label doc-label-classmethod"><code>classmethod</code></small>
+  </span>
+
+<a href="#pychebyshev.spline.ChebyshevSpline.from_values" class="headerlink" title="Permanent link">&para;</a></h2>
+
+
+    <div class="doc doc-contents ">
+
+        <p>Create a spline from pre-computed function values on each piece.</p>
+<p>The resulting object is fully functional: evaluation, derivatives,
+integration, rootfinding, algebra, extrusion/slicing, and
+serialization all work exactly as if <code>build()</code> had been called.</p>
+
+
+<p><span class="doc-section-title">Parameters:</span></p>
+    <table>
+      <thead>
+        <tr>
+          <th>Name</th>
+          <th>Type</th>
+          <th>Description</th>
+          <th>Default</th>
+        </tr>
+      </thead>
+      <tbody>
+          <tr class="doc-section-item">
+            <td>
+                <code>piece_values</code>
+            </td>
+            <td>
+                  <code>list of numpy.ndarray</code>
+            </td>
+            <td>
+              <div class="doc-md-description">
+                <p>Function values for each piece.  Length must equal the total
+number of pieces (<code>prod</code> of per-dimension piece counts).
+Order follows <code>np.ndindex(*piece_shape)</code> (C-order), matching
+the <code>'pieces'</code> list returned by :meth:<code>nodes</code>.  Each array
+must have shape <code>tuple(n_nodes)</code>.</p>
+              </div>
+            </td>
+            <td>
+                <em>required</em>
+            </td>
+          </tr>
+          <tr class="doc-section-item">
+            <td>
+                <code>num_dimensions</code>
+            </td>
+            <td>
+                  <code><span title="int">int</span></code>
+            </td>
+            <td>
+              <div class="doc-md-description">
+                <p>Number of dimensions.</p>
+              </div>
+            </td>
+            <td>
+                <em>required</em>
+            </td>
+          </tr>
+          <tr class="doc-section-item">
+            <td>
+                <code>domain</code>
+            </td>
+            <td>
+                  <code>list of (float, float)</code>
+            </td>
+            <td>
+              <div class="doc-md-description">
+                <p>Lower and upper bounds for each dimension.</p>
+              </div>
+            </td>
+            <td>
+                <em>required</em>
+            </td>
+          </tr>
+          <tr class="doc-section-item">
+            <td>
+                <code>n_nodes</code>
+            </td>
+            <td>
+                  <code>list of int</code>
+            </td>
+            <td>
+              <div class="doc-md-description">
+                <p>Number of Chebyshev nodes per dimension <em>per piece</em>.</p>
+              </div>
+            </td>
+            <td>
+                <em>required</em>
+            </td>
+          </tr>
+          <tr class="doc-section-item">
+            <td>
+                <code>knots</code>
+            </td>
+            <td>
+                  <code>list of list of float</code>
+            </td>
+            <td>
+              <div class="doc-md-description">
+                <p>Knot positions for each dimension (may be empty).</p>
+              </div>
+            </td>
+            <td>
+                <em>required</em>
+            </td>
+          </tr>
+          <tr class="doc-section-item">
+            <td>
+                <code>max_derivative_order</code>
+            </td>
+            <td>
+                  <code><span title="int">int</span></code>
+            </td>
+            <td>
+              <div class="doc-md-description">
+                <p>Maximum derivative order (default 2).</p>
+              </div>
+            </td>
+            <td>
+                  <code>2</code>
+            </td>
+          </tr>
+      </tbody>
+    </table>
+
+
+    <p><span class="doc-section-title">Returns:</span></p>
+    <table>
+      <thead>
+        <tr>
+          <th>Type</th>
+          <th>Description</th>
+        </tr>
+      </thead>
+      <tbody>
+          <tr class="doc-section-item">
+            <td>
+                  <code><a class="autorefs autorefs-internal" title="pychebyshev.spline.ChebyshevSpline" href="#pychebyshev.spline.ChebyshevSpline">ChebyshevSpline</a></code>
+            </td>
+            <td>
+              <div class="doc-md-description">
+                <p>A fully built spline with <code>function=None</code>.</p>
+              </div>
+            </td>
+          </tr>
+      </tbody>
+    </table>
+
+
+<p><span class="doc-section-title">Raises:</span></p>
+    <table>
+      <thead>
+        <tr>
+          <th>Type</th>
+          <th>Description</th>
+        </tr>
+      </thead>
+      <tbody>
+          <tr class="doc-section-item">
+            <td>
+                  <code><span title="ValueError">ValueError</span></code>
+            </td>
+            <td>
+              <div class="doc-md-description">
+                <p>If the number of pieces does not match, or any piece has
+the wrong shape or contains NaN/Inf.</p>
               </div>
             </td>
           </tr>
