@@ -98,3 +98,8 @@ def my_func(point, data):
 - [Error Estimation](error-estimation.md) -- check accuracy without test points
 - [Saving & Loading](serialization.md) -- persist built interpolants for production
 - For 5+ dimensions, see [Tensor Train](tensor-train.md) or [Sliding Technique](sliding.md)
+
+## References
+
+- Berrut, J.-P. & Trefethen, L. N. (2004). "Barycentric Lagrange Interpolation."
+  *SIAM Review* 46(3):501--517.

@@ -242,3 +242,14 @@ For full method signatures and parameter details, see:
 - [`ChebyshevApproximation.error_estimate()`](../api/reference.md#pychebyshev.ChebyshevApproximation.error_estimate) -- error estimate for standard tensor interpolation.
 - [`ChebyshevSlider.error_estimate()`](../api/reference.md#pychebyshev.ChebyshevSlider.error_estimate) -- error estimate for sliding approximation (sum of per-slide errors).
 - [`ChebyshevTT.error_estimate()`](../api/reference.md#pychebyshev.ChebyshevTT.error_estimate) -- error estimate for Tensor Train approximation (from coefficient cores).
+
+## References
+
+- Berrut, J.-P. & Trefethen, L. N. (2004). "Barycentric Lagrange Interpolation."
+  *SIAM Review* 46(3):501--517.
+- Good, I.J. (1961). "The colleague matrix, a Chebyshev analogue of the companion
+  matrix." *The Quarterly Journal of Mathematics* 12(1):61--68.
+- Ruiz, G. & Zeron, M. (2021). *Machine Learning for Risk Calculations.*
+  Wiley Finance. Section 3.4.
+- Trefethen, L. N. (2013). *Approximation Theory and Approximation Practice.*
+  SIAM. Chapters 3--4.

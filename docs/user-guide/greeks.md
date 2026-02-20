@@ -85,3 +85,10 @@ With 11 nodes per dimension on a 5D Black-Scholes test:
 
 Vega has slightly higher error because volatility sensitivity involves a product of
 multiple terms, but remains well within practical tolerance.
+
+## References
+
+- Berrut, J.-P. & Trefethen, L. N. (2004). "Barycentric Lagrange Interpolation."
+  *SIAM Review* 46(3):501--517.
+- Trefethen, L. N. (2013). *Approximation Theory and Approximation Practice.*
+  SIAM. Chapter 11.

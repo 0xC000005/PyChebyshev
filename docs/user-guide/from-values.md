@@ -260,3 +260,8 @@ workflow, which also supports decoupled node generation and value loading:
 - [Chebyshev Calculus](calculus.md) -- integrate, find roots, optimize
 - [Extrusion & Slicing](extrude-slice.md) -- add/fix dimensions
 - [Saving & Loading](serialization.md) -- persist from_values objects
+
+## References
+
+- Trefethen, L. N. (2013). *Approximation Theory and Approximation Practice.*
+  SIAM. Chapter 3.

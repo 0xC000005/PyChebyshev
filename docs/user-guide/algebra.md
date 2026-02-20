@@ -280,3 +280,10 @@ grid refinement step and is not supported.
   order, and (where applicable) knots or partition must be identical.
 - **Result has `function=None`** -- the combined interpolant cannot call `build()`
   again, since it has no underlying function reference.
+
+## References
+
+- Berrut, J.-P. & Trefethen, L. N. (2004). "Barycentric Lagrange Interpolation."
+  *SIAM Review* 46(3):501--517.
+- Ruiz, G. & Zeron, M. (2021). *Machine Learning for Risk Calculations.*
+  Wiley Finance. Section 3.9.

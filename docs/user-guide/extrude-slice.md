@@ -329,3 +329,12 @@ When slicing a slider, two cases arise:
   and then add it to a `ChebyshevApproximation`.
 - **Result has `function=None`** -- the extruded/sliced interpolant cannot
   call `build()` again, since it has no underlying function reference.
+
+## References
+
+- Berrut, J.-P. & Trefethen, L. N. (2004). "Barycentric Lagrange Interpolation."
+  *SIAM Review* 46(3):501--517.
+- Ruiz, G. & Zeron, M. (2021). *Machine Learning for Risk Calculations.*
+  Wiley Finance. Section 24.2.1.
+- Trefethen, L. N. (2013). *Approximation Theory and Approximation Practice.*
+  SIAM. Chapter 8.
