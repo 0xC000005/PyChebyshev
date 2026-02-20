@@ -5,6 +5,32 @@ All notable changes to PyChebyshev will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [0.10.0] - 2026-02-20
+
+### Added
+
+- `ChebyshevApproximation.nodes()` static method to generate Chebyshev grid
+  points without evaluating any function. Returns per-dimension node arrays,
+  the full Cartesian product grid, and the expected tensor shape.
+- `ChebyshevApproximation.from_values()` class method to construct a fully
+  functional interpolant from pre-computed function values. Supports all
+  operations: evaluation, derivatives, integration, rootfinding, optimization,
+  algebra, extrusion/slicing, and serialization.
+- `ChebyshevSpline.nodes()` static method returning per-piece node information
+  for piecewise Chebyshev interpolation with knots.
+- `ChebyshevSpline.from_values()` class method to construct a spline from
+  per-piece pre-computed values.
+- Guard in `build()` for both classes: raises `RuntimeError` with a clear
+  message when `function=None` (e.g., after `from_values()`, `load()`, or
+  algebra operations).
+- Input validation in `from_values()`: shape mismatch, NaN/Inf detection,
+  dimension consistency, and domain ordering.
+- 65 new tests covering core equivalence (bit-identical to `build()`),
+  edge cases (NaN/Inf, shape mismatch, domain validation, duplicate knots,
+  boundary evaluation, 4D, algebra chains), and cross-compatibility.
+- Documentation page: "Pre-computed Values" with workflow, indexing convention,
+  mathematical justification, API reference, and MoCaX Extend comparison.
+
 ## [0.9.5] - 2026-02-15
 
 ### Added

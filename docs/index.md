@@ -15,6 +15,7 @@ PyChebyshev builds a Chebyshev interpolant of any smooth function in up to N dim
 - **Chebyshev Splines** — piecewise interpolation at kinks restores spectral convergence for non-smooth functions
 - **Arithmetic operators** — combine interpolants via `+`, `-`, `*`, `/` for portfolio-level proxies
 - **Extrusion & slicing** — add or fix dimensions to combine interpolants across different risk-factor sets
+- **Pre-computed values** — generate nodes first, evaluate externally, load values later (`nodes()` + `from_values()`)
 - **Integration, rootfinding & optimization** — spectral calculus directly on interpolants, no re-evaluation needed
 - **Analytical derivatives** — via spectral differentiation matrices (no finite differences)
 - **Tensor Train** — TT-Cross builds from O(d·n·r²) evaluations instead of O(n^d)

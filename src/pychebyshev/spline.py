@@ -132,6 +132,11 @@ class ChebyshevSpline:
         verbose : bool, optional
             If True, print build progress.  Default is True.
         """
+        if self.function is None:
+            raise RuntimeError(
+                "Cannot build: no function assigned. "
+                "This object was created via from_values() or load()."
+            )
         start = time.time()
         self._cached_error_estimate = None
         total_pieces = int(np.prod(self._shape))
@@ -514,6 +519,243 @@ class ChebyshevSpline:
                 f"Expected a {cls.__name__} instance, "
                 f"got {type(obj).__name__}"
             )
+        return obj
+
+    # ------------------------------------------------------------------
+    # Pre-computed values: nodes first, values later
+    # ------------------------------------------------------------------
+
+    @staticmethod
+    def nodes(
+        num_dimensions: int,
+        domain: List[Tuple[float, float]],
+        n_nodes: List[int],
+        knots: List[List[float]],
+    ) -> dict:
+        """Generate Chebyshev nodes for every piece without evaluating any function.
+
+        Use this to obtain the per-piece grid points, evaluate your function
+        externally, then pass the results to :meth:`from_values`.
+
+        Parameters
+        ----------
+        num_dimensions : int
+            Number of dimensions.
+        domain : list of (float, float)
+            Lower and upper bounds for each dimension.
+        n_nodes : list of int
+            Number of Chebyshev nodes per dimension *per piece*.
+        knots : list of list of float
+            Knot positions for each dimension (may be empty).
+
+        Returns
+        -------
+        dict
+            ``'pieces'`` : list of dicts, one per piece in C-order
+            (``np.ndindex(*piece_shape)``).  Each dict contains:
+
+            - ``'piece_index'`` : tuple — multi-index of this piece
+            - ``'sub_domain'`` : list of (float, float) — bounds for this piece
+            - ``'nodes_per_dim'`` : list of 1-D arrays
+            - ``'full_grid'`` : 2-D array, shape ``(prod(n_nodes), num_dimensions)``
+            - ``'shape'`` : tuple of int
+
+            ``'num_pieces'`` : int — total number of pieces.
+
+            ``'piece_shape'`` : tuple of int — per-dimension piece counts.
+
+        Examples
+        --------
+        >>> info = ChebyshevSpline.nodes(1, [[-1, 1]], [10], [[0.0]])
+        >>> info['num_pieces']
+        2
+        >>> info['pieces'][0]['sub_domain']
+        [(-1, 0.0)]
+        """
+        # Validate domain and knots
+        for d in range(num_dimensions):
+            lo, hi = domain[d]
+            if lo >= hi:
+                raise ValueError(
+                    f"domain[{d}]: lo={lo} must be strictly less than hi={hi}"
+                )
+            for k in knots[d]:
+                if not (lo < k < hi):
+                    raise ValueError(
+                        f"Knot {k} for dimension {d} is not strictly "
+                        f"inside domain [{lo}, {hi}]"
+                    )
+            if list(knots[d]) != sorted(knots[d]):
+                raise ValueError(
+                    f"Knots for dimension {d} must be sorted"
+                )
+            if len(knots[d]) != len(set(knots[d])):
+                raise ValueError(
+                    f"Knots for dimension {d} contain duplicates"
+                )
+
+        # Compute per-dimension intervals
+        intervals = []
+        for d in range(num_dimensions):
+            lo, hi = domain[d]
+            edges = [lo] + list(knots[d]) + [hi]
+            intervals.append(
+                [(edges[i], edges[i + 1]) for i in range(len(edges) - 1)]
+            )
+
+        piece_shape = tuple(len(ivs) for ivs in intervals)
+        pieces_info = []
+
+        for multi_idx in np.ndindex(*piece_shape):
+            sub_domain = [
+                intervals[d][multi_idx[d]]
+                for d in range(num_dimensions)
+            ]
+            piece_nodes = ChebyshevApproximation.nodes(
+                num_dimensions,
+                [list(sd) for sd in sub_domain],
+                n_nodes,
+            )
+            pieces_info.append({
+                "piece_index": multi_idx,
+                "sub_domain": sub_domain,
+                "nodes_per_dim": piece_nodes["nodes_per_dim"],
+                "full_grid": piece_nodes["full_grid"],
+                "shape": piece_nodes["shape"],
+            })
+
+        return {
+            "pieces": pieces_info,
+            "num_pieces": int(np.prod(piece_shape)),
+            "piece_shape": piece_shape,
+        }
+
+    @classmethod
+    def from_values(
+        cls,
+        piece_values: List[np.ndarray],
+        num_dimensions: int,
+        domain: List[Tuple[float, float]],
+        n_nodes: List[int],
+        knots: List[List[float]],
+        max_derivative_order: int = 2,
+    ) -> "ChebyshevSpline":
+        """Create a spline from pre-computed function values on each piece.
+
+        The resulting object is fully functional: evaluation, derivatives,
+        integration, rootfinding, algebra, extrusion/slicing, and
+        serialization all work exactly as if ``build()`` had been called.
+
+        Parameters
+        ----------
+        piece_values : list of numpy.ndarray
+            Function values for each piece.  Length must equal the total
+            number of pieces (``prod`` of per-dimension piece counts).
+            Order follows ``np.ndindex(*piece_shape)`` (C-order), matching
+            the ``'pieces'`` list returned by :meth:`nodes`.  Each array
+            must have shape ``tuple(n_nodes)``.
+        num_dimensions : int
+            Number of dimensions.
+        domain : list of (float, float)
+            Lower and upper bounds for each dimension.
+        n_nodes : list of int
+            Number of Chebyshev nodes per dimension *per piece*.
+        knots : list of list of float
+            Knot positions for each dimension (may be empty).
+        max_derivative_order : int, optional
+            Maximum derivative order (default 2).
+
+        Returns
+        -------
+        ChebyshevSpline
+            A fully built spline with ``function=None``.
+
+        Raises
+        ------
+        ValueError
+            If the number of pieces does not match, or any piece has
+            the wrong shape or contains NaN/Inf.
+        """
+        # Validate domain and knots (same as nodes())
+        for d in range(num_dimensions):
+            lo, hi = domain[d]
+            if lo >= hi:
+                raise ValueError(
+                    f"domain[{d}]: lo={lo} must be strictly less than hi={hi}"
+                )
+            for k in knots[d]:
+                if not (lo < k < hi):
+                    raise ValueError(
+                        f"Knot {k} for dimension {d} is not strictly "
+                        f"inside domain [{lo}, {hi}]"
+                    )
+            if list(knots[d]) != sorted(knots[d]):
+                raise ValueError(
+                    f"Knots for dimension {d} must be sorted"
+                )
+            if len(knots[d]) != len(set(knots[d])):
+                raise ValueError(
+                    f"Knots for dimension {d} contain duplicates"
+                )
+
+        # Compute intervals and shape
+        intervals = []
+        for d in range(num_dimensions):
+            lo, hi = domain[d]
+            edges = [lo] + list(knots[d]) + [hi]
+            intervals.append(
+                [(edges[i], edges[i + 1]) for i in range(len(edges) - 1)]
+            )
+
+        piece_shape = tuple(len(ivs) for ivs in intervals)
+        total_pieces = int(np.prod(piece_shape))
+
+        if len(piece_values) != total_pieces:
+            raise ValueError(
+                f"Expected {total_pieces} piece_values, got {len(piece_values)}"
+            )
+
+        # Validate per-piece shapes before building
+        expected_shape = tuple(n_nodes)
+        for flat_idx, pv in enumerate(piece_values):
+            pv_arr = np.asarray(pv)
+            if pv_arr.shape != expected_shape:
+                raise ValueError(
+                    f"piece_values[{flat_idx}] has shape {pv_arr.shape}, "
+                    f"expected {expected_shape}"
+                )
+
+        # Build each piece via ChebyshevApproximation.from_values()
+        pieces = []
+        for flat_idx, multi_idx in enumerate(np.ndindex(*piece_shape)):
+            sub_domain = [
+                list(intervals[d][multi_idx[d]])
+                for d in range(num_dimensions)
+            ]
+            piece = ChebyshevApproximation.from_values(
+                piece_values[flat_idx],
+                num_dimensions,
+                sub_domain,
+                n_nodes,
+                max_derivative_order=max_derivative_order,
+            )
+            pieces.append(piece)
+
+        # Assemble via object.__new__()
+        obj = object.__new__(cls)
+        obj.function = None
+        obj.num_dimensions = num_dimensions
+        obj.domain = [list(bounds) for bounds in domain]
+        obj.n_nodes = list(n_nodes)
+        obj.max_derivative_order = max_derivative_order
+        obj.knots = [list(k) for k in knots]
+        obj._intervals = intervals
+        obj._shape = piece_shape
+        obj._pieces = pieces
+        obj._built = True
+        obj._build_time = 0.0
+        obj._cached_error_estimate = None
+
         return obj
 
     # ------------------------------------------------------------------

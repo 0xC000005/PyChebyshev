@@ -217,6 +217,11 @@ class ChebyshevApproximation:
         verbose : bool, optional
             If True, print build progress. Default is True.
         """
+        if self.function is None:
+            raise RuntimeError(
+                "Cannot build: no function assigned. "
+                "This object was created via from_values() or load()."
+            )
         total = int(np.prod(self.n_nodes))
         if verbose:
             print(f"Building {self.num_dimensions}D Chebyshev approximation "
@@ -712,6 +717,190 @@ class ChebyshevApproximation:
             raise TypeError(
                 f"Expected a {cls.__name__} instance, got {type(obj).__name__}"
             )
+        return obj
+
+    # ------------------------------------------------------------------
+    # Pre-computed values: nodes first, values later
+    # ------------------------------------------------------------------
+
+    @staticmethod
+    def nodes(
+        num_dimensions: int,
+        domain: List[Tuple[float, float]],
+        n_nodes: List[int],
+    ) -> dict:
+        """Generate Chebyshev nodes without evaluating any function.
+
+        Use this to obtain the grid points, evaluate your function externally
+        (e.g. on an HPC cluster), then pass the results to :meth:`from_values`.
+
+        Parameters
+        ----------
+        num_dimensions : int
+            Number of dimensions.
+        domain : list of (float, float)
+            Lower and upper bounds for each dimension.
+        n_nodes : list of int
+            Number of Chebyshev nodes per dimension.
+
+        Returns
+        -------
+        dict
+            ``'nodes_per_dim'`` : list of 1-D arrays — Chebyshev nodes for
+            each dimension, sorted ascending.
+
+            ``'full_grid'`` : 2-D array, shape ``(prod(n_nodes), num_dimensions)``
+            — Cartesian product of all nodes.  Row order matches
+            ``np.ndindex(*n_nodes)`` (C-order), so
+            ``values.reshape(info['shape'])`` produces the correct tensor.
+
+            ``'shape'`` : tuple of int — expected shape of the tensor
+            (``== tuple(n_nodes)``).
+
+        Examples
+        --------
+        >>> info = ChebyshevApproximation.nodes(1, [[-1, 1]], [5])
+        >>> info['shape']
+        (5,)
+        >>> info['full_grid'].shape
+        (5, 1)
+        """
+        if len(domain) != num_dimensions or len(n_nodes) != num_dimensions:
+            raise ValueError(
+                f"len(domain)={len(domain)} and len(n_nodes)={len(n_nodes)} "
+                f"must both equal num_dimensions={num_dimensions}"
+            )
+        from pychebyshev._extrude_slice import _make_nodes_for_dim
+
+        nodes_per_dim = []
+        for d in range(num_dimensions):
+            lo, hi = domain[d]
+            nodes_per_dim.append(_make_nodes_for_dim(lo, hi, n_nodes[d]))
+
+        grids = np.meshgrid(*nodes_per_dim, indexing="ij")
+        full_grid = np.column_stack([g.ravel() for g in grids])
+
+        return {
+            "nodes_per_dim": nodes_per_dim,
+            "full_grid": full_grid,
+            "shape": tuple(n_nodes),
+        }
+
+    @classmethod
+    def from_values(
+        cls,
+        tensor_values: np.ndarray,
+        num_dimensions: int,
+        domain: List[Tuple[float, float]],
+        n_nodes: List[int],
+        max_derivative_order: int = 2,
+    ) -> "ChebyshevApproximation":
+        """Create an interpolant from pre-computed function values.
+
+        The resulting object is fully functional: evaluation, derivatives,
+        integration, rootfinding, algebra, extrusion/slicing, and
+        serialization all work exactly as if ``build()`` had been called.
+
+        Parameters
+        ----------
+        tensor_values : numpy.ndarray
+            Function values on the Chebyshev grid.  Shape must equal
+            ``tuple(n_nodes)``.  Entry ``tensor_values[i0, i1, ...]``
+            corresponds to the function evaluated at
+            ``(nodes[0][i0], nodes[1][i1], ...)``, where ``nodes`` are the
+            arrays returned by :meth:`nodes`.
+        num_dimensions : int
+            Number of dimensions.
+        domain : list of (float, float)
+            Lower and upper bounds for each dimension.
+        n_nodes : list of int
+            Number of Chebyshev nodes per dimension.
+        max_derivative_order : int, optional
+            Maximum derivative order (default 2).
+
+        Returns
+        -------
+        ChebyshevApproximation
+            A fully built interpolant with ``function=None``.
+
+        Raises
+        ------
+        ValueError
+            If *tensor_values* shape does not match *n_nodes*, contains
+            NaN or Inf, or if dimension parameters are inconsistent.
+
+        Examples
+        --------
+        >>> import math
+        >>> info = ChebyshevApproximation.nodes(1, [[0, 3.15]], [20])
+        >>> vals = np.sin(info['full_grid'][:, 0]).reshape(info['shape'])
+        >>> cheb = ChebyshevApproximation.from_values(vals, 1, [[0, 3.15]], [20])
+        >>> abs(cheb.vectorized_eval([1.0], [0]) - math.sin(1.0)) < 1e-10
+        True
+        """
+        tensor_values = np.asarray(tensor_values, dtype=float)
+
+        # --- validation ---
+        if len(domain) != num_dimensions or len(n_nodes) != num_dimensions:
+            raise ValueError(
+                f"len(domain)={len(domain)} and len(n_nodes)={len(n_nodes)} "
+                f"must both equal num_dimensions={num_dimensions}"
+            )
+        expected_shape = tuple(n_nodes)
+        if tensor_values.shape != expected_shape:
+            raise ValueError(
+                f"tensor_values.shape={tensor_values.shape} does not match "
+                f"n_nodes={expected_shape}"
+            )
+        if not np.isfinite(tensor_values).all():
+            raise ValueError("tensor_values contains NaN or Inf")
+        for d in range(num_dimensions):
+            lo, hi = domain[d]
+            if lo >= hi:
+                raise ValueError(
+                    f"domain[{d}]: lo={lo} must be strictly less than hi={hi}"
+                )
+
+        # --- build the object without calling __init__ ---
+        from pychebyshev._extrude_slice import _make_nodes_for_dim
+
+        obj = object.__new__(cls)
+        obj.function = None
+        obj.num_dimensions = num_dimensions
+        obj.domain = [list(bounds) for bounds in domain]
+        obj.n_nodes = list(n_nodes)
+        obj.max_derivative_order = max_derivative_order
+
+        # Chebyshev nodes
+        obj.nodes = []
+        for d in range(num_dimensions):
+            lo, hi = domain[d]
+            obj.nodes.append(_make_nodes_for_dim(lo, hi, n_nodes[d]))
+
+        obj.tensor_values = tensor_values.copy()
+
+        # Barycentric weights
+        obj.weights = []
+        for d in range(num_dimensions):
+            obj.weights.append(compute_barycentric_weights(obj.nodes[d]))
+
+        # Differentiation matrices
+        obj.diff_matrices = []
+        for d in range(num_dimensions):
+            obj.diff_matrices.append(
+                compute_differentiation_matrix(obj.nodes[d], obj.weights[d])
+            )
+
+        obj.build_time = 0.0
+        obj.n_evaluations = 0
+        obj._cached_error_estimate = None
+
+        # Pre-allocate eval cache for deprecated fast_eval()
+        obj._eval_cache = {}
+        for d in range(obj.num_dimensions - 1, 0, -1):
+            shape = tuple(obj.n_nodes[i] for i in range(d))
+            obj._eval_cache[d] = np.zeros(shape)
+
         return obj
 
     # ------------------------------------------------------------------
