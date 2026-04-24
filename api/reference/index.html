@@ -11,7 +11,7 @@
       
       
       
-        <link rel="prev" href="../../user-guide/error-estimation/">
+        <link rel="prev" href="../../user-guide/error-driven-construction/">
       
       
         <link rel="next" href="../../benchmarks/">
@@ -683,6 +683,34 @@
 
               
             
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../user-guide/error-driven-construction/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Error-Driven Construction
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
           </ul>
         </nav>
       
@@ -878,6 +906,17 @@
 </li>
       
         <li class="md-nav__item">
+  <a href="#pychebyshev.ChebyshevApproximation.get_error_threshold" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        get_error_threshold
+      
+    </span>
+  </a>
+  
+</li>
+      
+        <li class="md-nav__item">
   <a href="#pychebyshev.ChebyshevApproximation.__getstate__" class="md-nav__link">
     <span class="md-ellipsis">
       
@@ -915,6 +954,17 @@
     <span class="md-ellipsis">
       
         load
+      
+    </span>
+  </a>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#pychebyshev.ChebyshevApproximation.get_optimal_n1" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        get_optimal_n1
       
     </span>
   </a>
@@ -1616,6 +1666,33 @@
   
 
     
+      
+      
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../roadmap/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Roadmap
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+    
   </ul>
 </nav>
                   </div>
@@ -1764,6 +1841,17 @@
 </li>
       
         <li class="md-nav__item">
+  <a href="#pychebyshev.ChebyshevApproximation.get_error_threshold" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        get_error_threshold
+      
+    </span>
+  </a>
+  
+</li>
+      
+        <li class="md-nav__item">
   <a href="#pychebyshev.ChebyshevApproximation.__getstate__" class="md-nav__link">
     <span class="md-ellipsis">
       
@@ -1801,6 +1889,17 @@
     <span class="md-ellipsis">
       
         load
+      
+    </span>
+  </a>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#pychebyshev.ChebyshevApproximation.get_optimal_n1" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        get_optimal_n1
       
     </span>
   </a>
@@ -2572,15 +2671,18 @@ additional data (can be None).</p>
                 <code>n_nodes</code>
             </td>
             <td>
-                  <code>list of int</code>
+                  <code>list of (int or None)</code>
             </td>
             <td>
               <div class="doc-md-description">
-                <p>Number of Chebyshev nodes per dimension.</p>
+                <p>Number of Chebyshev nodes per dimension. Entries may be None
+when <code>error_threshold</code> is set, signalling auto-N mode for
+that dimension. If omitted entirely, <code>error_threshold</code> must
+be provided. Default is None.</p>
               </div>
             </td>
             <td>
-                <em>required</em>
+                  <code>None</code>
             </td>
           </tr>
           <tr class="doc-section-item">
@@ -2597,6 +2699,43 @@ additional data (can be None).</p>
             </td>
             <td>
                   <code>2</code>
+            </td>
+          </tr>
+          <tr class="doc-section-item">
+            <td>
+                <code>error_threshold</code>
+            </td>
+            <td>
+                  <code><span title="float">float</span></code>
+            </td>
+            <td>
+              <div class="doc-md-description">
+                <p>When set, enables error-driven auto-N construction: any
+dimension with an unresolved (None) entry in <code>n_nodes</code> is
+refined via the build-time doubling loop until the sup-norm
+error estimate falls below this threshold (or <code>max_n</code> is
+reached). Default is None.</p>
+              </div>
+            </td>
+            <td>
+                  <code>None</code>
+            </td>
+          </tr>
+          <tr class="doc-section-item">
+            <td>
+                <code>max_n</code>
+            </td>
+            <td>
+                  <code><span title="int">int</span></code>
+            </td>
+            <td>
+              <div class="doc-md-description">
+                <p>Upper cap on per-dimension node count when the doubling loop
+refines auto dims. Default is 64.</p>
+              </div>
+            </td>
+            <td>
+                  <code>64</code>
             </td>
           </tr>
       </tbody>
@@ -2771,7 +2910,11 @@ each dimension, sorted ascending.</p>
 
     <div class="doc doc-contents ">
 
-        <p>Evaluate the function at all node combinations and pre-compute weights.</p>
+        <p>Build the Chebyshev approximation by evaluating the function on the grid.</p>
+<p>If <code>error_threshold</code> was provided to <code>__init__</code>, runs the
+doubling loop until the target precision is reached (or
+<code>max_n</code> is hit on all auto dims). Otherwise builds on the
+fixed grid specified by <code>n_nodes</code>.</p>
 
 
 <p><span class="doc-section-title">Parameters:</span></p>
@@ -2799,6 +2942,44 @@ each dimension, sorted ascending.</p>
             </td>
             <td>
                   <code>True</code>
+            </td>
+          </tr>
+      </tbody>
+    </table>
+
+
+<details class="note" open>
+  <summary>Notes</summary>
+  <p>In auto-N mode (<code>error_threshold</code> set), <code>n_evaluations</code>
+and <code>build_time</code> are <strong>accumulated across doubling
+iterations</strong> and reflect the total work performed, not just
+the final iteration. In fixed-N mode they reflect a single
+build.</p>
+<p>Dispatch keys off the user's <em>original</em> <code>n_nodes</code>
+(preserved as <code>_original_n_nodes</code>), so a second
+<code>build()</code> after mutating <code>error_threshold</code> correctly
+re-runs the doubling loop instead of silently bypassing it.</p>
+</details>
+
+<p><span class="doc-section-title">Raises:</span></p>
+    <table>
+      <thead>
+        <tr>
+          <th>Type</th>
+          <th>Description</th>
+        </tr>
+      </thead>
+      <tbody>
+          <tr class="doc-section-item">
+            <td>
+                  <code><span title="RuntimeError">RuntimeError</span></code>
+            </td>
+            <td>
+              <div class="doc-md-description">
+                <p>If <code>function</code> is None (e.g., object was produced via
+<code>from_values()</code>, <code>load()</code>, algebra, <code>slice</code>, or
+<code>extrude</code> — use those factories directly).</p>
+              </div>
             </td>
           </tr>
       </tbody>
@@ -3421,6 +3602,51 @@ maximum last-coefficient magnitudes:</p>
 <div class="doc doc-object doc-function">
 
 
+<h2 id="pychebyshev.ChebyshevApproximation.get_error_threshold" class="doc doc-heading">
+            <code class="highlight language-python"><span class="n">get_error_threshold</span><span class="p">()</span></code>
+
+<a href="#pychebyshev.ChebyshevApproximation.get_error_threshold" class="headerlink" title="Permanent link">&para;</a></h2>
+
+
+    <div class="doc doc-contents ">
+
+        <p>Return the error_threshold passed to <code>__init__</code>, or None if unset.</p>
+<p>This is the <em>target</em> precision specified at construction time, not
+the achieved error after build. For the post-build achieved error
+estimate, use :meth:<code>error_estimate</code>.</p>
+
+
+    <p><span class="doc-section-title">Returns:</span></p>
+    <table>
+      <thead>
+        <tr>
+          <th>Type</th>
+          <th>Description</th>
+        </tr>
+      </thead>
+      <tbody>
+          <tr class="doc-section-item">
+            <td>
+                  <code><span title="float">float</span> or None</code>
+            </td>
+            <td>
+              <div class="doc-md-description">
+                <p>The <code>error_threshold</code> kwarg from construction, or <code>None</code>
+if the object was built with an explicit fixed grid.</p>
+              </div>
+            </td>
+          </tr>
+      </tbody>
+    </table>
+
+
+    </div>
+
+</div>
+
+<div class="doc doc-object doc-function">
+
+
 <h2 id="pychebyshev.ChebyshevApproximation.__getstate__" class="doc doc-heading">
             <code class="highlight language-python"><span class="n">__getstate__</span><span class="p">()</span></code>
 
@@ -3632,6 +3858,136 @@ before calling <code>build()</code> again if a rebuild is desired.</p>
                 <p>This method uses :mod:<code>pickle</code> internally. Pickle can execute
 arbitrary code during deserialization. <strong>Only load files you
 trust.</strong></p>
+              </div>
+            </td>
+          </tr>
+      </tbody>
+    </table>
+
+
+    </div>
+
+</div>
+
+<div class="doc doc-object doc-function">
+
+
+<h2 id="pychebyshev.ChebyshevApproximation.get_optimal_n1" class="doc doc-heading">
+            <code class="highlight language-python"><span class="n">get_optimal_n1</span><span class="p">(</span><span class="n">function</span><span class="p">,</span> <span class="n">domain_1d</span><span class="p">,</span> <span class="n">error_threshold</span><span class="p">,</span> <span class="n">max_n</span><span class="o">=</span><span class="mi">64</span><span class="p">)</span></code>
+
+  <span class="doc doc-labels">
+      <small class="doc doc-label doc-label-classmethod"><code>classmethod</code></small>
+  </span>
+
+<a href="#pychebyshev.ChebyshevApproximation.get_optimal_n1" class="headerlink" title="Permanent link">&para;</a></h2>
+
+
+    <div class="doc doc-contents ">
+
+        <p>Smallest N such that a 1-D Chebyshev build hits <code>error_threshold</code>.</p>
+<p>Useful as a capacity estimate before committing to a full
+multi-dimensional build. Internally runs the same doubling
+loop as <code>__init__(error_threshold=...)</code> on a 1-D interpolant.</p>
+
+
+<p><span class="doc-section-title">Parameters:</span></p>
+    <table>
+      <thead>
+        <tr>
+          <th>Name</th>
+          <th>Type</th>
+          <th>Description</th>
+          <th>Default</th>
+        </tr>
+      </thead>
+      <tbody>
+          <tr class="doc-section-item">
+            <td>
+                <code>function</code>
+            </td>
+            <td>
+                  <code><span title="callable">callable</span></code>
+            </td>
+            <td>
+              <div class="doc-md-description">
+                <p>Signature <code>f(point, data) -&gt; float</code> where <code>point</code> is a
+list of length 1.</p>
+              </div>
+            </td>
+            <td>
+                <em>required</em>
+            </td>
+          </tr>
+          <tr class="doc-section-item">
+            <td>
+                <code>domain_1d</code>
+            </td>
+            <td>
+                  <code><span title="tuple">tuple</span> or <span title="list">list</span></code>
+            </td>
+            <td>
+              <div class="doc-md-description">
+                <p><code>(lo, hi)</code> bounds.</p>
+              </div>
+            </td>
+            <td>
+                <em>required</em>
+            </td>
+          </tr>
+          <tr class="doc-section-item">
+            <td>
+                <code>error_threshold</code>
+            </td>
+            <td>
+                  <code><span title="float">float</span></code>
+            </td>
+            <td>
+              <div class="doc-md-description">
+                <p>Target supremum-norm error.</p>
+              </div>
+            </td>
+            <td>
+                <em>required</em>
+            </td>
+          </tr>
+          <tr class="doc-section-item">
+            <td>
+                <code>max_n</code>
+            </td>
+            <td>
+                  <code><span title="int">int</span></code>
+            </td>
+            <td>
+              <div class="doc-md-description">
+                <p>Cap on the returned N. Default is 64. If the doubling loop
+cannot achieve <code>error_threshold</code> within this cap, a
+<code>RuntimeWarning</code> is emitted and <code>max_n</code> is returned.</p>
+              </div>
+            </td>
+            <td>
+                  <code>64</code>
+            </td>
+          </tr>
+      </tbody>
+    </table>
+
+
+    <p><span class="doc-section-title">Returns:</span></p>
+    <table>
+      <thead>
+        <tr>
+          <th>Type</th>
+          <th>Description</th>
+        </tr>
+      </thead>
+      <tbody>
+          <tr class="doc-section-item">
+            <td>
+                  <code><span title="int">int</span></code>
+            </td>
+            <td>
+              <div class="doc-md-description">
+                <p>Resolved N on dimension 0.</p>
               </div>
             </td>
           </tr>
@@ -5702,15 +6058,19 @@ additional data (can be None).</p>
                 <code>n_nodes</code>
             </td>
             <td>
-                  <code>list of int</code>
+                  <code>list of (int or None)</code>
             </td>
             <td>
               <div class="doc-md-description">
-                <p>Number of Chebyshev nodes per dimension <em>per piece</em>.</p>
+                <p>Number of Chebyshev nodes per dimension <em>per piece</em>.  Entries
+may be <code>None</code> when <code>error_threshold</code> is set, signalling
+auto-N mode for that dimension (each piece runs its own
+doubling loop independently).  If omitted entirely,
+<code>error_threshold</code> must be provided.  Default is <code>None</code>.</p>
               </div>
             </td>
             <td>
-                <em>required</em>
+                  <code>None</code>
             </td>
           </tr>
           <tr class="doc-section-item">
@@ -5724,11 +6084,15 @@ additional data (can be None).</p>
               <div class="doc-md-description">
                 <p>Interior knots for each dimension.  Each sub-list must be sorted
 and every knot must lie strictly inside the corresponding domain
-interval.  Use an empty list <code>[]</code> for dimensions with no knots.</p>
+interval.  Use an empty list <code>[]</code> for dimensions with no knots.
+If omitted or <code>None</code>, defaults to
+<code>[[] for _ in range(num_dimensions)]</code> (single piece per dim,
+no knots).  Useful in combination with <code>error_threshold</code> for
+a flat spline with auto-N.</p>
               </div>
             </td>
             <td>
-                <em>required</em>
+                  <code>None</code>
             </td>
           </tr>
           <tr class="doc-section-item">
@@ -5745,6 +6109,42 @@ interval.  Use an empty list <code>[]</code> for dimensions with no knots.</p>
             </td>
             <td>
                   <code>2</code>
+            </td>
+          </tr>
+          <tr class="doc-section-item">
+            <td>
+                <code>error_threshold</code>
+            </td>
+            <td>
+                  <code><span title="float">float</span></code>
+            </td>
+            <td>
+              <div class="doc-md-description">
+                <p>When set, enables error-driven auto-N construction on every
+piece: each piece is built with this threshold, so pieces near
+kinks may refine to higher N than smooth pieces.  Default is
+<code>None</code>.</p>
+              </div>
+            </td>
+            <td>
+                  <code>None</code>
+            </td>
+          </tr>
+          <tr class="doc-section-item">
+            <td>
+                <code>max_n</code>
+            </td>
+            <td>
+                  <code><span title="int">int</span></code>
+            </td>
+            <td>
+              <div class="doc-md-description">
+                <p>Upper cap on per-dimension node count passed through to each
+piece's doubling loop.  Default is 64.</p>
+              </div>
+            </td>
+            <td>
+                  <code>64</code>
             </td>
           </tr>
       </tbody>
@@ -5820,6 +6220,12 @@ interval.  Use an empty list <code>[]</code> for dimensions with no knots.</p>
     <div class="doc doc-contents ">
 
         <p>Total number of function evaluations used during build.</p>
+<p>In auto-N mode each piece may end up at a different resolved
+grid size (and may have run a doubling loop), so we sum each
+piece's own <code>n_evaluations</code> counter rather than assuming a
+uniform grid.  Falls back to the old uniform-grid formula if
+pieces have not been built yet.  For an unbuilt auto-N spline
+the total cannot be predicted up-front, so we return 0.</p>
 
     </div>
 

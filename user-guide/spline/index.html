@@ -1212,6 +1212,34 @@
 
               
             
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../error-driven-construction/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Error-Driven Construction
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
           </ul>
         </nav>
       
@@ -1261,6 +1289,33 @@
     
   
     Benchmarks
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+    
+      
+      
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../roadmap/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Roadmap
   
 
     
@@ -2219,15 +2274,19 @@ additional data (can be None).</p>
                 <code>n_nodes</code>
             </td>
             <td>
-                  <code>list of int</code>
+                  <code>list of (int or None)</code>
             </td>
             <td>
               <div class="doc-md-description">
-                <p>Number of Chebyshev nodes per dimension <em>per piece</em>.</p>
+                <p>Number of Chebyshev nodes per dimension <em>per piece</em>.  Entries
+may be <code>None</code> when <code>error_threshold</code> is set, signalling
+auto-N mode for that dimension (each piece runs its own
+doubling loop independently).  If omitted entirely,
+<code>error_threshold</code> must be provided.  Default is <code>None</code>.</p>
               </div>
             </td>
             <td>
-                <em>required</em>
+                  <code>None</code>
             </td>
           </tr>
           <tr class="doc-section-item">
@@ -2241,11 +2300,15 @@ additional data (can be None).</p>
               <div class="doc-md-description">
                 <p>Interior knots for each dimension.  Each sub-list must be sorted
 and every knot must lie strictly inside the corresponding domain
-interval.  Use an empty list <code>[]</code> for dimensions with no knots.</p>
+interval.  Use an empty list <code>[]</code> for dimensions with no knots.
+If omitted or <code>None</code>, defaults to
+<code>[[] for _ in range(num_dimensions)]</code> (single piece per dim,
+no knots).  Useful in combination with <code>error_threshold</code> for
+a flat spline with auto-N.</p>
               </div>
             </td>
             <td>
-                <em>required</em>
+                  <code>None</code>
             </td>
           </tr>
           <tr class="doc-section-item">
@@ -2262,6 +2325,42 @@ interval.  Use an empty list <code>[]</code> for dimensions with no knots.</p>
             </td>
             <td>
                   <code>2</code>
+            </td>
+          </tr>
+          <tr class="doc-section-item">
+            <td>
+                <code>error_threshold</code>
+            </td>
+            <td>
+                  <code><span title="float">float</span></code>
+            </td>
+            <td>
+              <div class="doc-md-description">
+                <p>When set, enables error-driven auto-N construction on every
+piece: each piece is built with this threshold, so pieces near
+kinks may refine to higher N than smooth pieces.  Default is
+<code>None</code>.</p>
+              </div>
+            </td>
+            <td>
+                  <code>None</code>
+            </td>
+          </tr>
+          <tr class="doc-section-item">
+            <td>
+                <code>max_n</code>
+            </td>
+            <td>
+                  <code><span title="int">int</span></code>
+            </td>
+            <td>
+              <div class="doc-md-description">
+                <p>Upper cap on per-dimension node count passed through to each
+piece's doubling loop.  Default is 64.</p>
+              </div>
+            </td>
+            <td>
+                  <code>64</code>
             </td>
           </tr>
       </tbody>
@@ -2337,6 +2436,12 @@ interval.  Use an empty list <code>[]</code> for dimensions with no knots.</p>
     <div class="doc doc-contents ">
 
         <p>Total number of function evaluations used during build.</p>
+<p>In auto-N mode each piece may end up at a different resolved
+grid size (and may have run a doubling loop), so we sum each
+piece's own <code>n_evaluations</code> counter rather than assuming a
+uniform grid.  Falls back to the old uniform-grid formula if
+pieces have not been built yet.  For an unbuilt auto-N spline
+the total cannot be predicted up-front, so we return 0.</p>
 
     </div>
 
