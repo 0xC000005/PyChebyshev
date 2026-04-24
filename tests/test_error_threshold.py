@@ -3,9 +3,7 @@
 from __future__ import annotations
 
 import math
-import warnings
 
-import numpy as np
 import pytest
 
 from pychebyshev import ChebyshevApproximation
@@ -53,6 +51,11 @@ class TestConstructorValidation:
             ChebyshevApproximation(
                 _sin2d, 2, [[-1, 1], [-1, 1]], n_nodes=[None, 11],
             )
+
+    def test_neither_n_nor_threshold_raises(self):
+        """Omitting both n_nodes and error_threshold → ValueError."""
+        with pytest.raises(ValueError, match="n_nodes.*error_threshold"):
+            ChebyshevApproximation(_sin2d, 2, [[-1, 1], [-1, 1]])
 
     def test_all_none_all_dim_auto(self):
         """All-None n_nodes is equivalent to omitting n_nodes."""

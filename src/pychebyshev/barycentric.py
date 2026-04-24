@@ -163,10 +163,22 @@ class ChebyshevApproximation:
         Number of input dimensions.
     domain : list of (float, float)
         Bounds [(lo, hi), ...] for each dimension.
-    n_nodes : list of int
-        Number of Chebyshev nodes per dimension.
+    n_nodes : list of (int or None), optional
+        Number of Chebyshev nodes per dimension. Entries may be None
+        when ``error_threshold`` is set, signalling auto-N mode for
+        that dimension. If omitted entirely, ``error_threshold`` must
+        be provided. Default is None.
     max_derivative_order : int, optional
         Maximum derivative order to support. Default is 2.
+    error_threshold : float, optional
+        When set, enables error-driven auto-N construction: any
+        dimension with an unresolved (None) entry in ``n_nodes`` is
+        refined via the build-time doubling loop until the sup-norm
+        error estimate falls below this threshold (or ``max_n`` is
+        reached). Default is None.
+    max_n : int, optional
+        Upper cap on per-dimension node count when the doubling loop
+        refines auto dims. Default is 64.
 
     Examples
     --------
@@ -184,7 +196,7 @@ class ChebyshevApproximation:
         function: Callable,
         num_dimensions: int,
         domain: List[Tuple[float, float]],
-        n_nodes: List[int] | None = None,
+        n_nodes: List[int | None] | None = None,
         max_derivative_order: int = 2,
         error_threshold: float | None = None,
         max_n: int = 64,
@@ -203,7 +215,7 @@ class ChebyshevApproximation:
                     "Must provide either n_nodes (explicit) or error_threshold "
                     "(auto-N). Got neither."
                 )
-            n_nodes = [None] * num_dimensions  # type: ignore[list-item]
+            n_nodes = [None] * num_dimensions
         else:
             n_nodes = list(n_nodes)
             if any(n is None for n in n_nodes) and error_threshold is None:
