@@ -146,6 +146,66 @@ def barycentric_derivative_analytical(x: float, nodes: np.ndarray, values: np.nd
         raise ValueError(f"Derivative order {order} not supported (use 1 or 2)")
 
 
+def _validate_special_points_shape(
+    special_points: List[List[float]],
+    n_nodes,
+    num_dimensions: int,
+    domain: List[Tuple[float, float]],
+) -> None:
+    """Validate special_points and nested n_nodes shape (v0.12).
+
+    Called from ``ChebyshevApproximation.__new__`` before dispatching to
+    ``ChebyshevSpline``.  Raises ValueError on any shape or content
+    violation; returns None on success.
+    """
+    if len(special_points) != num_dimensions:
+        raise ValueError(
+            f"special_points must have {num_dimensions} entries, "
+            f"got {len(special_points)}"
+        )
+    for d in range(num_dimensions):
+        lo, hi = domain[d]
+        pts = list(special_points[d])
+        for k in pts:
+            if not (lo < k < hi):
+                raise ValueError(
+                    f"Special point {k} for dimension {d} is not strictly "
+                    f"inside domain [{lo}, {hi}]"
+                )
+        if pts != sorted(pts):
+            raise ValueError(
+                f"special_points for dimension {d} must be sorted"
+            )
+        if len(set(pts)) != len(pts):
+            raise ValueError(
+                f"Coinciding special points in dimension {d}"
+            )
+
+    if n_nodes is None:
+        return  # auto-N per piece is fine; spline will handle
+
+    any_nested = any(isinstance(x, (list, tuple)) for x in n_nodes)
+    all_nested = all(isinstance(x, (list, tuple)) for x in n_nodes)
+    if any_nested and not all_nested:
+        raise ValueError(
+            f"n_nodes must be fully nested (all dims as lists) when any "
+            f"dim is nested; got mixed form {n_nodes!r}"
+        )
+    if not all_nested:
+        raise ValueError(
+            f"n_nodes must be nested as List[List[int]] when special_points "
+            f"is present; got {n_nodes!r}"
+        )
+    for d in range(num_dimensions):
+        expected = len(special_points[d]) + 1
+        got = len(n_nodes[d])
+        if got != expected:
+            raise ValueError(
+                f"n_nodes[{d}] must have {expected} entries "
+                f"(one per sub-interval); got {got}"
+            )
+
+
 class ChebyshevApproximation:
     """Multi-dimensional Chebyshev approximation using barycentric interpolation.
 
@@ -191,15 +251,58 @@ class ChebyshevApproximation:
     0.7764...
     """
 
+    def __new__(
+        cls,
+        function=None,
+        num_dimensions=None,
+        domain=None,
+        n_nodes=None,
+        max_derivative_order=2,
+        error_threshold=None,
+        max_n=64,
+        special_points=None,
+    ):
+        """Dispatch to ChebyshevSpline when special_points declares any kink.
+
+        Python skips ``__init__`` on this class when ``__new__`` returns an
+        instance that is not an instance of ``cls`` (or subclass).
+        ChebyshevSpline is not a subclass of ChebyshevApproximation, so the
+        spline's own ``__init__`` (already run inside the return expression
+        below) is not overwritten.
+
+        All parameters default to ``None`` so pickle/copy protocols can call
+        ``__new__(cls)`` without positional arguments; real construction
+        still goes through ``__init__``.
+        """
+        if special_points is not None and any(
+            len(sp) > 0 for sp in special_points
+        ):
+            from pychebyshev.spline import ChebyshevSpline
+            _validate_special_points_shape(
+                special_points, n_nodes, num_dimensions, domain
+            )
+            return ChebyshevSpline(
+                function,
+                num_dimensions,
+                domain,
+                n_nodes=n_nodes,
+                knots=special_points,
+                max_derivative_order=max_derivative_order,
+                error_threshold=error_threshold,
+                max_n=max_n,
+            )
+        return super().__new__(cls)
+
     def __init__(
         self,
         function: Callable,
         num_dimensions: int,
         domain: List[Tuple[float, float]],
-        n_nodes: List[int | None] | None = None,
+        n_nodes: List[int | None] | List[List[int | None]] | None = None,
         max_derivative_order: int = 2,
         error_threshold: float | None = None,
         max_n: int = 64,
+        special_points: List[List[float]] | None = None,
     ):
         self.function = function
         self.num_dimensions = num_dimensions
