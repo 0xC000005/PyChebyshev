@@ -225,6 +225,11 @@ class ChebyshevApproximation:
                 )
 
         self.n_nodes = n_nodes
+        # Preserve the user's original intent (None sentinels intact) so
+        # a second build() call after the doubling loop has resolved all
+        # Ns can still dispatch to the auto-N path when the user
+        # tightens error_threshold and rebuilds.
+        self._original_n_nodes: List[int | None] = list(self.n_nodes)
 
         self.tensor_values: np.ndarray | None = None
         self.weights: List[np.ndarray] | None = None
@@ -267,6 +272,19 @@ class ChebyshevApproximation:
         verbose : bool, optional
             If True, print build progress. Default is True.
 
+        Notes
+        -----
+        In auto-N mode (``error_threshold`` set), ``n_evaluations``
+        and ``build_time`` are **accumulated across doubling
+        iterations** and reflect the total work performed, not just
+        the final iteration. In fixed-N mode they reflect a single
+        build.
+
+        Dispatch keys off the user's *original* ``n_nodes``
+        (preserved as ``_original_n_nodes``), so a second
+        ``build()`` after mutating ``error_threshold`` correctly
+        re-runs the doubling loop instead of silently bypassing it.
+
         Raises
         ------
         RuntimeError
@@ -279,7 +297,7 @@ class ChebyshevApproximation:
                 "Cannot build: no function assigned. "
                 "This object was created via from_values() or load()."
             )
-        if any(n is None for n in self.n_nodes):
+        if any(n is None for n in self._original_n_nodes):
             self._build_with_threshold(verbose=verbose)
         else:
             self._build_fixed_grid(verbose=verbose)
@@ -294,13 +312,17 @@ class ChebyshevApproximation:
         work done, not just the final iteration.
         """
         assert self.error_threshold is not None
-        assert any(n is None for n in self.n_nodes), (
+        assert any(n is None for n in self._original_n_nodes), (
             "_build_with_threshold called with all Ns resolved"
         )
 
         # Resolve: ints stay, None starts at 3
-        current: List[int] = [n if n is not None else 3 for n in self.n_nodes]
-        auto_dims = [i for i, n in enumerate(self.n_nodes) if n is None]
+        current: List[int] = [
+            n if n is not None else 3 for n in self._original_n_nodes
+        ]
+        auto_dims = [
+            i for i, n in enumerate(self._original_n_nodes) if n is None
+        ]
 
         total_evals = 0
         total_build_time = 0.0
@@ -313,7 +335,13 @@ class ChebyshevApproximation:
             total_evals += self.n_evaluations
             total_build_time += self.build_time
 
-            err = self.error_estimate()
+            # Compute per-dim errors once per iteration; derive the
+            # total from their sum and seed the cache so any external
+            # error_estimate() call on the final object hits the cache.
+            per_dim = self._error_estimate_per_dim()
+            err = float(sum(per_dim))
+            self._cached_error_estimate = err
+
             if verbose:
                 print(f"[auto-N] n_nodes={current}, error={err:.3e}")
 
@@ -321,7 +349,6 @@ class ChebyshevApproximation:
                 break
 
             # Pick worst auto dim not yet at max_n
-            per_dim = self._error_estimate_per_dim()
             candidates = [
                 (per_dim[i], i)
                 for i in auto_dims
@@ -352,13 +379,9 @@ class ChebyshevApproximation:
 
         Original body of build() — now called by the public build()
         wrapper for the fixed-N path, and by _build_with_threshold for
-        each iteration of the doubling loop.
+        each iteration of the doubling loop. The public wrapper
+        already enforces ``function is not None``, so no guard here.
         """
-        if self.function is None:
-            raise RuntimeError(
-                "Cannot build: no function assigned. "
-                "This object was created via from_values() or load()."
-            )
         total = int(np.prod(self.n_nodes))
         if verbose:
             print(f"Building {self.num_dimensions}D Chebyshev approximation "
@@ -798,6 +821,9 @@ class ChebyshevApproximation:
         # Ensure fields added in later versions exist (backward compat)
         if not hasattr(self, "_cached_error_estimate"):
             self._cached_error_estimate = None
+        if not hasattr(self, "_original_n_nodes"):
+            # v0.10 and earlier: n_nodes was always fully resolved
+            self._original_n_nodes = list(self.n_nodes)
 
         # Reconstruct pre-allocated eval cache for fast_eval() (deprecated)
         self._eval_cache = {}

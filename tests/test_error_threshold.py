@@ -138,3 +138,21 @@ class TestDoublingLoop:
         )
         cheb.build(verbose=False)
         assert cheb.error_estimate() <= 1e-12
+
+    def test_rebuild_with_tighter_threshold_rebuilds_auto_dims(self):
+        """Second build() with a tighter threshold must re-run the doubling loop."""
+        cheb = ChebyshevApproximation(
+            lambda x, _: math.sin(x[0]),
+            1, [[-1, 1]], error_threshold=1e-4,
+        )
+        cheb.build(verbose=False)
+        n_first = cheb.n_nodes[0]
+        err_first = cheb.error_estimate()
+        assert err_first <= 1e-4
+
+        # Tighten and rebuild
+        cheb.error_threshold = 1e-10
+        cheb.build(verbose=False)
+        assert cheb.error_estimate() <= 1e-10
+        # Tighter threshold should force at least as many nodes as before
+        assert cheb.n_nodes[0] >= n_first
