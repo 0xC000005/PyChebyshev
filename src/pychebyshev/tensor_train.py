@@ -677,6 +677,147 @@ def _orth_right_core(
     return new_core_k_minus_1, new_core_k
 
 
+def _als_fixed_rank_sweeps(
+    cores: list[np.ndarray],
+    evals_at: "Callable[[tuple[int, ...]], float]",
+    n_nodes: list[int],
+    tolerance: float,
+    max_iter: int,
+    verbose: bool = False,
+) -> list[np.ndarray]:
+    """Alternating LS sweeps at fixed TT rank.
+
+    At each core position k, hold all other cores fixed and solve a linear
+    least-squares problem for the coefficients of core k against the target
+    function values on the Chebyshev grid. Sweep left-to-right then
+    right-to-left; repeat up to ``max_iter`` outer iterations or until
+    tolerance reached.
+
+    Parameters
+    ----------
+    cores : list of np.ndarray
+        Initial TT cores, shapes ``(r_k, n_k, r_{k+1})`` with ``r_0 = r_d = 1``.
+    evals_at : callable
+        ``evals_at((i_0, i_1, ..., i_{d-1}))`` returns the target function's
+        value at grid index tuple. May cache internally.
+    n_nodes : list of int
+        Grid size per dimension.
+    tolerance : float
+        Stop when ``||T_new - T_old||_F / ||T_old||_F < tolerance``.
+    max_iter : int
+        Maximum outer iterations (one outer iter = L->R sweep + R->L sweep).
+    verbose : bool
+        Print per-sweep residuals.
+
+    Returns
+    -------
+    list of np.ndarray
+        Refined cores, mutating the input list.
+
+    Notes
+    -----
+    Reference: Holtz, Rohwedder, Schneider (2012),
+    "The Alternating Linear Scheme for Tensor Optimization in the
+    Tensor Train Format," *SIAM J. Sci. Comput.* 34(2), A683-A713.
+
+    This implementation uses the dense LS formulation: at position k,
+    we build design matrix ``A`` of shape
+    ``(prod(n_nodes), r_k * n_k * r_{k+1})`` and solve
+    ``A @ vec(C_k) = b`` via ``np.linalg.lstsq``. For small-to-moderate
+    problems (grid size up to ~1e5) this is direct and robust.
+    """
+    d = len(cores)
+    total_points = int(np.prod(n_nodes))
+    # Precompute b (grid values in C-order index) once per call.
+    b = np.empty(total_points, dtype=float)
+    multi_indices = list(np.ndindex(*n_nodes))
+    for flat, idx in enumerate(multi_indices):
+        b[flat] = evals_at(idx)
+
+    def reconstruct(cores_list):
+        T = cores_list[0]
+        for c in cores_list[1:]:
+            T = np.einsum("...i,ijk->...jk", T, c)
+        return T.squeeze(axis=0).squeeze(axis=-1)  # (n_0, n_1, ..., n_{d-1})
+
+    prev_T = reconstruct(cores)
+    for outer in range(max_iter):
+        for direction in ("left_to_right", "right_to_left"):
+            order = range(d) if direction == "left_to_right" else range(d - 1, -1, -1)
+            for k in order:
+                # Canonicalize around k: cores [0..k-1] left-orth, [k+1..d-1] right-orth.
+                # This is standard ALS and ensures the LS system is well-conditioned.
+                # Brute-force re-canonicalize each step to keep the code simple;
+                # amortized over a sweep this is O(d^2) QRs instead of O(d) but
+                # correctness is the priority.
+                for j in range(k):
+                    cores[j], cores[j + 1] = _orth_left_core(cores[j], cores[j + 1])
+                for j in range(d - 1, k, -1):
+                    cores[j - 1], cores[j] = _orth_right_core(cores[j - 1], cores[j])
+
+                r_left, n_k, r_right = cores[k].shape
+                # Build design matrix A for the LS system A @ vec(C_k) = b.
+                # At flat grid index (i_0, ..., i_{d-1}):
+                # T[i] = (C_0[0, i_0] @ ... @ C_{k-1}[..., i_{k-1}])_alpha
+                #        * C_k[alpha, i_k, beta]
+                #        * (C_{k+1}[beta, i_{k+1}] @ ... @ C_{d-1}[..., i_{d-1}])
+                # So A[flat, alpha*n_k*r_right + i_k*r_right + beta] =
+                #    L_factor[flat, alpha] * delta(i_k, idx[k]) * R_factor[flat, beta]
+                A = np.zeros((total_points, r_left * n_k * r_right), dtype=float)
+
+                # Precompute left and right factor rows for each flat index.
+                # L_factor: (total_points, r_left) -- product of cores [0..k-1]
+                # R_factor: (total_points, r_right) -- product of cores [k+1..d-1]
+                # Initialize with the boundary bond dimension 1 (r_0 = r_d = 1);
+                # the iterated einsum then grows the middle dim to r_left / r_right.
+                L_rows = np.ones((total_points, 1), dtype=float)
+                for j in range(k):
+                    Cj = cores[j]  # (rj, n_j, rj1)
+                    idx_j = np.array([idx[j] for idx in multi_indices])  # (total_points,)
+                    # L_rows @= Cj[:, idx_j, :] slice per-row
+                    # New shape: (total_points, rj1)
+                    slices = Cj[:, idx_j, :]  # (rj, total_points, rj1)
+                    slices = np.transpose(slices, (1, 0, 2))  # (total_points, rj, rj1)
+                    L_rows = np.einsum("pa,pab->pb", L_rows, slices)
+
+                R_rows = np.ones((total_points, 1), dtype=float)
+                for j in range(d - 1, k, -1):
+                    Cj = cores[j]
+                    idx_j = np.array([idx[j] for idx in multi_indices])
+                    slices = Cj[:, idx_j, :]
+                    slices = np.transpose(slices, (1, 0, 2))  # (total_points, rj, rj1)
+                    R_rows = np.einsum("pab,pb->pa", slices, R_rows)
+
+                i_k_arr = np.array([idx[k] for idx in multi_indices])
+                for flat in range(total_points):
+                    alpha_range = np.arange(r_left)
+                    beta_range = np.arange(r_right)
+                    # Fill the r_left * r_right entries for i_k = i_k_arr[flat]
+                    col_base = i_k_arr[flat] * r_right
+                    for alpha in alpha_range:
+                        row_offset = alpha * n_k * r_right + col_base
+                        A[flat, row_offset:row_offset + r_right] = (
+                            L_rows[flat, alpha] * R_rows[flat]
+                        )
+
+                # Solve LS: A @ c = b
+                c_vec, *_ = np.linalg.lstsq(A, b, rcond=None)
+                cores[k] = c_vec.reshape(r_left, n_k, r_right)
+
+        # Check convergence via reconstruction norm
+        T_new = reconstruct(cores)
+        num = np.linalg.norm(T_new - prev_T)
+        den = np.linalg.norm(prev_T) + 1e-30
+        rel_change = num / den
+        if verbose:
+            print(f"  ALS iter {outer + 1}: rel_change = {rel_change:.3e}")
+        if rel_change < tolerance:
+            break
+        prev_T = T_new
+
+    return cores
+
+
 # ======================================================================
 # ChebyshevTT class
 # ======================================================================

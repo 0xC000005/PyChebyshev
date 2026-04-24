@@ -586,3 +586,64 @@ class TestInnerProduct:
         tt_a.build(verbose=False, method="cross")
         with pytest.raises(RuntimeError, match="Call build"):
             tt_a.inner_product(tt_b)
+
+
+class TestALSInternals:
+    """White-box tests for the internal ALS sweep primitive."""
+
+    def test_als_sweep_reduces_residual_on_rank1_target(self):
+        """On an exactly-rank-1 target tensor, one sweep drives residual to ~0."""
+        from pychebyshev.tensor_train import _als_fixed_rank_sweeps
+        rng = np.random.default_rng(0)
+        # Build an exactly rank-1 target on an 8x8x8 grid
+        u0 = rng.standard_normal(8)
+        u1 = rng.standard_normal(8)
+        u2 = rng.standard_normal(8)
+        target = np.einsum("a,b,c->abc", u0, u1, u2)
+        # Full-grid evaluator: returns target[i,j,k] for integer grid index
+        def evals_at(idx_tuple):
+            return target[idx_tuple]
+        # Random rank-1 initial cores of matching shape
+        cores = [
+            rng.standard_normal((1, 8, 1)),
+            rng.standard_normal((1, 8, 1)),
+            rng.standard_normal((1, 8, 1)),
+        ]
+        new_cores = _als_fixed_rank_sweeps(
+            cores, evals_at, n_nodes=[8, 8, 8],
+            tolerance=1e-12, max_iter=5, verbose=False,
+        )
+        # Reconstruct and compare
+        T = new_cores[0]
+        for c in new_cores[1:]:
+            T = np.einsum("...i,ijk->...jk", T, c)
+        T = T.squeeze()
+        residual = np.linalg.norm(T - target) / np.linalg.norm(target)
+        assert residual < 1e-8, f"residual {residual} exceeds 1e-8"
+
+    def test_als_sweep_refines_rank2_target_at_rank2(self):
+        """Rank-2 target at rank-2 TT: ALS should fit to near machine precision."""
+        from pychebyshev.tensor_train import _als_fixed_rank_sweeps
+        rng = np.random.default_rng(7)
+        # Rank-2 target: sum of two rank-1 tensors
+        u0a, u1a, u2a = (rng.standard_normal(6) for _ in range(3))
+        u0b, u1b, u2b = (rng.standard_normal(6) for _ in range(3))
+        target = (np.einsum("a,b,c->abc", u0a, u1a, u2a)
+                  + np.einsum("a,b,c->abc", u0b, u1b, u2b))
+        def evals_at(idx):
+            return target[idx]
+        cores = [
+            rng.standard_normal((1, 6, 2)),
+            rng.standard_normal((2, 6, 2)),
+            rng.standard_normal((2, 6, 1)),
+        ]
+        new_cores = _als_fixed_rank_sweeps(
+            cores, evals_at, n_nodes=[6, 6, 6],
+            tolerance=1e-12, max_iter=15, verbose=False,
+        )
+        T = new_cores[0]
+        for c in new_cores[1:]:
+            T = np.einsum("...i,ijk->...jk", T, c)
+        T = T.squeeze()
+        residual = np.linalg.norm(T - target) / np.linalg.norm(target)
+        assert residual < 1e-6, f"residual {residual} exceeds 1e-6"
