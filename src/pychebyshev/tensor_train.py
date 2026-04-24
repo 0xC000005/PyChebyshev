@@ -26,6 +26,7 @@ from typing import Callable, List, Tuple
 
 import numpy as np
 from numpy.polynomial.chebyshev import chebpts1
+from scipy.fft import dct, idct
 
 
 # ======================================================================
@@ -933,6 +934,59 @@ def _tt_als(
 
 
 # ======================================================================
+# Value <-> Chebyshev coefficient core conversion
+# ======================================================================
+
+def _value_core_to_coeff_core(value_core: np.ndarray) -> np.ndarray:
+    """Value core at Chebyshev Type I nodes -> coefficient core.
+
+    Matches the inline transform originally in ``build()``. Extracted so
+    ALS completion can re-apply it after refinement.
+
+    Parameters
+    ----------
+    value_core : np.ndarray of shape ``(r_left, n_k, r_right)``
+        Values at Chebyshev Type I nodes along ``axis=1``.
+
+    Returns
+    -------
+    np.ndarray of shape ``(r_left, n_k, r_right)``
+        Chebyshev expansion coefficients along ``axis=1``.
+    """
+    n_k = value_core.shape[1]
+    coeff = dct(value_core[:, ::-1, :], type=2, axis=1) / n_k
+    coeff[:, 0, :] /= 2
+    return coeff
+
+
+def _coeff_core_to_value_core(coeff_core: np.ndarray) -> np.ndarray:
+    """Inverse of :func:`_value_core_to_coeff_core`.
+
+    Given a coefficient core, reconstruct values at the Chebyshev Type I
+    nodes along ``axis=1``. Used by ``run_completion`` to pull the current
+    TT cores back into value-space before ALS sweeps.
+
+    Derivation: the forward transform (scipy ``norm='backward'``) is
+
+        y = dct(x_rev, type=2, axis=1) / n
+        y[0] /= 2
+
+    scipy's default backward-normalised pair satisfies
+    ``idct(dct(x, type=2), type=2) = x`` exactly, so inverting only requires
+    undoing the two scalings the forward applied: double ``y[0]`` and
+    multiply by ``n``. No additional ``2n`` factor is needed (the plan's
+    earlier formula double-compensated, hence the ``/(2*n_k)`` was removed
+    after verifying against the round-trip test).
+    """
+    n_k = coeff_core.shape[1]
+    c = coeff_core.copy()
+    c[:, 0, :] *= 2  # undo the halving baked into the coefficient convention
+    val_reversed = idct(c * n_k, type=2, axis=1)
+    value_core = val_reversed[:, ::-1, :]
+    return value_core
+
+
+# ======================================================================
 # ChebyshevTT class
 # ======================================================================
 
@@ -1059,8 +1113,6 @@ class ChebyshevTT:
             is feasible for typical grids; users with very large grids
             should prefer ``'cross'``.
         """
-        from scipy.fft import dct
-
         if method not in ("cross", "svd", "als"):
             raise ValueError(
                 f"method must be 'cross', 'svd', or 'als', got {method!r}"
@@ -1135,12 +1187,7 @@ class ChebyshevTT:
         #
         # This is the same transform used by ChebyshevApproximation's
         # _chebyshev_coefficients_1d(), extended to 3D cores.
-        coeff_cores = []
-        for k, core in enumerate(value_cores):
-            n_k = core.shape[1]
-            coeff = dct(core[:, ::-1, :], type=2, axis=1) / n_k
-            coeff[:, 0, :] /= 2
-            coeff_cores.append(coeff)
+        coeff_cores = [_value_core_to_coeff_core(core) for core in value_cores]
 
         self._coeff_cores = coeff_cores
 
@@ -1226,6 +1273,79 @@ class ChebyshevTT:
             self._coeff_cores[k - 1], self._coeff_cores[k] = _orth_right_core(
                 self._coeff_cores[k - 1], self._coeff_cores[k]
             )
+
+    def run_completion(
+        self,
+        tolerance: float = 1e-8,
+        max_iter: int = 50,
+        verbose: bool = False,
+    ) -> None:
+        """Refine the TT at its current rank via ALS sweeps.
+
+        Works on any built TT (from ``cross``, ``svd``, or ``als``). Rank
+        does not grow; only per-core coefficients are refined.
+
+        Requires ``self.function`` to be callable -- completion re-samples
+        the grid to build the LS right-hand side. TTs loaded from pickle
+        typically retain the function unless it was pickled without a
+        closure; see Notes.
+
+        Parameters
+        ----------
+        tolerance : float
+            Stop when inner-sweep relative change falls below this value.
+        max_iter : int
+            Maximum number of outer sweeps.
+        verbose : bool
+            Print per-sweep residuals.
+
+        Raises
+        ------
+        RuntimeError
+            If the TT has not been built, or if ``self.function`` is None.
+        """
+        self._check_built()
+        if self.function is None:
+            raise RuntimeError(
+                "run_completion requires self.function to be callable; "
+                "the TT was loaded from a source without the original function."
+            )
+
+        # Convert coeff cores back to value cores at Chebyshev Type I nodes.
+        value_cores = [
+            _coeff_core_to_value_core(c) for c in self._coeff_cores
+        ]
+
+        # Rebuild the grids that build() used (same construction as
+        # tensor_train.py:1082-1087 inside build()).
+        grids = []
+        for k in range(self.num_dimensions):
+            nodes_std = chebpts1(self.n_nodes[k])
+            a, b = self.domain[k]
+            nodes_scaled = 0.5 * (a + b) + 0.5 * (b - a) * nodes_std
+            grids.append(np.sort(nodes_scaled))
+
+        cache: dict[tuple, float] = {}
+
+        def evals_at(idx: tuple) -> float:
+            key = tuple(int(i) for i in idx)
+            if key not in cache:
+                pt = [float(grids[k][key[k]]) for k in range(self.num_dimensions)]
+                # Match the (point, data) convention used by _tt_cross/_tt_svd/_tt_als.
+                cache[key] = self.function(pt, None)
+            return cache[key]
+
+        # Run fixed-rank ALS on the value cores.
+        refined_value_cores = _als_fixed_rank_sweeps(
+            value_cores, evals_at, n_nodes=list(self.n_nodes),
+            tolerance=tolerance, max_iter=max_iter, verbose=verbose,
+        )
+
+        # Convert back to coefficient cores and store.
+        self._coeff_cores = [
+            _value_core_to_coeff_core(c) for c in refined_value_cores
+        ]
+        self._cached_error_estimate = None
 
     def inner_product(self, other: "ChebyshevTT") -> float:
         """Frobenius inner product of the Chebyshev coefficient tensors of two TTs.

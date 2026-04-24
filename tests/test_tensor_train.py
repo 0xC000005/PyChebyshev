@@ -648,6 +648,18 @@ class TestALSInternals:
         residual = np.linalg.norm(T - target) / np.linalg.norm(target)
         assert residual < 1e-6, f"residual {residual} exceeds 1e-6"
 
+    def test_value_coeff_round_trip(self):
+        from pychebyshev.tensor_train import (
+            _value_core_to_coeff_core, _coeff_core_to_value_core,
+        )
+        rng = np.random.default_rng(2)
+        for shape in [(1, 8, 3), (2, 11, 4), (3, 5, 1)]:
+            v = rng.standard_normal(shape)
+            c = _value_core_to_coeff_core(v)
+            v_back = _coeff_core_to_value_core(c)
+            assert np.allclose(v, v_back, atol=1e-12), \
+                f"round-trip failed for shape {shape}"
+
 
 class TestALS:
     """Tests for ChebyshevTT method='als' (v0.13)."""
@@ -744,3 +756,99 @@ class TestALS:
         tt = ChebyshevTT(lambda x, _=None: x[0], 1, [(-1.0, 1.0)], [5])
         with pytest.raises(ValueError, match="'cross', 'svd', or 'als'"):
             tt.build(verbose=False, method="bogus")
+
+
+class TestCompletion:
+    """Tests for ChebyshevTT.run_completion (v0.13)."""
+
+    def test_completion_refines_cross_build(self):
+        from pychebyshev.tensor_train import ChebyshevTT
+
+        def f(x, _=None):
+            return np.exp(-0.5 * (x[0] ** 2 + x[1] ** 2)) * np.cos(x[2])
+
+        tt = ChebyshevTT(f, 3, [(-1.0, 1.0)] * 3, [10, 10, 10],
+                         tolerance=1e-3, max_rank=5)
+        tt.build(verbose=False, method="cross", seed=0)
+        err_before = tt.error_estimate()
+        tt.run_completion(tolerance=1e-12, max_iter=20, verbose=False)
+        err_after = tt.error_estimate()
+        assert err_after <= err_before + 1e-9, \
+            f"completion should not worsen error; {err_before} -> {err_after}"
+
+    def test_completion_refines_svd_build(self):
+        from pychebyshev.tensor_train import ChebyshevTT
+
+        # sin(x) + cos(y) is truly rank-2 and SVD at max_rank=5 fits it
+        # to machine precision, leaving err_before ~1e-9; the LS solve in
+        # completion then has gauge freedom and can inject noise at that
+        # level. Use a function whose SVD truncation at rank 5 leaves
+        # real headroom so the "does not worsen" check is meaningful.
+        def f(x, _=None):
+            return np.exp(x[0] * x[1])
+
+        tt = ChebyshevTT(f, 2, [(-1.0, 1.0)] * 2, [10, 10],
+                         tolerance=1e-3, max_rank=5)
+        tt.build(verbose=False, method="svd", seed=0)
+        err_before = tt.error_estimate()
+        tt.run_completion(tolerance=1e-12, max_iter=10, verbose=False)
+        err_after = tt.error_estimate()
+        assert err_after <= err_before + 1e-9
+
+    def test_completion_refines_als_build(self):
+        from pychebyshev.tensor_train import ChebyshevTT
+
+        def f(x, _=None):
+            return x[0] * x[1] + 0.3 * x[0] ** 2
+
+        tt = ChebyshevTT(f, 2, [(-1.0, 1.0)] * 2, [8, 8],
+                         tolerance=1e-3, max_rank=4)
+        tt.build(verbose=False, method="als", seed=0)
+        err_before = tt.error_estimate()
+        tt.run_completion(tolerance=1e-12, max_iter=10, verbose=False)
+        err_after = tt.error_estimate()
+        assert err_after <= err_before + 1e-9
+
+    def test_completion_max_iter_respected(self):
+        from pychebyshev.tensor_train import ChebyshevTT
+
+        def f(x, _=None):
+            return np.tanh(10 * x[0]) * x[1]  # hard to fit at low rank
+
+        tt = ChebyshevTT(f, 2, [(-1.0, 1.0)] * 2, [10, 10],
+                         tolerance=1e-3, max_rank=3)
+        tt.build(verbose=False, method="cross")
+        # Should not hang - max_iter=1 means at most one outer sweep.
+        import time
+        t0 = time.time()
+        tt.run_completion(tolerance=1e-20, max_iter=1, verbose=False)
+        assert time.time() - t0 < 30  # sanity timeout
+
+    def test_completion_raises_on_unbuilt(self):
+        from pychebyshev.tensor_train import ChebyshevTT
+        tt = ChebyshevTT(lambda x, _=None: x[0], 2, [(-1.0, 1.0)] * 2, [5, 5])
+        with pytest.raises(RuntimeError, match="Call build"):
+            tt.run_completion()
+
+    def test_completion_raises_when_function_missing(self):
+        from pychebyshev.tensor_train import ChebyshevTT
+        tt = ChebyshevTT(lambda x, _=None: x[0], 2, [(-1.0, 1.0)] * 2, [5, 5],
+                         tolerance=1e-2, max_rank=3)
+        tt.build(verbose=False, method="cross")
+        tt.function = None  # simulate loaded-from-pickle case
+        with pytest.raises(RuntimeError, match="requires self.function"):
+            tt.run_completion()
+
+    def test_completion_eval_stays_close_to_target(self):
+        """Sanity: completion should not diverge."""
+        from pychebyshev.tensor_train import ChebyshevTT
+
+        def f(x, _=None):
+            return np.cos(x[0] + x[1])
+
+        tt = ChebyshevTT(f, 2, [(-1.0, 1.0)] * 2, [10, 10],
+                         tolerance=1e-4, max_rank=5)
+        tt.build(verbose=False, method="cross", seed=0)
+        tt.run_completion(tolerance=1e-10, max_iter=10, verbose=False)
+        for p in [[0.1, 0.2], [-0.5, 0.7]]:
+            assert abs(tt.eval(p) - f(p)) < 1e-3
