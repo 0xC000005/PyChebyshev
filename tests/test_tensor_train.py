@@ -647,3 +647,100 @@ class TestALSInternals:
         T = T.squeeze()
         residual = np.linalg.norm(T - target) / np.linalg.norm(target)
         assert residual < 1e-6, f"residual {residual} exceeds 1e-6"
+
+
+class TestALS:
+    """Tests for ChebyshevTT method='als' (v0.13)."""
+
+    def test_als_builds_and_reaches_tolerance_3d(self):
+        from pychebyshev.tensor_train import ChebyshevTT
+
+        def f(x, _=None):
+            return np.sin(x[0]) * np.cos(x[1]) + 0.3 * x[2] ** 2
+
+        tt = ChebyshevTT(
+            f, 3, [(-1.0, 1.0)] * 3, [10, 10, 10],
+            tolerance=1e-4, max_rank=6,
+        )
+        tt.build(verbose=False, method="als", seed=42)
+        assert tt._built
+        # Evaluate at a few test points and compare to f
+        pts = [[0.1, -0.2, 0.3], [0.5, 0.5, -0.5], [-0.9, 0.1, 0.7]]
+        for p in pts:
+            got = tt.eval(p)
+            want = f(p)
+            assert abs(got - want) < 1e-3, f"ALS eval at {p}: {got} vs {want}"
+
+    def test_als_matches_cross_on_same_fixture(self):
+        from pychebyshev.tensor_train import ChebyshevTT
+
+        def f(x, _=None):
+            return np.exp(-x[0] ** 2) * np.cos(x[1])
+
+        domain = [(-1.0, 1.0), (-1.0, 1.0)]
+        n_nodes = [10, 10]
+        tt_cross = ChebyshevTT(
+            f, 2, domain, n_nodes, tolerance=1e-6, max_rank=8,
+        )
+        tt_cross.build(verbose=False, method="cross", seed=1)
+        tt_als = ChebyshevTT(
+            f, 2, domain, n_nodes, tolerance=1e-4, max_rank=8,
+        )
+        tt_als.build(verbose=False, method="als", seed=1)
+        pts = [[0.1, -0.2], [0.5, 0.5], [-0.9, 0.7]]
+        for p in pts:
+            assert abs(tt_cross.eval(p) - tt_als.eval(p)) < 5e-3
+
+    def test_als_respects_max_rank_cap(self):
+        from pychebyshev.tensor_train import ChebyshevTT
+
+        def hard_f(x, _=None):
+            # Nearly-discontinuous function, unreachable at low rank
+            return np.tanh(50 * (x[0] - x[1]))
+
+        tt = ChebyshevTT(
+            hard_f, 2, [(-1.0, 1.0)] * 2, [20, 20],
+            tolerance=1e-12, max_rank=3,
+        )
+        tt.build(verbose=False, method="als", seed=0)
+        for r in tt.tt_ranks:
+            assert r <= 3
+
+    def test_als_deterministic_given_random_state(self):
+        from pychebyshev.tensor_train import ChebyshevTT
+
+        def f(x, _=None):
+            return x[0] * x[1] + 0.5
+
+        kwargs = dict(tolerance=1e-4, max_rank=4)
+        tt_a = ChebyshevTT(f, 2, [(-1.0, 1.0)] * 2, [8, 8], **kwargs)
+        tt_b = ChebyshevTT(f, 2, [(-1.0, 1.0)] * 2, [8, 8], **kwargs)
+        tt_a.build(verbose=False, method="als", seed=123)
+        tt_b.build(verbose=False, method="als", seed=123)
+        assert abs(tt_a.eval([0.3, -0.4]) - tt_b.eval([0.3, -0.4])) < 1e-12
+
+    def test_als_method_attribute_set(self):
+        from pychebyshev.tensor_train import ChebyshevTT
+
+        tt = ChebyshevTT(
+            lambda x, _=None: x[0], 2, [(-1.0, 1.0)] * 2, [5, 5],
+            tolerance=1e-2, max_rank=3,
+        )
+        tt.build(verbose=False, method="als")
+        assert tt.method == "als"
+
+    def test_als_total_build_evals_positive(self):
+        from pychebyshev.tensor_train import ChebyshevTT
+
+        tt = ChebyshevTT(
+            lambda x, _=None: x[0] + x[1], 2, [(-1.0, 1.0)] * 2, [6, 6],
+            tolerance=1e-4, max_rank=3,
+        )
+        tt.build(verbose=False, method="als")
+        assert tt.total_build_evals > 0
+
+    def test_invalid_method_raises(self):
+        from pychebyshev.tensor_train import ChebyshevTT
+        tt = ChebyshevTT(lambda x, _=None: x[0], 1, [(-1.0, 1.0)], [5])
+        with pytest.raises(ValueError, match="'cross', 'svd', or 'als'"):
+            tt.build(verbose=False, method="bogus")

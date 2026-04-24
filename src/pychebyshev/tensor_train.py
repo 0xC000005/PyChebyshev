@@ -818,6 +818,115 @@ def _als_fixed_rank_sweeps(
     return cores
 
 
+def _tt_als(
+    function,
+    grids: list[np.ndarray],
+    max_rank: int,
+    tol: float,
+    random_state: int | None,
+    verbose: bool = False,
+) -> tuple[list[np.ndarray], int]:
+    """Rank-adaptive ALS build.
+
+    Returns VALUE cores at the provided grid points (same convention as
+    ``_tt_cross`` and ``_tt_svd``). The caller (``build()``) converts them
+    to coefficient cores via DCT-II.
+
+    Parameters mirror ``_tt_cross`` — in particular ``grids`` is a list of
+    1-D arrays of Chebyshev Type I nodes already scaled to the user's
+    domain. Produced by ``build()`` and passed in unchanged.
+
+    Starts at rank 1 and increments rank by 1 per outer iteration until
+    the grid residual
+    ``||reconstruct(cores) - target_tensor||_F / ||target_tensor||_F``
+    falls below ``tol`` or ``rank`` reaches ``max_rank``.
+
+    Parameters
+    ----------
+    function : callable
+        ``function(point, data) -> float`` where ``point`` is a list of
+        floats and ``data`` is arbitrary (passed as ``None``).
+    grids : list of np.ndarray
+        1-D Chebyshev Type I nodes per dimension, already scaled to
+        the user's domain.
+    max_rank : int
+        Maximum TT rank cap.
+    tol : float
+        Target relative Frobenius residual on the full grid.
+    random_state : int or None
+        Seed for deterministic core initialization.
+    verbose : bool
+        If True, print per-rank residuals.
+
+    Returns
+    -------
+    cores : list of np.ndarray
+        Value cores at the grid points. Shape ``(r_{k-1}, n_k, r_k)``.
+    n_evals : int
+        Number of unique function evaluations (cache size).
+    """
+    rng = np.random.default_rng(random_state)
+    d = len(grids)
+    n_nodes = [len(g) for g in grids]
+
+    # Eval cache by grid-index tuple (same pattern as _tt_cross).
+    cache: dict[tuple, float] = {}
+
+    def evals_at(idx: tuple) -> float:
+        key = tuple(int(i) for i in idx)
+        if key not in cache:
+            pt = [float(grids[k][key[k]]) for k in range(d)]
+            # Match the (point, data) convention used by _tt_cross/_tt_svd.
+            cache[key] = function(pt, None)
+        return cache[key]
+
+    # Precompute target tensor once (full grid). For d=5, n=8 uniformly:
+    # 32K floats ≈ 256 KB. Feasible for small/moderate problems.
+    target = np.empty(n_nodes, dtype=float)
+    for idx in np.ndindex(*n_nodes):
+        target[idx] = evals_at(idx)
+    target_norm = max(float(np.linalg.norm(target)), 1e-30)
+
+    def make_cores(rank: int) -> list[np.ndarray]:
+        shapes = []
+        for k in range(d):
+            r_left = 1 if k == 0 else rank
+            r_right = 1 if k == d - 1 else rank
+            shapes.append((r_left, n_nodes[k], r_right))
+        return [rng.standard_normal(s) for s in shapes]
+
+    def reconstruct(cores_list: list[np.ndarray]) -> np.ndarray:
+        T = cores_list[0]
+        for c in cores_list[1:]:
+            T = np.einsum("...i,ijk->...jk", T, c)
+        return T.squeeze(axis=0).squeeze(axis=-1)
+
+    def grid_residual(cores_list: list[np.ndarray]) -> float:
+        T = reconstruct(cores_list)
+        return float(np.linalg.norm(T - target) / target_norm)
+
+    rank = 1
+    cores = make_cores(rank)
+    while True:
+        cores = _als_fixed_rank_sweeps(
+            cores, evals_at, n_nodes=list(n_nodes),
+            tolerance=tol * 0.1, max_iter=5, verbose=verbose,
+        )
+        err = grid_residual(cores)
+        if verbose:
+            print(f"[ALS] rank {rank}: grid_residual = {err:.3e} (target {tol:.1e})")
+        if err < tol:
+            break
+        if rank >= max_rank:
+            if verbose:
+                print(f"[ALS] reached max_rank={max_rank} before tolerance")
+            break
+        rank += 1
+        cores = make_cores(rank)
+
+    return cores, len(cache)
+
+
 # ======================================================================
 # ChebyshevTT class
 # ======================================================================
@@ -934,8 +1043,11 @@ class ChebyshevTT:
         """
         from scipy.fft import dct
 
-        if method not in ("cross", "svd"):
-            raise ValueError(f"method must be 'cross' or 'svd', got {method!r}")
+        if method not in ("cross", "svd", "als"):
+            raise ValueError(
+                f"method must be 'cross', 'svd', or 'als', got {method!r}"
+            )
+        self.method = method
 
         start = time.time()
         self._cached_error_estimate = None
@@ -969,12 +1081,23 @@ class ChebyshevTT:
                 verbose=verbose,
                 seed=seed,
             )
-        else:  # svd
+        elif method == "svd":
             value_cores, n_evals = _tt_svd(
                 self.function,
                 grids,
                 max_rank=self.max_rank,
                 tol=self.tolerance,
+                verbose=verbose,
+            )
+        else:  # als
+            if verbose:
+                print("  Running TT-ALS...")
+            value_cores, n_evals = _tt_als(
+                self.function,
+                grids,
+                max_rank=self.max_rank,
+                tol=self.tolerance,
+                random_state=seed,
                 verbose=verbose,
             )
         self._total_build_evals = n_evals
