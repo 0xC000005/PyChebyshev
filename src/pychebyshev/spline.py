@@ -54,10 +54,14 @@ class ChebyshevSpline:
         auto-N mode for that dimension (each piece runs its own
         doubling loop independently).  If omitted entirely,
         ``error_threshold`` must be provided.  Default is ``None``.
-    knots : list of list of float
+    knots : list of list of float, optional
         Interior knots for each dimension.  Each sub-list must be sorted
         and every knot must lie strictly inside the corresponding domain
         interval.  Use an empty list ``[]`` for dimensions with no knots.
+        If omitted or ``None``, defaults to
+        ``[[] for _ in range(num_dimensions)]`` (single piece per dim,
+        no knots).  Useful in combination with ``error_threshold`` for
+        a flat spline with auto-N.
     max_derivative_order : int, optional
         Maximum derivative order to pre-compute (default 2).
     error_threshold : float, optional
@@ -469,10 +473,14 @@ class ChebyshevSpline:
         grid size (and may have run a doubling loop), so we sum each
         piece's own ``n_evaluations`` counter rather than assuming a
         uniform grid.  Falls back to the old uniform-grid formula if
-        pieces have not been built yet.
+        pieces have not been built yet.  For an unbuilt auto-N spline
+        the total cannot be predicted up-front, so we return 0.
         """
-        if self._built and all(p is not None for p in self._pieces):
+        if self._built:
             return sum(int(p.n_evaluations) for p in self._pieces)
+        if any(n is None for n in self.n_nodes):
+            # Auto-N mode, not yet built — total is unknown until build()
+            return 0
         return self.num_pieces * int(np.prod(self.n_nodes))
 
     @property

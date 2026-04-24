@@ -340,3 +340,20 @@ class TestSplineErrorThreshold:
         # Pieces should use the explicit N
         for piece in spl._pieces:
             assert piece.n_nodes == [15]
+
+    def test_total_build_evals_unbuilt_auto(self):
+        """total_build_evals on an unbuilt auto-N spline returns 0, no crash."""
+        from pychebyshev import ChebyshevSpline
+
+        def abs_fn(x, _):
+            return abs(x[0])
+
+        spl = ChebyshevSpline(
+            abs_fn, 1, [[-1, 1]],
+            n_nodes=[None], knots=[[0.0]], error_threshold=1e-6,
+        )
+        assert spl.total_build_evals == 0
+        spl.build(verbose=False)
+        # Post-build: sum of per-piece n_evaluations
+        assert spl.total_build_evals > 0
+        assert spl.total_build_evals == sum(p.n_evaluations for p in spl._pieces)
