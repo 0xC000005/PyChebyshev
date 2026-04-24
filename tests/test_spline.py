@@ -652,3 +652,92 @@ class TestVerboseAndDisplay:
         s = str(sp)
         assert "...]" in s
         assert "..." in s
+
+
+class TestNestedNNodes:
+    """Per-sub-interval n_nodes for ChebyshevSpline (v0.12)."""
+
+    def test_nested_form_accepted(self):
+        def f(x, _):
+            return abs(x[0])
+        sp = ChebyshevSpline(f, 1, [[-1, 1]], n_nodes=[[15, 12]], knots=[[0.0]])
+        sp.build(verbose=False)
+        assert sp._pieces[0].n_nodes == [15]
+        assert sp._pieces[1].n_nodes == [12]
+
+    def test_nested_form_accuracy_matches_flat(self):
+        def f(x, _):
+            return abs(x[0])
+        sp_flat = ChebyshevSpline(f, 1, [[-1, 1]], n_nodes=[15], knots=[[0.0]])
+        sp_nested = ChebyshevSpline(f, 1, [[-1, 1]], n_nodes=[[15, 15]], knots=[[0.0]])
+        sp_flat.build(verbose=False)
+        sp_nested.build(verbose=False)
+        for x in [-0.7, -0.2, 0.3, 0.8]:
+            assert sp_flat.eval([x], [0]) == sp_nested.eval([x], [0])
+
+    def test_nested_2d(self):
+        def f(x, _):
+            return abs(x[0]) + abs(x[1])
+        sp = ChebyshevSpline(
+            f, 2, [[-1, 1], [-1, 1]],
+            n_nodes=[[11, 13], [15, 17]],
+            knots=[[0.0], [0.0]],
+        )
+        sp.build(verbose=False)
+        # Row-major flat order via itertools.product over self._shape.
+        assert sp._pieces[0].n_nodes == [11, 15]
+        assert sp._pieces[1].n_nodes == [11, 17]
+        assert sp._pieces[2].n_nodes == [13, 15]
+        assert sp._pieces[3].n_nodes == [13, 17]
+
+    def test_nested_with_auto_n_per_piece(self):
+        def f(x, _):
+            return abs(x[0])
+        sp = ChebyshevSpline(
+            f, 1, [[-1, 1]],
+            n_nodes=[[None, 15]],
+            knots=[[0.0]],
+            error_threshold=1e-6,
+        )
+        sp.build(verbose=False)
+        assert sp._pieces[0].n_nodes[0] >= 3
+        assert sp._pieces[1].n_nodes == [15]
+
+    def test_nested_save_load_roundtrip(self, tmp_path):
+        import pickle
+        def f(x, _):
+            return abs(x[0])
+        sp = ChebyshevSpline(f, 1, [[-1, 1]], n_nodes=[[11, 13]], knots=[[0.0]])
+        sp.build(verbose=False)
+        path = tmp_path / "nested.pkl"
+        with open(path, "wb") as fh:
+            pickle.dump(sp, fh)
+        with open(path, "rb") as fh:
+            loaded = pickle.load(fh)
+        assert loaded._pieces[0].n_nodes == [11]
+        assert loaded._pieces[1].n_nodes == [13]
+        for x in [-0.5, 0.0, 0.5]:
+            assert loaded.eval([x], [0]) == sp.eval([x], [0])
+
+    def test_total_build_evals_nested(self):
+        def f(x, _):
+            return abs(x[0])
+        sp = ChebyshevSpline(f, 1, [[-1, 1]], n_nodes=[[11, 13]], knots=[[0.0]])
+        sp.build(verbose=False)
+        assert sp.total_build_evals == 24
+
+    def test_nested_mixed_raises(self):
+        with pytest.raises(ValueError, match="fully nested"):
+            ChebyshevSpline(
+                lambda x, _: abs(x[0]) + abs(x[1]), 2, [[-1, 1], [-1, 1]],
+                n_nodes=[[11, 11], 13],
+                knots=[[0.0], []],
+            )
+
+    def test_nested_wrong_inner_length_raises(self):
+        with pytest.raises(ValueError, match="must have 2 entries"):
+            ChebyshevSpline(
+                lambda x, _: abs(x[0]), 1, [[-1, 1]],
+                n_nodes=[[11]],
+                knots=[[0.0]],
+            )

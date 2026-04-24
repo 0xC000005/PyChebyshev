@@ -26,6 +26,11 @@ import numpy as np
 from pychebyshev.barycentric import ChebyshevApproximation
 
 
+def _is_nested_n_nodes(n_nodes):
+    """Return True if n_nodes is in nested (per-sub-interval) form."""
+    return any(isinstance(x, (list, tuple)) for x in n_nodes)
+
+
 class ChebyshevSpline:
     """Piecewise Chebyshev interpolation with user-specified knots.
 
@@ -127,6 +132,15 @@ class ChebyshevSpline:
                     "(auto-N mode)."
                 )
 
+        # Detect and validate nested form (v0.12): List[List[int | None]]
+        self._n_nodes_nested = _is_nested_n_nodes(n_nodes)
+        if self._n_nodes_nested:
+            if not all(isinstance(x, (list, tuple)) for x in n_nodes):
+                raise ValueError(
+                    "n_nodes must be fully nested (all dims as lists) when any "
+                    "dim is nested; got mixed form"
+                )
+
         self.n_nodes = n_nodes
         if knots is None:
             knots = [[] for _ in range(num_dimensions)]
@@ -160,6 +174,25 @@ class ChebyshevSpline:
         # Shape: per-dimension piece counts
         self._shape = tuple(len(intervals) for intervals in self._intervals)
 
+        # Nested-form length validation (v0.12)
+        if self._n_nodes_nested:
+            for d in range(num_dimensions):
+                expected = len(knots[d]) + 1
+                got = len(n_nodes[d])
+                if got != expected:
+                    raise ValueError(
+                        f"n_nodes[{d}] must have {expected} entries "
+                        f"(one per sub-interval); got {got}"
+                    )
+                inner = list(n_nodes[d])
+                if any(x is None for x in inner) and error_threshold is None:
+                    raise ValueError(
+                        "None entries in nested n_nodes require error_threshold "
+                        "to be set (auto-N mode)."
+                    )
+                n_nodes[d] = inner
+            self.n_nodes = n_nodes
+
         # Flat storage for pieces
         self._pieces: List[ChebyshevApproximation | None] = (
             [None] * int(np.prod(self._shape))
@@ -191,18 +224,25 @@ class ChebyshevSpline:
         if verbose:
             # Per-piece eval count is unknown up-front in auto-N mode;
             # fall back to "auto" rather than crashing on None entries.
-            if any(n is None for n in self.n_nodes):
+            if self._n_nodes_nested:
+                has_auto = any(
+                    any(n is None for n in self.n_nodes[d])
+                    for d in range(self.num_dimensions)
+                )
+            else:
+                has_auto = any(n is None for n in self.n_nodes)
+            if has_auto:
                 print(
                     f"Building {self.num_dimensions}D Chebyshev Spline "
                     f"({total_pieces} pieces, auto-N per piece "
                     f"with error_threshold={self.error_threshold:.2e})..."
                 )
             else:
-                per_piece_evals = int(np.prod(self.n_nodes))
+                total_evals = self.total_build_evals
                 print(
                     f"Building {self.num_dimensions}D Chebyshev Spline "
                     f"({total_pieces} pieces, "
-                    f"{total_pieces * per_piece_evals:,} total evaluations)..."
+                    f"{total_evals:,} total evaluations)..."
                 )
 
         for flat_idx, multi_idx in enumerate(
@@ -214,11 +254,19 @@ class ChebyshevSpline:
                 for d in range(self.num_dimensions)
             ]
 
+            if self._n_nodes_nested:
+                piece_n_nodes = [
+                    self.n_nodes[d][multi_idx[d]]
+                    for d in range(self.num_dimensions)
+                ]
+            else:
+                piece_n_nodes = self.n_nodes
+
             piece = ChebyshevApproximation(
                 self.function,
                 self.num_dimensions,
                 sub_domain,
-                self.n_nodes,
+                piece_n_nodes,
                 max_derivative_order=self.max_derivative_order,
                 error_threshold=self.error_threshold,
                 max_n=self.max_n,
@@ -474,21 +522,33 @@ class ChebyshevSpline:
 
     @property
     def total_build_evals(self) -> int:
-        """Total number of function evaluations used during build.
+        """Total number of function evaluations across all pieces.
 
-        In auto-N mode each piece may end up at a different resolved
-        grid size (and may have run a doubling loop), so we sum each
-        piece's own ``n_evaluations`` counter rather than assuming a
-        uniform grid.  Falls back to the old uniform-grid formula if
-        pieces have not been built yet.  For an unbuilt auto-N spline
-        the total cannot be predicted up-front, so we return 0.
+        After ``build()`` the total is computed by summing each piece's
+        own ``n_evaluations`` counter, which handles auto-N mode where
+        different pieces may end up at different grid sizes.  For an
+        unbuilt spline we predict from ``n_nodes`` when possible (both
+        flat and nested forms); auto-N pieces with ``None`` entries
+        return 0 because the total cannot be known up-front.
         """
         if self._built:
             return sum(int(p.n_evaluations) for p in self._pieces)
+        if self._n_nodes_nested:
+            total = 0
+            for multi_idx in itertools.product(
+                *[range(s) for s in self._shape]
+            ):
+                piece_n = [
+                    self.n_nodes[d][multi_idx[d]]
+                    for d in range(self.num_dimensions)
+                ]
+                if any(n is None for n in piece_n):
+                    return 0
+                total += int(np.prod(piece_n))
+            return total
         if any(n is None for n in self.n_nodes):
-            # Auto-N mode, not yet built — total is unknown until build()
             return 0
-        return self.num_pieces * int(np.prod(self.n_nodes))
+        return int(np.prod(self.n_nodes)) * int(np.prod(self._shape))
 
     @property
     def build_time(self) -> float:
@@ -529,6 +589,8 @@ class ChebyshevSpline:
         # Ensure fields added in later versions exist (backward compat)
         if not hasattr(self, "_cached_error_estimate"):
             self._cached_error_estimate = None
+        if not hasattr(self, "_n_nodes_nested"):
+            self._n_nodes_nested = _is_nested_n_nodes(self.n_nodes)
 
     def save(self, path: str | os.PathLike) -> None:
         """Save the built spline to a file.
@@ -818,6 +880,7 @@ class ChebyshevSpline:
         obj.num_dimensions = num_dimensions
         obj.domain = [list(bounds) for bounds in domain]
         obj.n_nodes = list(n_nodes)
+        obj._n_nodes_nested = False
         obj.max_derivative_order = max_derivative_order
         obj.knots = [list(k) for k in knots]
         obj._intervals = intervals
@@ -841,6 +904,7 @@ class ChebyshevSpline:
         obj.num_dimensions = source.num_dimensions
         obj.domain = [list(bounds) for bounds in source.domain]
         obj.n_nodes = list(source.n_nodes)
+        obj._n_nodes_nested = getattr(source, "_n_nodes_nested", False)
         obj.max_derivative_order = source.max_derivative_order
         obj.knots = [list(k) for k in source.knots]
         obj._intervals = source._intervals
@@ -906,7 +970,8 @@ class ChebyshevSpline:
             intervals.insert(dim_idx, [(lo, hi)])
             shape.insert(dim_idx, 1)
             domain.insert(dim_idx, [lo, hi])
-            n_nodes.insert(dim_idx, n)
+            # Keep nested form consistent: new dim has a single sub-interval.
+            n_nodes.insert(dim_idx, [n] if self._n_nodes_nested else n)
 
         # Extrude each piece
         pieces = []
@@ -922,6 +987,7 @@ class ChebyshevSpline:
         obj.num_dimensions = new_ndim
         obj.domain = domain
         obj.n_nodes = n_nodes
+        obj._n_nodes_nested = self._n_nodes_nested
         obj.max_derivative_order = self.max_derivative_order
         obj.knots = knots
         obj._intervals = intervals
@@ -1018,6 +1084,7 @@ class ChebyshevSpline:
         obj.num_dimensions = new_ndim
         obj.domain = domain
         obj.n_nodes = n_nodes
+        obj._n_nodes_nested = self._n_nodes_nested
         obj.max_derivative_order = self.max_derivative_order
         obj.knots = knots
         obj._intervals = intervals
@@ -1197,6 +1264,7 @@ class ChebyshevSpline:
         obj.num_dimensions = new_ndim
         obj.domain = domain
         obj.n_nodes = n_nodes
+        obj._n_nodes_nested = self._n_nodes_nested
         obj.max_derivative_order = self.max_derivative_order
         obj.knots = knots
         obj._intervals = intervals
