@@ -855,3 +855,75 @@ class TestCompletion:
         tt.run_completion(tolerance=1e-10, max_iter=10, verbose=False)
         for p in [[0.1, 0.2], [-0.5, 0.7]]:
             assert abs(tt.eval(p) - f(p)) < 1e-3
+
+
+class TestCrossFeatureALS:
+    """Integration: ALS-built TTs through existing features."""
+
+    def test_als_tt_save_load_round_trip(self, tmp_path):
+        from pychebyshev.tensor_train import ChebyshevTT
+
+        def f(x, data=None):
+            return np.sin(x[0]) + x[1] ** 2
+
+        tt = ChebyshevTT(f, 2, [(-1.0, 1.0)] * 2, [8, 8],
+                         tolerance=1e-4, max_rank=4)
+        tt.build(verbose=False, method="als", seed=0)
+        val_before = tt.eval([0.3, -0.4])
+        path = tmp_path / "als_tt.pkl"
+        tt.save(path)
+        tt2 = ChebyshevTT.load(path)
+        val_after = tt2.eval([0.3, -0.4])
+        assert abs(val_before - val_after) < 1e-12
+        assert tt2.method == "als"
+
+    def test_als_tt_eval_batch_matches_eval(self):
+        from pychebyshev.tensor_train import ChebyshevTT
+
+        def f(x, data=None):
+            return x[0] * x[1] + np.sin(x[2])
+
+        tt = ChebyshevTT(f, 3, [(-1.0, 1.0)] * 3, [8, 8, 8],
+                         tolerance=1e-3, max_rank=4)
+        tt.build(verbose=False, method="als", seed=0)
+        pts = np.array([[0.1, -0.2, 0.3], [0.5, 0.0, -0.5]])
+        batch = tt.eval_batch(pts)
+        for i, p in enumerate(pts):
+            assert abs(batch[i] - tt.eval(p.tolist())) < 1e-12
+
+    def test_orth_is_idempotent_on_canonical_cores(self):
+        """Calling orth_left twice at the same position should not change eval."""
+        from pychebyshev.tensor_train import ChebyshevTT
+
+        def f(x, data=None):
+            return np.cos(x[0]) * np.sin(x[1])
+
+        tt = ChebyshevTT(f, 2, [(-1.0, 1.0)] * 2, [8, 8],
+                         tolerance=1e-5, max_rank=5)
+        tt.build(verbose=False, method="cross")
+        tt.orth_left(position=1)
+        val1 = tt.eval([0.2, 0.3])
+        tt.orth_left(position=1)  # idempotent
+        val2 = tt.eval([0.2, 0.3])
+        assert abs(val1 - val2) < 1e-10
+
+    def test_inner_product_then_orth_preserves_value(self):
+        """Orthogonalizing both TTs should not change their inner product."""
+        from pychebyshev.tensor_train import ChebyshevTT
+
+        def f(x, data=None):
+            return np.sin(x[0]) + x[1]
+
+        def g(x, data=None):
+            return np.cos(x[0]) * x[1]
+
+        kwargs = dict(tolerance=1e-6, max_rank=5)
+        tt_a = ChebyshevTT(f, 2, [(-1.0, 1.0)] * 2, [8, 8], **kwargs)
+        tt_b = ChebyshevTT(g, 2, [(-1.0, 1.0)] * 2, [8, 8], **kwargs)
+        tt_a.build(verbose=False, method="cross")
+        tt_b.build(verbose=False, method="cross")
+        ip_before = tt_a.inner_product(tt_b)
+        tt_a.orth_left(position=1)
+        tt_b.orth_right(position=0)
+        ip_after = tt_a.inner_product(tt_b)
+        assert abs(ip_before - ip_after) < 1e-9
