@@ -172,8 +172,10 @@ cheb = ChebyshevApproximation(
 )
 
 # Not yet supported: per-sub-interval Ns via nodes() + from_values()
+# Nested n_nodes here raises NotImplementedError with a link back to
+# this page.
 # grids = ChebyshevSpline.nodes(1, [[-1, 1]], n_nodes=[[11, 15]], knots=[[0.0]])
-# ChebyshevSpline.from_values(..., n_nodes=[[11, 15]], ...)  # raises
+# ChebyshevSpline.from_values(..., n_nodes=[[11, 15]], ...)
 ```
 
 Extending the precompute workflow to nested Ns is tracked for a future

@@ -501,6 +501,22 @@ class TestCoverageBranches:
         # 11 + 13 = 24 evaluations across the two disjoint pieces.
         assert cheb.total_build_evals == 24
 
+    def test_nodes_rejects_nested_n_nodes(self):
+        # nodes()/from_values() accept only flat n_nodes; nested form must
+        # raise NotImplementedError pointing at the user guide (spline.py).
+        with pytest.raises(NotImplementedError, match="special-points.md"):
+            ChebyshevSpline.nodes(
+                1, [[-1, 1]], n_nodes=[[11, 13]], knots=[[0.0]]
+            )
+
+    def test_from_values_rejects_nested_n_nodes(self):
+        dummy_piece_values = [np.zeros((11,)), np.zeros((13,))]
+        with pytest.raises(NotImplementedError, match="special-points.md"):
+            ChebyshevSpline.from_values(
+                dummy_piece_values, 1, [[-1, 1]],
+                n_nodes=[[11, 13]], knots=[[0.0]],
+            )
+
     def test_setstate_backward_compat_missing_n_nodes_nested(self):
         # __setstate__ backward-compat shim (spline.py ~L604): when loading
         # a pre-v0.12 pickle without the _n_nodes_nested attr, infer it.

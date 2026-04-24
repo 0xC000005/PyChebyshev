@@ -716,6 +716,14 @@ class ChebyshevSpline:
         >>> info['pieces'][0]['sub_domain']
         [(-1, 0.0)]
         """
+        if _is_nested_n_nodes(n_nodes):
+            raise NotImplementedError(
+                "ChebyshevSpline.nodes() accepts only flat n_nodes "
+                "(one int per dim, shared across pieces). Nested "
+                "per-sub-interval n_nodes is supported via __init__ "
+                "but not yet via the nodes()/from_values() workflow. "
+                "See docs/user-guide/special-points.md."
+            )
         # Validate domain and knots
         for d in range(num_dimensions):
             lo, hi = domain[d]
@@ -820,6 +828,14 @@ class ChebyshevSpline:
             If the number of pieces does not match, or any piece has
             the wrong shape or contains NaN/Inf.
         """
+        if _is_nested_n_nodes(n_nodes):
+            raise NotImplementedError(
+                "ChebyshevSpline.from_values() accepts only flat n_nodes "
+                "(one int per dim, shared across pieces). Nested "
+                "per-sub-interval n_nodes is supported via __init__ "
+                "but not yet via the nodes()/from_values() workflow. "
+                "See docs/user-guide/special-points.md."
+            )
         # Validate domain and knots (same as nodes())
         for d in range(num_dimensions):
             lo, hi = domain[d]
