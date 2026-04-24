@@ -469,3 +469,29 @@ class TestCoverageGaps:
         s = str(cheb)
         assert "...]" in s
         assert "..." in s
+
+
+class TestErrorEstimatePerDim:
+    """Tests for the internal _error_estimate_per_dim helper."""
+
+    def test_per_dim_sums_to_total(self, cheb_sin_3d):
+        """Per-dim contributions must sum to error_estimate()."""
+        per_dim = cheb_sin_3d._error_estimate_per_dim()
+        assert len(per_dim) == cheb_sin_3d.num_dimensions
+        total = sum(per_dim)
+        assert abs(total - cheb_sin_3d.error_estimate()) < 1e-14
+
+    def test_per_dim_nonnegative(self, cheb_sin_3d):
+        per_dim = cheb_sin_3d._error_estimate_per_dim()
+        assert all(x >= 0 for x in per_dim)
+
+    def test_per_dim_requires_build(self):
+        from pychebyshev import ChebyshevApproximation
+        import math
+
+        cheb = ChebyshevApproximation(
+            lambda x, _: math.sin(x[0]),
+            1, [[-1, 1]], [5],
+        )
+        with pytest.raises(RuntimeError, match="build"):
+            cheb._error_estimate_per_dim()

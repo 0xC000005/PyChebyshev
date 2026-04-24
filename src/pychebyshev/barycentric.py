@@ -564,6 +564,38 @@ class ChebyshevApproximation:
         coeffs[0] /= 2
         return coeffs
 
+    def _error_estimate_per_dim(self) -> List[float]:
+        """Per-dimension max last-coefficient magnitudes.
+
+        Returns one float per dimension; ``error_estimate()`` returns the sum.
+        Split out so ``_build_with_threshold`` can pick the worst-contributing
+        dim to refine.
+
+        Raises
+        ------
+        RuntimeError
+            If ``build()`` has not been called.
+        """
+        if self.tensor_values is None:
+            raise RuntimeError("Call build() first")
+
+        per_dim: List[float] = []
+        for d in range(self.num_dimensions):
+            max_err_this_dim = 0.0
+            other_shape = tuple(
+                self.n_nodes[i]
+                for i in range(self.num_dimensions)
+                if i != d
+            )
+            for idx in np.ndindex(*other_shape):
+                full_idx = list(idx)
+                full_idx.insert(d, slice(None))
+                values_1d = self.tensor_values[tuple(full_idx)]
+                coeffs = self._chebyshev_coefficients_1d(values_1d)
+                max_err_this_dim = max(max_err_this_dim, abs(coeffs[-1]))
+            per_dim.append(max_err_this_dim)
+        return per_dim
+
     def error_estimate(self) -> float:
         """Estimate the supremum-norm interpolation error.
 
@@ -589,32 +621,11 @@ class ChebyshevApproximation:
         RuntimeError
             If ``build()`` has not been called.
         """
-        if self.tensor_values is None:
-            raise RuntimeError("Call build() first")
-
         if self._cached_error_estimate is not None:
             return self._cached_error_estimate
-
-        total_error = 0.0
-        for d in range(self.num_dimensions):
-            max_err_this_dim = 0.0
-            # Build shape of indices for all dims except d
-            other_shape = tuple(
-                self.n_nodes[i]
-                for i in range(self.num_dimensions)
-                if i != d
-            )
-            for idx in np.ndindex(*other_shape):
-                # Insert slice(None) at position d to extract 1-D slice
-                full_idx = list(idx)
-                full_idx.insert(d, slice(None))
-                values_1d = self.tensor_values[tuple(full_idx)]
-                coeffs = self._chebyshev_coefficients_1d(values_1d)
-                max_err_this_dim = max(max_err_this_dim, abs(coeffs[-1]))
-            total_error += max_err_this_dim
-
-        self._cached_error_estimate = total_error
-        return total_error
+        total = float(sum(self._error_estimate_per_dim()))
+        self._cached_error_estimate = total
+        return total
 
     # ------------------------------------------------------------------
     # Serialization
