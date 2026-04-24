@@ -26,6 +26,7 @@ from typing import Callable, List, Tuple
 
 import numpy as np
 from numpy.polynomial.chebyshev import chebpts1
+from scipy.fft import dct, idct
 
 
 # ======================================================================
@@ -633,6 +634,359 @@ def _tt_svd(
 
 
 # ======================================================================
+# Orthogonalization primitives
+# ======================================================================
+
+def _orth_left_core(
+    core_k: np.ndarray, core_k1: np.ndarray
+) -> tuple[np.ndarray, np.ndarray]:
+    """QR-orthogonalize core_k from the left; absorb R into core_k1.
+
+    Parameters
+    ----------
+    core_k : np.ndarray of shape (r_k, n_k, r_{k+1})
+    core_k1 : np.ndarray of shape (r_{k+1}, n_{k+1}, r_{k+2})
+
+    Returns
+    -------
+    new_core_k : left-orthogonal (Q^T Q = I after unfolding)
+    new_core_k1 : R absorbed into the left bond
+    """
+    r0, n, r1 = core_k.shape
+    Q, R = np.linalg.qr(core_k.reshape(r0 * n, r1))
+    new_core_k = Q.reshape(r0, n, Q.shape[1])
+    new_core_k1 = np.einsum("ij,jpk->ipk", R, core_k1)
+    return new_core_k, new_core_k1
+
+
+def _orth_right_core(
+    core_k_minus_1: np.ndarray, core_k: np.ndarray
+) -> tuple[np.ndarray, np.ndarray]:
+    """LQ-orthogonalize core_k from the right; absorb L into core_{k-1}.
+
+    Implemented via QR on the transposed unfolding.
+    """
+    r_prev, n, r_next = core_k.shape
+    # Unfold core_k as (r_prev, n * r_next). Right-orthogonality means rows
+    # of this matrix are orthonormal: M M^T = I. Achieve via QR of M^T.
+    M = core_k.reshape(r_prev, n * r_next)
+    Qt, Rt = np.linalg.qr(M.T)  # Qt: (n*r_next, k), Rt: (k, r_prev)
+    new_core_k = Qt.T.reshape(Qt.shape[1], n, r_next)
+    L = Rt.T  # (r_prev, k)
+    r_prev_prev, n_prev, _ = core_k_minus_1.shape
+    new_core_k_minus_1 = np.einsum("ipk,kj->ipj", core_k_minus_1, L)
+    return new_core_k_minus_1, new_core_k
+
+
+def _als_fixed_rank_sweeps(
+    cores: list[np.ndarray],
+    evals_at: "Callable[[tuple[int, ...]], float]",
+    n_nodes: list[int],
+    tolerance: float,
+    max_iter: int,
+    verbose: bool = False,
+) -> list[np.ndarray]:
+    """Alternating LS sweeps at fixed TT rank.
+
+    At each core position k, hold all other cores fixed and solve a linear
+    least-squares problem for the coefficients of core k against the target
+    function values on the Chebyshev grid. Sweep left-to-right then
+    right-to-left; repeat up to ``max_iter`` outer iterations or until
+    tolerance reached.
+
+    Parameters
+    ----------
+    cores : list of np.ndarray
+        Initial TT cores, shapes ``(r_k, n_k, r_{k+1})`` with ``r_0 = r_d = 1``.
+    evals_at : callable
+        ``evals_at((i_0, i_1, ..., i_{d-1}))`` returns the target function's
+        value at grid index tuple. May cache internally.
+    n_nodes : list of int
+        Grid size per dimension.
+    tolerance : float
+        Stop when ``||T_new - T_old||_F / ||T_old||_F < tolerance``.
+    max_iter : int
+        Maximum outer iterations (one outer iter = L->R sweep + R->L sweep).
+    verbose : bool
+        Print per-sweep residuals.
+
+    Returns
+    -------
+    list of np.ndarray
+        Refined cores, mutating the input list.
+
+    Notes
+    -----
+    Reference: Holtz, Rohwedder, Schneider (2012),
+    "The Alternating Linear Scheme for Tensor Optimization in the
+    Tensor Train Format," *SIAM J. Sci. Comput.* 34(2), A683-A713.
+
+    This implementation uses the dense LS formulation: at position k,
+    we build design matrix ``A`` of shape
+    ``(prod(n_nodes), r_k * n_k * r_{k+1})`` and solve
+    ``A @ vec(C_k) = b`` via ``np.linalg.lstsq``. For small-to-moderate
+    problems (grid size up to ~1e5) this is direct and robust.
+    """
+    d = len(cores)
+    total_points = int(np.prod(n_nodes))
+    # Precompute b (grid values in C-order index) once per call.
+    b = np.empty(total_points, dtype=float)
+    multi_indices = list(np.ndindex(*n_nodes))
+    for flat, idx in enumerate(multi_indices):
+        b[flat] = evals_at(idx)
+
+    def reconstruct(cores_list):
+        T = cores_list[0]
+        for c in cores_list[1:]:
+            T = np.einsum("...i,ijk->...jk", T, c)
+        return T.squeeze(axis=0).squeeze(axis=-1)  # (n_0, n_1, ..., n_{d-1})
+
+    prev_T = reconstruct(cores)
+    for outer in range(max_iter):
+        for direction in ("left_to_right", "right_to_left"):
+            order = range(d) if direction == "left_to_right" else range(d - 1, -1, -1)
+            for k in order:
+                # Canonicalize around k: cores [0..k-1] left-orth, [k+1..d-1] right-orth.
+                # This is standard ALS and ensures the LS system is well-conditioned.
+                # Brute-force re-canonicalize each step to keep the code simple;
+                # amortized over a sweep this is O(d^2) QRs instead of O(d) but
+                # correctness is the priority.
+                for j in range(k):
+                    cores[j], cores[j + 1] = _orth_left_core(cores[j], cores[j + 1])
+                for j in range(d - 1, k, -1):
+                    cores[j - 1], cores[j] = _orth_right_core(cores[j - 1], cores[j])
+
+                r_left, n_k, r_right = cores[k].shape
+                # Build design matrix A for the LS system A @ vec(C_k) = b.
+                # At flat grid index (i_0, ..., i_{d-1}):
+                # T[i] = (C_0[0, i_0] @ ... @ C_{k-1}[..., i_{k-1}])_alpha
+                #        * C_k[alpha, i_k, beta]
+                #        * (C_{k+1}[beta, i_{k+1}] @ ... @ C_{d-1}[..., i_{d-1}])
+                # So A[flat, alpha*n_k*r_right + i_k*r_right + beta] =
+                #    L_factor[flat, alpha] * delta(i_k, idx[k]) * R_factor[flat, beta]
+                A = np.zeros((total_points, r_left * n_k * r_right), dtype=float)
+
+                # Precompute left and right factor rows for each flat index.
+                # L_factor: (total_points, r_left) -- product of cores [0..k-1]
+                # R_factor: (total_points, r_right) -- product of cores [k+1..d-1]
+                # Initialize with the boundary bond dimension 1 (r_0 = r_d = 1);
+                # the iterated einsum then grows the middle dim to r_left / r_right.
+                L_rows = np.ones((total_points, 1), dtype=float)
+                for j in range(k):
+                    Cj = cores[j]  # (rj, n_j, rj1)
+                    idx_j = np.array([idx[j] for idx in multi_indices])  # (total_points,)
+                    # L_rows @= Cj[:, idx_j, :] slice per-row
+                    # New shape: (total_points, rj1)
+                    slices = Cj[:, idx_j, :]  # (rj, total_points, rj1)
+                    slices = np.transpose(slices, (1, 0, 2))  # (total_points, rj, rj1)
+                    L_rows = np.einsum("pa,pab->pb", L_rows, slices)
+
+                R_rows = np.ones((total_points, 1), dtype=float)
+                for j in range(d - 1, k, -1):
+                    Cj = cores[j]
+                    idx_j = np.array([idx[j] for idx in multi_indices])
+                    slices = Cj[:, idx_j, :]
+                    slices = np.transpose(slices, (1, 0, 2))  # (total_points, rj, rj1)
+                    R_rows = np.einsum("pab,pb->pa", slices, R_rows)
+
+                i_k_arr = np.array([idx[k] for idx in multi_indices])
+                for flat in range(total_points):
+                    alpha_range = np.arange(r_left)
+                    beta_range = np.arange(r_right)
+                    # Fill the r_left * r_right entries for i_k = i_k_arr[flat]
+                    col_base = i_k_arr[flat] * r_right
+                    for alpha in alpha_range:
+                        row_offset = alpha * n_k * r_right + col_base
+                        A[flat, row_offset:row_offset + r_right] = (
+                            L_rows[flat, alpha] * R_rows[flat]
+                        )
+
+                # Solve LS: A @ c = b
+                c_vec, *_ = np.linalg.lstsq(A, b, rcond=None)
+                cores[k] = c_vec.reshape(r_left, n_k, r_right)
+
+        # Check convergence via reconstruction norm
+        T_new = reconstruct(cores)
+        num = np.linalg.norm(T_new - prev_T)
+        den = np.linalg.norm(prev_T) + 1e-30
+        rel_change = num / den
+        if verbose:
+            print(f"  ALS iter {outer + 1}: rel_change = {rel_change:.3e}")
+        if rel_change < tolerance:
+            break
+        prev_T = T_new
+
+    return cores
+
+
+def _tt_als(
+    function,
+    grids: list[np.ndarray],
+    max_rank: int,
+    tol: float,
+    random_state: int | None,
+    verbose: bool = False,
+) -> tuple[list[np.ndarray], int]:
+    """Rank-adaptive ALS build.
+
+    Returns VALUE cores at the provided grid points (same convention as
+    ``_tt_cross`` and ``_tt_svd``). The caller (``build()``) converts them
+    to coefficient cores via DCT-II.
+
+    Parameters mirror ``_tt_cross`` — in particular ``grids`` is a list of
+    1-D arrays of Chebyshev Type I nodes already scaled to the user's
+    domain. Produced by ``build()`` and passed in unchanged.
+
+    Starts at rank 1 and increments rank by 1 per outer iteration until
+    the grid residual
+    ``||reconstruct(cores) - target_tensor||_F / ||target_tensor||_F``
+    falls below ``tol`` or ``rank`` reaches ``max_rank``.
+
+    Parameters
+    ----------
+    function : callable
+        ``function(point, data) -> float`` where ``point`` is a list of
+        floats and ``data`` is arbitrary (passed as ``None``).
+    grids : list of np.ndarray
+        1-D Chebyshev Type I nodes per dimension, already scaled to
+        the user's domain.
+    max_rank : int
+        Maximum TT rank cap.
+    tol : float
+        Target relative Frobenius residual on the full grid.
+    random_state : int or None
+        Seed for deterministic core initialization.
+    verbose : bool
+        If True, print per-rank residuals.
+
+    Returns
+    -------
+    cores : list of np.ndarray
+        Value cores at the grid points. Shape ``(r_{k-1}, n_k, r_k)``.
+    n_evals : int
+        Number of unique function evaluations (cache size).
+    """
+    rng = np.random.default_rng(random_state)
+    d = len(grids)
+    n_nodes = [len(g) for g in grids]
+
+    # Eval cache by grid-index tuple (same pattern as _tt_cross).
+    cache: dict[tuple, float] = {}
+
+    def evals_at(idx: tuple) -> float:
+        key = tuple(int(i) for i in idx)
+        if key not in cache:
+            pt = [float(grids[k][key[k]]) for k in range(d)]
+            # Match the (point, data) convention used by _tt_cross/_tt_svd.
+            cache[key] = function(pt, None)
+        return cache[key]
+
+    # Precompute target tensor once (full grid). For d=5, n=8 uniformly:
+    # 32K floats ≈ 256 KB. Feasible for small/moderate problems.
+    target = np.empty(n_nodes, dtype=float)
+    for idx in np.ndindex(*n_nodes):
+        target[idx] = evals_at(idx)
+    target_norm = max(float(np.linalg.norm(target)), 1e-30)
+
+    def make_cores(rank: int) -> list[np.ndarray]:
+        shapes = []
+        for k in range(d):
+            r_left = 1 if k == 0 else rank
+            r_right = 1 if k == d - 1 else rank
+            shapes.append((r_left, n_nodes[k], r_right))
+        return [rng.standard_normal(s) for s in shapes]
+
+    def reconstruct(cores_list: list[np.ndarray]) -> np.ndarray:
+        T = cores_list[0]
+        for c in cores_list[1:]:
+            T = np.einsum("...i,ijk->...jk", T, c)
+        return T.squeeze(axis=0).squeeze(axis=-1)
+
+    def grid_residual(cores_list: list[np.ndarray]) -> float:
+        T = reconstruct(cores_list)
+        return float(np.linalg.norm(T - target) / target_norm)
+
+    rank = 1
+    cores = make_cores(rank)
+    while True:
+        # Inner loop measures relative change between ALS sweeps; outer loop
+        # measures grid residual vs. target tensor -- two different quantities.
+        # The 0.1 factor tightens inner convergence so the outer check isn't
+        # starved; max_iter=5 caps inner work because rank growth, not more
+        # sweeps, handles residuals the current rank can't reach.
+        cores = _als_fixed_rank_sweeps(
+            cores, evals_at, n_nodes=list(n_nodes),
+            tolerance=tol * 0.1, max_iter=5, verbose=verbose,
+        )
+        err = grid_residual(cores)
+        if verbose:
+            print(f"[ALS] rank {rank}: grid_residual = {err:.3e} (target {tol:.1e})")
+        if err < tol:
+            break
+        if rank >= max_rank:
+            if verbose:
+                print(f"[ALS] reached max_rank={max_rank} before tolerance")
+            break
+        rank += 1
+        cores = make_cores(rank)
+
+    return cores, len(cache)
+
+
+# ======================================================================
+# Value <-> Chebyshev coefficient core conversion
+# ======================================================================
+
+def _value_core_to_coeff_core(value_core: np.ndarray) -> np.ndarray:
+    """Value core at Chebyshev Type I nodes -> coefficient core.
+
+    Matches the inline transform originally in ``build()``. Extracted so
+    ALS completion can re-apply it after refinement.
+
+    Parameters
+    ----------
+    value_core : np.ndarray of shape ``(r_left, n_k, r_right)``
+        Values at Chebyshev Type I nodes along ``axis=1``.
+
+    Returns
+    -------
+    np.ndarray of shape ``(r_left, n_k, r_right)``
+        Chebyshev expansion coefficients along ``axis=1``.
+    """
+    n_k = value_core.shape[1]
+    coeff = dct(value_core[:, ::-1, :], type=2, axis=1) / n_k
+    coeff[:, 0, :] /= 2
+    return coeff
+
+
+def _coeff_core_to_value_core(coeff_core: np.ndarray) -> np.ndarray:
+    """Inverse of :func:`_value_core_to_coeff_core`.
+
+    Given a coefficient core, reconstruct values at the Chebyshev Type I
+    nodes along ``axis=1``. Used by ``run_completion`` to pull the current
+    TT cores back into value-space before ALS sweeps.
+
+    Derivation: the forward transform (scipy ``norm='backward'``) is
+
+        y = dct(x_rev, type=2, axis=1) / n
+        y[0] /= 2
+
+    scipy's default backward-normalised pair satisfies
+    ``idct(dct(x, type=2), type=2) = x`` exactly, so inverting only requires
+    undoing the two scalings the forward applied: double ``y[0]`` and
+    multiply by ``n``. No additional ``2n`` factor is needed (the plan's
+    earlier formula double-compensated, hence the ``/(2*n_k)`` was removed
+    after verifying against the round-trip test).
+    """
+    n_k = coeff_core.shape[1]
+    c = coeff_core.copy()
+    c[:, 0, :] *= 2  # undo the halving baked into the coefficient convention
+    val_reversed = idct(c * n_k, type=2, axis=1)
+    value_core = val_reversed[:, ::-1, :]
+    return value_core
+
+
+# ======================================================================
 # ChebyshevTT class
 # ======================================================================
 
@@ -709,6 +1063,7 @@ class ChebyshevTT:
         self._build_time: float = 0.0
         self._total_build_evals: int = 0
         self._cached_error_estimate: float | None = None
+        self.method: str | None = None
 
     def build(
         self,
@@ -723,9 +1078,10 @@ class ChebyshevTT:
         1. **Generate Chebyshev grids.** Compute Type I Chebyshev nodes
            in each dimension, scaled to the specified domain.
         2. **Build value cores.** Either TT-Cross (evaluating at
-           $O(d \\cdot n \\cdot r^2)$ strategically selected points) or
+           $O(d \\cdot n \\cdot r^2)$ strategically selected points),
            TT-SVD (evaluating the full $O(n^d)$ tensor, then decomposing
-           via sequential SVD).
+           via sequential SVD), or TT-ALS (rank-adaptive alternating
+           least squares against the full Chebyshev-grid tensor).
         3. **Convert to coefficient cores.** Apply DCT-II along the node
            axis of each core to convert from function values at Chebyshev
            nodes to Chebyshev expansion coefficients. This enables
@@ -737,19 +1093,31 @@ class ChebyshevTT:
         verbose : bool, optional
             If True, print build progress. Default is True.
         seed : int or None, optional
-            Random seed for TT-Cross initialization. Default is None.
-            Ignored when ``method='svd'``.
-        method : ``'cross'`` or ``'svd'``, optional
+            Random seed for initialization. Used by ``method='cross'`` to
+            seed TT-Cross initialization and by ``method='als'`` to
+            deterministically seed the initial cores. Ignored when
+            ``method='svd'``.
+        method : ``'cross'``, ``'svd'``, or ``'als'``, optional
             Build algorithm. ``'cross'`` (default) uses TT-Cross to
             evaluate the function at $O(d \\cdot n \\cdot r^2)$ strategically
             selected points. ``'svd'`` builds the full tensor and decomposes
             via truncated SVD -- only feasible for moderate dimensions
-            ($d \\leq 6$) but useful for validation.
+            ($d \\leq 6$) but useful for validation. ``'als'`` runs
+            rank-adaptive alternating least squares: it starts at rank 1
+            and grows the TT rank by $+1$ per outer iteration until the
+            grid residual falls below ``tolerance`` or the rank reaches
+            ``max_rank``. The residual is the relative Frobenius norm
+            $\\|T_{\\text{als}} - T_{\\text{grid}}\\|_F / \\|T_{\\text{grid}}\\|_F$
+            measured over the Chebyshev grid. Like ``'svd'``, ALS
+            materializes a target tensor of $\\prod_k n_k$ floats, so it
+            is feasible for typical grids; users with very large grids
+            should prefer ``'cross'``.
         """
-        from scipy.fft import dct
-
-        if method not in ("cross", "svd"):
-            raise ValueError(f"method must be 'cross' or 'svd', got {method!r}")
+        if method not in ("cross", "svd", "als"):
+            raise ValueError(
+                f"method must be 'cross', 'svd', or 'als', got {method!r}"
+            )
+        self.method = method
 
         start = time.time()
         self._cached_error_estimate = None
@@ -783,12 +1151,23 @@ class ChebyshevTT:
                 verbose=verbose,
                 seed=seed,
             )
-        else:  # svd
+        elif method == "svd":
             value_cores, n_evals = _tt_svd(
                 self.function,
                 grids,
                 max_rank=self.max_rank,
                 tol=self.tolerance,
+                verbose=verbose,
+            )
+        else:  # als
+            if verbose:
+                print("  Running TT-ALS...")
+            value_cores, n_evals = _tt_als(
+                self.function,
+                grids,
+                max_rank=self.max_rank,
+                tol=self.tolerance,
+                random_state=seed,
                 verbose=verbose,
             )
         self._total_build_evals = n_evals
@@ -808,12 +1187,7 @@ class ChebyshevTT:
         #
         # This is the same transform used by ChebyshevApproximation's
         # _chebyshev_coefficients_1d(), extended to 3D cores.
-        coeff_cores = []
-        for k, core in enumerate(value_cores):
-            n_k = core.shape[1]
-            coeff = dct(core[:, ::-1, :], type=2, axis=1) / n_k
-            coeff[:, 0, :] /= 2
-            coeff_cores.append(coeff)
+        coeff_cores = [_value_core_to_coeff_core(core) for core in value_cores]
 
         self._coeff_cores = coeff_cores
 
@@ -837,6 +1211,204 @@ class ChebyshevTT:
         """Raise RuntimeError if build() has not been called."""
         if not self._built:
             raise RuntimeError("Call build() before using this method.")
+
+    def orth_left(self, position: int) -> None:
+        """Left-orthogonalize cores ``[0..position-1]`` in place.
+
+        After the call, each core ``C_k`` for ``k < position``, reshaped as
+        an ``(r_k * n_k, r_{k+1})`` matrix, satisfies ``C^T C = I``. The R
+        factors are absorbed rightward into ``core[position]``; the
+        represented tensor is unchanged.
+
+        Parameters
+        ----------
+        position : int
+            Pivot core index, must be in ``range(1, num_dimensions)``.
+
+        Raises
+        ------
+        RuntimeError
+            If the TT has not been built.
+        ValueError
+            If ``position`` is outside ``[1, num_dimensions - 1]``.
+        """
+        self._check_built()
+        d = self.num_dimensions
+        if not (1 <= position < d):
+            raise ValueError(
+                f"position must be in [1, {d - 1}] for orth_left, got {position}"
+            )
+        for k in range(position):
+            self._coeff_cores[k], self._coeff_cores[k + 1] = _orth_left_core(
+                self._coeff_cores[k], self._coeff_cores[k + 1]
+            )
+
+    def orth_right(self, position: int) -> None:
+        """Right-orthogonalize cores ``[position+1..d-1]`` in place.
+
+        Mirror of :meth:`orth_left`. Each core ``C_k`` for ``k > position``,
+        reshaped as an ``(r_k, n_k * r_{k+1})`` matrix, satisfies
+        ``C C^T = I``. L factors are absorbed leftward; the tensor is
+        unchanged.
+
+        Parameters
+        ----------
+        position : int
+            Pivot core index, must be in ``range(0, num_dimensions - 1)``.
+
+        Raises
+        ------
+        RuntimeError
+            If the TT has not been built.
+        ValueError
+            If ``position`` is outside ``[0, num_dimensions - 2]``.
+        """
+        self._check_built()
+        d = self.num_dimensions
+        if not (0 <= position < d - 1):
+            raise ValueError(
+                f"position must be in [0, {d - 2}] for orth_right, got {position}"
+            )
+        for k in range(d - 1, position, -1):
+            self._coeff_cores[k - 1], self._coeff_cores[k] = _orth_right_core(
+                self._coeff_cores[k - 1], self._coeff_cores[k]
+            )
+
+    def run_completion(
+        self,
+        tolerance: float = 1e-8,
+        max_iter: int = 50,
+        verbose: bool = False,
+    ) -> None:
+        """Refine the TT at its current rank via ALS sweeps.
+
+        Works on any built TT (from ``cross``, ``svd``, or ``als``). Rank
+        does not grow; only per-core coefficients are refined.
+
+        Requires ``self.function`` to be callable -- completion re-samples
+        the grid to build the LS right-hand side. TTs loaded from pickle
+        typically retain the function unless it was pickled without a
+        closure; see Notes.
+
+        Parameters
+        ----------
+        tolerance : float
+            Stop when inner-sweep relative change falls below this value.
+        max_iter : int
+            Maximum number of outer sweeps.
+        verbose : bool
+            Print per-sweep residuals.
+
+        Raises
+        ------
+        RuntimeError
+            If the TT has not been built, or if ``self.function`` is None.
+
+        Notes
+        -----
+        Completion evaluates ``self.function`` on the full tensor-product grid
+        (``prod(n_nodes)`` points), which may dwarf the cost of a prior
+        ``method='cross'`` build. The eval cache is rebuilt fresh, not reused
+        from the original build.
+        """
+        self._check_built()
+        if self.function is None:
+            raise RuntimeError(
+                "run_completion requires self.function to be callable; "
+                "the TT was loaded from a source without the original function."
+            )
+
+        # Convert coeff cores back to value cores at Chebyshev Type I nodes.
+        value_cores = [
+            _coeff_core_to_value_core(c) for c in self._coeff_cores
+        ]
+
+        # Rebuild the grids that build() used (same construction as
+        # tensor_train.py:1082-1087 inside build()).
+        grids = []
+        for k in range(self.num_dimensions):
+            nodes_std = chebpts1(self.n_nodes[k])
+            a, b = self.domain[k]
+            nodes_scaled = 0.5 * (a + b) + 0.5 * (b - a) * nodes_std
+            grids.append(np.sort(nodes_scaled))
+
+        cache: dict[tuple, float] = {}
+
+        def evals_at(idx: tuple) -> float:
+            key = tuple(int(i) for i in idx)
+            if key not in cache:
+                pt = [float(grids[k][key[k]]) for k in range(self.num_dimensions)]
+                # Match the (point, data) convention used by _tt_cross/_tt_svd/_tt_als.
+                cache[key] = self.function(pt, None)
+            return cache[key]
+
+        # Run fixed-rank ALS on the value cores.
+        refined_value_cores = _als_fixed_rank_sweeps(
+            value_cores, evals_at, n_nodes=list(self.n_nodes),
+            tolerance=tolerance, max_iter=max_iter, verbose=verbose,
+        )
+
+        # Convert back to coefficient cores and store.
+        self._coeff_cores = [
+            _value_core_to_coeff_core(c) for c in refined_value_cores
+        ]
+        self._cached_error_estimate = None
+
+    def inner_product(self, other: "ChebyshevTT") -> float:
+        """Frobenius inner product of the Chebyshev coefficient tensors of two TTs.
+
+        Because ``_coeff_cores`` stores Chebyshev expansion coefficients
+        (DCT-II applied during ``build()``), contracting the cores core-by-core
+        yields $\\sum_{i_1,\\ldots,i_d} C_{\\text{self}}[i_1,\\ldots,i_d] \\,
+        C_{\\text{other}}[i_1,\\ldots,i_d]$, where $C$ denotes the full
+        coefficient tensor. The core-by-core contraction costs
+        $O(d \\cdot n \\cdot r_s^2 \\cdot r_o^2)$ operations and
+        $O(r_s \\cdot r_o)$ extra memory, where $r_s, r_o$ are the TT ranks
+        of ``self`` and ``other``.
+
+        Parameters
+        ----------
+        other : ChebyshevTT
+            Must have the same ``domain`` and the same ``n_nodes`` as ``self``.
+
+        Returns
+        -------
+        float
+            Frobenius inner product of the two Chebyshev coefficient tensors,
+            $\\sum_{i_1,\\ldots,i_d} C_{\\text{self}}[i] \\, C_{\\text{other}}[i]$.
+
+        Raises
+        ------
+        RuntimeError
+            If either TT is not built.
+        ValueError
+            If ``other`` is not a ChebyshevTT, or has a different ``domain``
+            or ``n_nodes``.
+        """
+        self._check_built()
+        if not isinstance(other, ChebyshevTT):
+            raise ValueError(
+                f"other must be a ChebyshevTT, got {type(other).__name__}"
+            )
+        other._check_built()
+        if self.domain != other.domain:
+            raise ValueError(
+                "inner_product requires matching domains; "
+                f"got {self.domain} vs {other.domain}"
+            )
+        if list(self.n_nodes) != list(other.n_nodes):
+            raise ValueError(
+                "inner_product requires matching n_nodes; "
+                f"got {self.n_nodes} vs {other.n_nodes}"
+            )
+
+        M = np.array([[1.0]])  # (r_self_0, r_other_0) = (1, 1)
+        for k in range(self.num_dimensions):
+            A = self._coeff_cores[k]   # (r_self_k, n_k, r_self_{k+1})
+            B = other._coeff_cores[k]  # (r_other_k, n_k, r_other_{k+1})
+            # M[i,j] * A[i,p,a] * B[j,p,b] -> new_M[a,b]
+            M = np.einsum("ij,ipa,jpb->ab", M, A, B)
+        return float(M[0, 0])
 
     def eval(self, point: List[float]) -> float:
         """Evaluate at a single point via TT inner product.

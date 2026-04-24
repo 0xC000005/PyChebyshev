@@ -56,15 +56,14 @@ ChebyshevApproximation(
 
 **Closes MoCaX gaps:** core `special_points` kwarg, per-sub-interval Ns.
 
-## v0.13 — Tensor Train Algebra and ALS :material-clock-outline:
+## v0.13 — Tensor Train Algebra and ALS :material-check:
 
 Alternating Least Squares as a new build method alongside TT-Cross and
 TT-SVD, plus TT-level algebra primitives.
 
 ```python
-tt = ChebyshevTT(f, 5, domain, n_nodes, method='als',
-                 tolerance=1e-6, max_rank=10)
-tt.build()
+tt = ChebyshevTT(f, 5, domain, n_nodes, tolerance=1e-6, max_rank=10)
+tt.build(method='als')
 
 # Refine an existing TT at fixed rank
 tt.run_completion(tolerance=1e-8)

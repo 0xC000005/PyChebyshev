@@ -419,3 +419,535 @@ class TestCoverageGaps:
         # d^3f/dx0 dx1 dx2 for separable f = 0
         results = tt_sin_3d.eval_multi(pt, [[1, 1, 1]])
         assert abs(results[0]) < 0.1, f"Triple cross deriv = {results[0]:.4e}"
+
+
+class TestOrthogonalization:
+    """Tests for ChebyshevTT.orth_left / orth_right (v0.13)."""
+
+    @pytest.fixture
+    def tt_3d(self):
+        from pychebyshev.tensor_train import ChebyshevTT
+        def f(x, _):
+            return np.sin(x[0]) * np.cos(x[1]) + 0.3 * x[2] ** 2
+        tt = ChebyshevTT(f, 3, [(-1.0, 1.0)] * 3, [11, 11, 11],
+                         tolerance=1e-6, max_rank=6)
+        tt.build(verbose=False, method="cross", seed=42)
+        return tt
+
+    def test_orth_left_produces_left_orthogonal_cores(self, tt_3d):
+        tt_3d.orth_left(position=2)
+        # Cores 0 and 1 must satisfy Q^T Q = I after unfolding as (r_k*n_k, r_{k+1})
+        for k in (0, 1):
+            C = tt_3d._coeff_cores[k]
+            r0, n, r1 = C.shape
+            Q = C.reshape(r0 * n, r1)
+            gram = Q.T @ Q
+            assert np.allclose(gram, np.eye(r1), atol=1e-10), \
+                f"core {k} not left-orthogonal after orth_left(2)"
+
+    def test_orth_right_produces_right_orthogonal_cores(self, tt_3d):
+        tt_3d.orth_right(position=0)
+        # Cores 1 and 2 must satisfy Q Q^T = I after unfolding as (r_k, n_k*r_{k+1})
+        for k in (1, 2):
+            C = tt_3d._coeff_cores[k]
+            r0, n, r1 = C.shape
+            Q = C.reshape(r0, n * r1)
+            gram = Q @ Q.T
+            assert np.allclose(gram, np.eye(r0), atol=1e-10), \
+                f"core {k} not right-orthogonal after orth_right(0)"
+
+    def test_orth_left_preserves_eval(self, tt_3d):
+        pts = np.array([[0.1, -0.2, 0.3], [0.5, 0.5, -0.5], [-0.9, 0.1, 0.7]])
+        before = np.array([tt_3d.eval(p.tolist()) for p in pts])
+        tt_3d.orth_left(position=2)
+        after = np.array([tt_3d.eval(p.tolist()) for p in pts])
+        assert np.allclose(before, after, atol=1e-10)
+
+    def test_orth_right_preserves_eval(self, tt_3d):
+        pts = np.array([[0.1, -0.2, 0.3], [0.5, 0.5, -0.5], [-0.9, 0.1, 0.7]])
+        before = np.array([tt_3d.eval(p.tolist()) for p in pts])
+        tt_3d.orth_right(position=0)
+        after = np.array([tt_3d.eval(p.tolist()) for p in pts])
+        assert np.allclose(before, after, atol=1e-10)
+
+    def test_orth_left_position_zero_raises(self, tt_3d):
+        with pytest.raises(ValueError, match="position must be in"):
+            tt_3d.orth_left(position=0)
+
+    def test_orth_right_position_last_raises(self, tt_3d):
+        with pytest.raises(ValueError, match="position must be in"):
+            tt_3d.orth_right(position=2)  # d=3, last valid is d-2=1
+
+    def test_orth_left_out_of_range_raises(self, tt_3d):
+        with pytest.raises(ValueError, match="position must be in"):
+            tt_3d.orth_left(position=5)
+
+    def test_orth_left_on_unbuilt_raises(self):
+        from pychebyshev.tensor_train import ChebyshevTT
+        tt = ChebyshevTT(lambda x: x[0], 2, [(-1.0, 1.0)] * 2, [5, 5])
+        with pytest.raises(RuntimeError, match="Call build"):
+            tt.orth_left(position=1)
+
+
+class TestInnerProduct:
+    """Tests for ChebyshevTT.inner_product (v0.13)."""
+
+    def test_inner_product_matches_explicit_contraction_2d(self):
+        from pychebyshev.tensor_train import ChebyshevTT
+        def f(x, data=None):
+            return np.sin(x[0]) + 0.5 * x[1]
+        def g(x, data=None):
+            return np.cos(x[0]) * x[1]
+        domain = [(-1.0, 1.0), (-1.0, 1.0)]
+        n_nodes = [8, 8]
+        tt_a = ChebyshevTT(f, 2, domain, n_nodes,
+                           tolerance=1e-8, max_rank=8)
+        tt_b = ChebyshevTT(g, 2, domain, n_nodes,
+                           tolerance=1e-8, max_rank=8)
+        tt_a.build(verbose=False, method="cross", seed=1)
+        tt_b.build(verbose=False, method="cross", seed=2)
+
+        ip = tt_a.inner_product(tt_b)
+
+        # Reference: contract full TT tensors explicitly via einsum on cores
+        def full_tensor(tt):
+            T = tt._coeff_cores[0]  # (1, n, r1)
+            for k in range(1, tt.num_dimensions):
+                T = np.einsum("...i,ijk->...jk", T, tt._coeff_cores[k])
+            return T.squeeze()
+
+        Ta = full_tensor(tt_a)
+        Tb = full_tensor(tt_b)
+        ref = np.sum(Ta * Tb)
+        assert abs(ip - ref) < 1e-10, f"inner_product {ip} != reference {ref}"
+
+    def test_self_inner_product_is_squared_norm(self):
+        from pychebyshev.tensor_train import ChebyshevTT
+        def f(x, data=None):
+            return np.cos(x[0]) + x[1] ** 2
+        tt = ChebyshevTT(f, 2, [(-1.0, 1.0)] * 2, [10, 10],
+                         tolerance=1e-8, max_rank=8)
+        tt.build(verbose=False, method="cross", seed=0)
+        ip = tt.inner_product(tt)
+        # T is the full Chebyshev coefficient tensor; sum(T*T) is its squared Frobenius norm
+        def full_tensor(tt):
+            T = tt._coeff_cores[0]
+            for k in range(1, tt.num_dimensions):
+                T = np.einsum("...i,ijk->...jk", T, tt._coeff_cores[k])
+            return T.squeeze()
+        T = full_tensor(tt)
+        assert abs(ip - float(np.sum(T * T))) < 1e-10
+        assert ip > 0  # squared norm is positive
+
+    def test_inner_product_raises_on_non_tt(self):
+        from pychebyshev.tensor_train import ChebyshevTT
+        tt = ChebyshevTT(lambda x, _=None: x[0], 2, [(-1.0, 1.0)] * 2, [5, 5],
+                         tolerance=1e-4, max_rank=3)
+        tt.build(verbose=False, method="cross")
+        with pytest.raises(ValueError, match="must be a ChebyshevTT"):
+            tt.inner_product("not a tt")
+
+    def test_inner_product_raises_on_domain_mismatch(self):
+        from pychebyshev.tensor_train import ChebyshevTT
+        tt_a = ChebyshevTT(lambda x, _=None: x[0], 2, [(-1.0, 1.0)] * 2, [5, 5],
+                           tolerance=1e-4, max_rank=3)
+        tt_b = ChebyshevTT(lambda x, _=None: x[0], 2, [(-2.0, 2.0)] * 2, [5, 5],
+                           tolerance=1e-4, max_rank=3)
+        tt_a.build(verbose=False, method="cross")
+        tt_b.build(verbose=False, method="cross")
+        with pytest.raises(ValueError, match="matching domains"):
+            tt_a.inner_product(tt_b)
+
+    def test_inner_product_raises_on_n_nodes_mismatch(self):
+        from pychebyshev.tensor_train import ChebyshevTT
+        tt_a = ChebyshevTT(lambda x, _=None: x[0], 2, [(-1.0, 1.0)] * 2, [5, 5],
+                           tolerance=1e-4, max_rank=3)
+        tt_b = ChebyshevTT(lambda x, _=None: x[0], 2, [(-1.0, 1.0)] * 2, [7, 7],
+                           tolerance=1e-4, max_rank=3)
+        tt_a.build(verbose=False, method="cross")
+        tt_b.build(verbose=False, method="cross")
+        with pytest.raises(ValueError, match="matching n_nodes"):
+            tt_a.inner_product(tt_b)
+
+    def test_inner_product_raises_on_unbuilt_self(self):
+        from pychebyshev.tensor_train import ChebyshevTT
+        tt_a = ChebyshevTT(lambda x, _=None: x[0], 2, [(-1.0, 1.0)] * 2, [5, 5])
+        tt_b = ChebyshevTT(lambda x, _=None: x[0], 2, [(-1.0, 1.0)] * 2, [5, 5],
+                           tolerance=1e-4, max_rank=3)
+        tt_b.build(verbose=False, method="cross")
+        with pytest.raises(RuntimeError, match="Call build"):
+            tt_a.inner_product(tt_b)
+
+    def test_inner_product_raises_on_unbuilt_other(self):
+        from pychebyshev.tensor_train import ChebyshevTT
+        tt_a = ChebyshevTT(lambda x, _=None: x[0], 2, [(-1.0, 1.0)] * 2, [5, 5],
+                           tolerance=1e-4, max_rank=3)
+        tt_b = ChebyshevTT(lambda x, _=None: x[0], 2, [(-1.0, 1.0)] * 2, [5, 5])
+        tt_a.build(verbose=False, method="cross")
+        with pytest.raises(RuntimeError, match="Call build"):
+            tt_a.inner_product(tt_b)
+
+
+class TestALSInternals:
+    """White-box tests for the internal ALS sweep primitive."""
+
+    def test_als_sweep_reduces_residual_on_rank1_target(self):
+        """On an exactly-rank-1 target tensor, one sweep drives residual to ~0."""
+        from pychebyshev.tensor_train import _als_fixed_rank_sweeps
+        rng = np.random.default_rng(0)
+        # Build an exactly rank-1 target on an 8x8x8 grid
+        u0 = rng.standard_normal(8)
+        u1 = rng.standard_normal(8)
+        u2 = rng.standard_normal(8)
+        target = np.einsum("a,b,c->abc", u0, u1, u2)
+        # Full-grid evaluator: returns target[i,j,k] for integer grid index
+        def evals_at(idx_tuple):
+            return target[idx_tuple]
+        # Random rank-1 initial cores of matching shape
+        cores = [
+            rng.standard_normal((1, 8, 1)),
+            rng.standard_normal((1, 8, 1)),
+            rng.standard_normal((1, 8, 1)),
+        ]
+        new_cores = _als_fixed_rank_sweeps(
+            cores, evals_at, n_nodes=[8, 8, 8],
+            tolerance=1e-12, max_iter=5, verbose=False,
+        )
+        # Reconstruct and compare
+        T = new_cores[0]
+        for c in new_cores[1:]:
+            T = np.einsum("...i,ijk->...jk", T, c)
+        T = T.squeeze()
+        residual = np.linalg.norm(T - target) / np.linalg.norm(target)
+        assert residual < 1e-8, f"residual {residual} exceeds 1e-8"
+
+    def test_als_sweep_refines_rank2_target_at_rank2(self):
+        """Rank-2 target at rank-2 TT: ALS should fit to near machine precision."""
+        from pychebyshev.tensor_train import _als_fixed_rank_sweeps
+        rng = np.random.default_rng(7)
+        # Rank-2 target: sum of two rank-1 tensors
+        u0a, u1a, u2a = (rng.standard_normal(6) for _ in range(3))
+        u0b, u1b, u2b = (rng.standard_normal(6) for _ in range(3))
+        target = (np.einsum("a,b,c->abc", u0a, u1a, u2a)
+                  + np.einsum("a,b,c->abc", u0b, u1b, u2b))
+        def evals_at(idx):
+            return target[idx]
+        cores = [
+            rng.standard_normal((1, 6, 2)),
+            rng.standard_normal((2, 6, 2)),
+            rng.standard_normal((2, 6, 1)),
+        ]
+        new_cores = _als_fixed_rank_sweeps(
+            cores, evals_at, n_nodes=[6, 6, 6],
+            tolerance=1e-12, max_iter=15, verbose=False,
+        )
+        T = new_cores[0]
+        for c in new_cores[1:]:
+            T = np.einsum("...i,ijk->...jk", T, c)
+        T = T.squeeze()
+        residual = np.linalg.norm(T - target) / np.linalg.norm(target)
+        assert residual < 1e-6, f"residual {residual} exceeds 1e-6"
+
+    def test_value_coeff_round_trip(self):
+        from pychebyshev.tensor_train import (
+            _value_core_to_coeff_core, _coeff_core_to_value_core,
+        )
+        rng = np.random.default_rng(2)
+        for shape in [(1, 8, 3), (2, 11, 4), (3, 5, 1)]:
+            v = rng.standard_normal(shape)
+            c = _value_core_to_coeff_core(v)
+            v_back = _coeff_core_to_value_core(c)
+            assert np.allclose(v, v_back, atol=1e-12), \
+                f"round-trip failed for shape {shape}"
+
+
+class TestALS:
+    """Tests for ChebyshevTT method='als' (v0.13)."""
+
+    def test_als_builds_and_reaches_tolerance_3d(self):
+        from pychebyshev.tensor_train import ChebyshevTT
+
+        def f(x, _=None):
+            return np.sin(x[0]) * np.cos(x[1]) + 0.3 * x[2] ** 2
+
+        tt = ChebyshevTT(
+            f, 3, [(-1.0, 1.0)] * 3, [10, 10, 10],
+            tolerance=1e-4, max_rank=6,
+        )
+        tt.build(verbose=False, method="als", seed=42)
+        assert tt._built
+        # Evaluate at a few test points and compare to f
+        pts = [[0.1, -0.2, 0.3], [0.5, 0.5, -0.5], [-0.9, 0.1, 0.7]]
+        for p in pts:
+            got = tt.eval(p)
+            want = f(p)
+            assert abs(got - want) < 1e-3, f"ALS eval at {p}: {got} vs {want}"
+
+    def test_als_matches_cross_on_same_fixture(self):
+        from pychebyshev.tensor_train import ChebyshevTT
+
+        def f(x, _=None):
+            return np.exp(-x[0] ** 2) * np.cos(x[1])
+
+        domain = [(-1.0, 1.0), (-1.0, 1.0)]
+        n_nodes = [10, 10]
+        tt_cross = ChebyshevTT(
+            f, 2, domain, n_nodes, tolerance=1e-6, max_rank=8,
+        )
+        tt_cross.build(verbose=False, method="cross", seed=1)
+        tt_als = ChebyshevTT(
+            f, 2, domain, n_nodes, tolerance=1e-4, max_rank=8,
+        )
+        tt_als.build(verbose=False, method="als", seed=1)
+        pts = [[0.1, -0.2], [0.5, 0.5], [-0.9, 0.7]]
+        for p in pts:
+            assert abs(tt_cross.eval(p) - tt_als.eval(p)) < 5e-3
+
+    def test_als_respects_max_rank_cap(self):
+        from pychebyshev.tensor_train import ChebyshevTT
+
+        def hard_f(x, _=None):
+            # Nearly-discontinuous function, unreachable at low rank
+            return np.tanh(50 * (x[0] - x[1]))
+
+        tt = ChebyshevTT(
+            hard_f, 2, [(-1.0, 1.0)] * 2, [20, 20],
+            tolerance=1e-12, max_rank=3,
+        )
+        tt.build(verbose=False, method="als", seed=0)
+        for r in tt.tt_ranks:
+            assert r <= 3
+
+    def test_als_deterministic_given_random_state(self):
+        from pychebyshev.tensor_train import ChebyshevTT
+
+        def f(x, _=None):
+            return x[0] * x[1] + 0.5
+
+        kwargs = dict(tolerance=1e-4, max_rank=4)
+        tt_a = ChebyshevTT(f, 2, [(-1.0, 1.0)] * 2, [8, 8], **kwargs)
+        tt_b = ChebyshevTT(f, 2, [(-1.0, 1.0)] * 2, [8, 8], **kwargs)
+        tt_a.build(verbose=False, method="als", seed=123)
+        tt_b.build(verbose=False, method="als", seed=123)
+        assert abs(tt_a.eval([0.3, -0.4]) - tt_b.eval([0.3, -0.4])) < 1e-12
+
+    def test_als_method_attribute_set(self):
+        from pychebyshev.tensor_train import ChebyshevTT
+
+        tt = ChebyshevTT(
+            lambda x, _=None: x[0], 2, [(-1.0, 1.0)] * 2, [5, 5],
+            tolerance=1e-2, max_rank=3,
+        )
+        tt.build(verbose=False, method="als")
+        assert tt.method == "als"
+
+    def test_als_total_build_evals_positive(self):
+        from pychebyshev.tensor_train import ChebyshevTT
+
+        tt = ChebyshevTT(
+            lambda x, _=None: x[0] + x[1], 2, [(-1.0, 1.0)] * 2, [6, 6],
+            tolerance=1e-4, max_rank=3,
+        )
+        tt.build(verbose=False, method="als")
+        assert tt.total_build_evals > 0
+
+    def test_invalid_method_raises(self):
+        from pychebyshev.tensor_train import ChebyshevTT
+        tt = ChebyshevTT(lambda x, _=None: x[0], 1, [(-1.0, 1.0)], [5])
+        with pytest.raises(ValueError, match="'cross', 'svd', or 'als'"):
+            tt.build(verbose=False, method="bogus")
+
+
+class TestCompletion:
+    """Tests for ChebyshevTT.run_completion (v0.13)."""
+
+    def test_completion_refines_cross_build(self):
+        from pychebyshev.tensor_train import ChebyshevTT
+
+        # err_before must be well above 1e-14 so the assertion actually has teeth.
+        def f(x, _=None):
+            return np.exp(x[0] * x[1] * x[2])
+
+        tt = ChebyshevTT(f, 3, [(-1.0, 1.0)] * 3, [10, 10, 10],
+                         tolerance=1e-3, max_rank=3)
+        tt.build(verbose=False, method="cross", seed=0)
+        err_before = tt.error_estimate()
+        tt.run_completion(tolerance=1e-12, max_iter=20, verbose=False)
+        err_after = tt.error_estimate()
+        assert err_after <= err_before * 1.1 + 1e-14, \
+            f"completion should not worsen error; {err_before} -> {err_after}"
+
+    def test_completion_refines_svd_build(self):
+        from pychebyshev.tensor_train import ChebyshevTT
+
+        # sin(x) + cos(y) is truly rank-2 and SVD at max_rank=5 fits it
+        # to machine precision, leaving err_before ~1e-9; the LS solve in
+        # completion then has gauge freedom and can inject noise at that
+        # level. Use a function whose SVD truncation at rank 5 leaves
+        # real headroom so the "does not worsen" check is meaningful.
+        def f(x, _=None):
+            return np.exp(x[0] * x[1])
+
+        tt = ChebyshevTT(f, 2, [(-1.0, 1.0)] * 2, [10, 10],
+                         tolerance=1e-3, max_rank=5)
+        tt.build(verbose=False, method="svd", seed=0)
+        err_before = tt.error_estimate()
+        tt.run_completion(tolerance=1e-12, max_iter=10, verbose=False)
+        err_after = tt.error_estimate()
+        assert err_after <= err_before + 1e-9
+
+    def test_completion_refines_als_build(self):
+        from pychebyshev.tensor_train import ChebyshevTT
+
+        # err_before must be well above 1e-14 so the assertion actually has teeth.
+        def f(x, _=None):
+            return np.exp(x[0] * x[1])
+
+        tt = ChebyshevTT(f, 2, [(-1.0, 1.0)] * 2, [8, 8],
+                         tolerance=1e-3, max_rank=2)
+        tt.build(verbose=False, method="als", seed=0)
+        err_before = tt.error_estimate()
+        tt.run_completion(tolerance=1e-12, max_iter=10, verbose=False)
+        err_after = tt.error_estimate()
+        assert err_after <= err_before * 1.1 + 1e-14, \
+            f"completion should not worsen error; {err_before} -> {err_after}"
+
+    def test_completion_max_iter_respected(self):
+        from pychebyshev.tensor_train import ChebyshevTT
+
+        def f(x, _=None):
+            return np.tanh(10 * x[0]) * x[1]  # hard to fit at low rank
+
+        tt = ChebyshevTT(f, 2, [(-1.0, 1.0)] * 2, [10, 10],
+                         tolerance=1e-3, max_rank=3)
+        tt.build(verbose=False, method="cross")
+        # Should not hang - max_iter=1 means at most one outer sweep.
+        import time
+        t0 = time.time()
+        tt.run_completion(tolerance=1e-20, max_iter=1, verbose=False)
+        assert time.time() - t0 < 30  # sanity timeout
+
+    def test_completion_raises_on_unbuilt(self):
+        from pychebyshev.tensor_train import ChebyshevTT
+        tt = ChebyshevTT(lambda x, _=None: x[0], 2, [(-1.0, 1.0)] * 2, [5, 5])
+        with pytest.raises(RuntimeError, match="Call build"):
+            tt.run_completion()
+
+    def test_completion_raises_when_function_missing(self):
+        from pychebyshev.tensor_train import ChebyshevTT
+        tt = ChebyshevTT(lambda x, _=None: x[0], 2, [(-1.0, 1.0)] * 2, [5, 5],
+                         tolerance=1e-2, max_rank=3)
+        tt.build(verbose=False, method="cross")
+        tt.function = None  # simulate loaded-from-pickle case
+        with pytest.raises(RuntimeError, match="requires self.function"):
+            tt.run_completion()
+
+    def test_completion_eval_stays_close_to_target(self):
+        """Sanity: completion should not diverge."""
+        from pychebyshev.tensor_train import ChebyshevTT
+
+        def f(x, _=None):
+            return np.cos(x[0] + x[1])
+
+        tt = ChebyshevTT(f, 2, [(-1.0, 1.0)] * 2, [10, 10],
+                         tolerance=1e-4, max_rank=5)
+        tt.build(verbose=False, method="cross", seed=0)
+        tt.run_completion(tolerance=1e-10, max_iter=10, verbose=False)
+        for p in [[0.1, 0.2], [-0.5, 0.7]]:
+            assert abs(tt.eval(p) - f(p)) < 1e-3
+
+
+class TestCrossFeatureALS:
+    """Integration: ALS-built TTs through existing features."""
+
+    def test_als_tt_save_load_round_trip(self, tmp_path):
+        from pychebyshev.tensor_train import ChebyshevTT
+
+        def f(x, data=None):
+            return np.sin(x[0]) + x[1] ** 2
+
+        tt = ChebyshevTT(f, 2, [(-1.0, 1.0)] * 2, [8, 8],
+                         tolerance=1e-4, max_rank=4)
+        tt.build(verbose=False, method="als", seed=0)
+        val_before = tt.eval([0.3, -0.4])
+        path = tmp_path / "als_tt.pkl"
+        tt.save(path)
+        tt2 = ChebyshevTT.load(path)
+        val_after = tt2.eval([0.3, -0.4])
+        assert abs(val_before - val_after) < 1e-12
+        assert tt2.method == "als"
+
+    def test_als_tt_eval_batch_matches_eval(self):
+        from pychebyshev.tensor_train import ChebyshevTT
+
+        def f(x, data=None):
+            return x[0] * x[1] + np.sin(x[2])
+
+        tt = ChebyshevTT(f, 3, [(-1.0, 1.0)] * 3, [8, 8, 8],
+                         tolerance=1e-3, max_rank=4)
+        tt.build(verbose=False, method="als", seed=0)
+        pts = np.array([[0.1, -0.2, 0.3], [0.5, 0.0, -0.5]])
+        batch = tt.eval_batch(pts)
+        for i, p in enumerate(pts):
+            assert abs(batch[i] - tt.eval(p.tolist())) < 1e-12
+
+    def test_inner_product_als_vs_cross_matches_reference(self):
+        """inner_product on mixed ALS/cross TTs should match explicit full-tensor contraction."""
+        from pychebyshev.tensor_train import ChebyshevTT
+
+        def f(x, data=None):
+            return np.sin(x[0]) + 0.5 * x[1]
+
+        def g(x, data=None):
+            return np.cos(x[0]) * x[1]
+
+        domain = [(-1.0, 1.0), (-1.0, 1.0)]
+        n_nodes = [10, 10]
+        kwargs = dict(tolerance=1e-6, max_rank=8)
+        tt_als = ChebyshevTT(f, 2, domain, n_nodes, **kwargs)
+        tt_cross = ChebyshevTT(g, 2, domain, n_nodes, **kwargs)
+        tt_als.build(verbose=False, method="als", seed=0)
+        tt_cross.build(verbose=False, method="cross", seed=0)
+
+        ip = tt_als.inner_product(tt_cross)
+
+        # Reference: contract full TT tensors explicitly via einsum on cores
+        def full_tensor(tt):
+            T = tt._coeff_cores[0]  # (1, n, r1)
+            for k in range(1, tt.num_dimensions):
+                T = np.einsum("...i,ijk->...jk", T, tt._coeff_cores[k])
+            return T.squeeze()
+
+        T_als = full_tensor(tt_als)
+        T_cross = full_tensor(tt_cross)
+        ref = np.sum(T_als * T_cross)
+        assert abs(ip - ref) < 1e-10, f"inner_product {ip} != reference {ref}"
+
+    def test_run_completion_works_after_save_load(self, tmp_path):
+        """run_completion should work on an ALS TT that was saved and reloaded."""
+        from pychebyshev.tensor_train import ChebyshevTT
+
+        def f(x, data=None):
+            return np.exp(x[0] * x[1])
+
+        tt = ChebyshevTT(f, 2, [(-1.0, 1.0)] * 2, [10, 10],
+                         tolerance=1e-4, max_rank=3)
+        tt.build(verbose=False, method="als", seed=0)
+        err_before = tt.error_estimate()
+
+        path = tmp_path / "als_pre_completion.pkl"
+        tt.save(path)
+        tt2 = ChebyshevTT.load(path)
+        # save/load strips the function by design; reassign it to re-enable
+        # grid-resampling operations like run_completion
+        tt2.function = f
+
+        # run_completion re-samples the grid; it raises RuntimeError if
+        # self.function is None, so a successful call confirms the reassigned
+        # function is being used
+        tt2.run_completion(tolerance=1e-6, max_iter=20, verbose=False)
+        err_after = tt2.error_estimate()
+
+        assert err_after <= err_before * 1.1 + 1e-14, (
+            f"completion increased error: before={err_before:.3e}, after={err_after:.3e}"
+        )

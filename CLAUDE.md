@@ -12,7 +12,7 @@ PyChebyshev is a pip-installable Python library for multi-dimensional Chebyshev 
 # Setup
 uv sync
 
-# Run tests (~543 tests, ~110s due to 5D Black-Scholes builds)
+# Run tests (~586 tests, ~110s due to 5D Black-Scholes builds)
 uv run pytest tests/ -v
 
 # Run a single test
@@ -42,7 +42,7 @@ The installable package. Public classes: `ChebyshevApproximation`, `ChebyshevSpl
 - **`barycentric.py`** — Core implementation. `ChebyshevApproximation` class with `build()`, `eval()`, `vectorized_eval()`, `vectorized_eval_multi()`, `integrate()`, `roots()`, `minimize()`, `maximize()`, `nodes()`, `from_values()`. Key insight: barycentric weights depend only on node positions (not function values), enabling full pre-computation. `vectorized_eval()` uses a reshape trick to route N-D tensor contractions through BLAS GEMV (~0.065ms/query). `vectorized_eval_multi()` shares barycentric weight computation across price + derivatives (~0.29ms for 6 outputs). `fast_eval()` exists but is deprecated (JIT path, ~150x slower than BLAS).
 - **`spline.py`** — `ChebyshevSpline` class for piecewise Chebyshev interpolation with user-specified knots at singularities. Partitions the domain into sub-intervals and builds an independent `ChebyshevApproximation` on each piece. Restores spectral convergence for functions with kinks or discontinuities. Supports `integrate()`, `roots()`, `minimize()`, `maximize()`, `nodes()`, `from_values()` across pieces.
 - **`slider.py`** — `ChebyshevSlider` class for high-dimensional approximation via the Sliding Technique.
-- **`tensor_train.py`** — `ChebyshevTT` class for Tensor Train Chebyshev interpolation. TT-Cross builds from O(d·n·r²) evaluations with maxvol pivoting, eval caching, and SVD-based adaptive rank. Vectorized batch eval via numpy einsum. FD derivatives.
+- **`tensor_train.py`** — `ChebyshevTT` class for Tensor Train Chebyshev interpolation. TT-Cross builds from O(d·n·r²) evaluations with maxvol pivoting, eval caching, and SVD-based adaptive rank. Vectorized batch eval via numpy einsum. FD derivatives. v0.13 adds `method='als'` rank-adaptive ALS build, `run_completion()` to refine any built TT at fixed rank, `inner_product()` exact TT contraction, and in-place `orth_left`/`orth_right` canonicalization sweeps.
 - **`_algebra.py`** — Shared helpers for Chebyshev arithmetic operators (compatibility validation, operator dispatch).
 - **`_extrude_slice.py`** — Shared helpers for extrusion and slicing (parameter validation, tensor manipulation, barycentric contraction).
 - **`_calculus.py`** — Shared helpers for Chebyshev calculus (Fejér-1 quadrature weights via DCT-III, sub-interval quadrature weights via Chebyshev antiderivatives, companion-matrix rootfinding, 1-D optimization). References: Waldvogel (2006), Trefethen (2013).
@@ -59,6 +59,7 @@ Not part of the library. Compare Chebyshev barycentric against alternative metho
 - `mocax_baseline.py`, `mocax_tt.py`, `mocax_sliding.py` — MoCaX C++ library tests (require `mocaxextend_lib/`)
 - `compare_methods_time_accuracy.py` — Fair time/accuracy comparison across all methods
 - `compare_tensor_train.py` — PyChebyshev TT vs MoCaX TT comparison (requires `mocaxextend_lib/`)
+- `compare_tensor_train_als.py` — PyChebyshev TT ALS + algebra (ALS build, `run_completion`, `inner_product`, `orth_left`/`orth_right`) vs MoCaX TT comparison (requires `mocaxextend_lib/`)
 - `compare_spline.py` — PyChebyshev ChebyshevSpline vs MoCaX spine comparison (requires `mocaxextend_lib/`)
 - `compare_algebra.py` — PyChebyshev Chebyshev algebra vs MoCaX comparison (requires `mocaxextend_lib/`)
 - `compare_extrude_slice.py` — PyChebyshev extrusion/slicing vs MoCaX comparison (requires `mocaxextend_lib/`)
@@ -71,7 +72,7 @@ Not part of the library. Compare Chebyshev barycentric against alternative metho
 - `test_barycentric.py` — 48 tests: accuracy, derivatives, eval method consistency, node coincidence, error estimation, build-required guard.
 - `test_slider.py` — 40 tests: additive/coupled functions, 5D, cross-group derivatives, error estimation, serialization.
 - `test_spline.py` — 55 tests: construction validation, 1D/2D accuracy, batch eval, derivatives, knot boundary checks, multiple knots, error estimation, serialization.
-- `test_tensor_train.py` — 35 tests: TT-Cross/TT-SVD accuracy, batch eval, FD derivatives, rank control, serialization, error estimation.
+- `test_tensor_train.py` — 71 tests: TT-Cross/TT-SVD accuracy, batch eval, FD derivatives, rank control, serialization, error estimation, plus v0.13 classes: `TestOrthogonalization` (8), `TestInnerProduct` (7), `TestALSInternals` (3), `TestALS` (7), `TestCompletion` (7), `TestCrossFeatureALS` (4).
 - `test_algebra.py` — 77 tests: arithmetic operators for ChebyshevApproximation, ChebyshevSpline, and ChebyshevSlider; batch/multi eval; compatibility error handling; portfolio use cases.
 - `test_extrude_slice.py` — 63 tests: extrusion and slicing for ChebyshevApproximation, ChebyshevSpline, and ChebyshevSlider; round-trip identity; derivatives; serialization; portfolio via extrude+algebra; edge cases (min nodes, boundary slicing, batch/multi eval, error estimates).
 - `test_calculus.py` — 74 tests: integration (full-domain and sub-interval), rootfinding, and optimization for ChebyshevApproximation and ChebyshevSpline; 1-D and multi-D; partial integration; spline piece merging and overlap clipping; edge cases.
