@@ -764,16 +764,17 @@ class TestCompletion:
     def test_completion_refines_cross_build(self):
         from pychebyshev.tensor_train import ChebyshevTT
 
+        # err_before must be well above 1e-14 so the assertion actually has teeth.
         def f(x, _=None):
-            return np.exp(-0.5 * (x[0] ** 2 + x[1] ** 2)) * np.cos(x[2])
+            return np.exp(x[0] * x[1] * x[2])
 
         tt = ChebyshevTT(f, 3, [(-1.0, 1.0)] * 3, [10, 10, 10],
-                         tolerance=1e-3, max_rank=5)
+                         tolerance=1e-3, max_rank=3)
         tt.build(verbose=False, method="cross", seed=0)
         err_before = tt.error_estimate()
         tt.run_completion(tolerance=1e-12, max_iter=20, verbose=False)
         err_after = tt.error_estimate()
-        assert err_after <= err_before + 1e-9, \
+        assert err_after <= err_before * 1.1 + 1e-14, \
             f"completion should not worsen error; {err_before} -> {err_after}"
 
     def test_completion_refines_svd_build(self):
@@ -798,16 +799,18 @@ class TestCompletion:
     def test_completion_refines_als_build(self):
         from pychebyshev.tensor_train import ChebyshevTT
 
+        # err_before must be well above 1e-14 so the assertion actually has teeth.
         def f(x, _=None):
-            return x[0] * x[1] + 0.3 * x[0] ** 2
+            return np.exp(x[0] * x[1])
 
         tt = ChebyshevTT(f, 2, [(-1.0, 1.0)] * 2, [8, 8],
-                         tolerance=1e-3, max_rank=4)
+                         tolerance=1e-3, max_rank=2)
         tt.build(verbose=False, method="als", seed=0)
         err_before = tt.error_estimate()
         tt.run_completion(tolerance=1e-12, max_iter=10, verbose=False)
         err_after = tt.error_estimate()
-        assert err_after <= err_before + 1e-9
+        assert err_after <= err_before * 1.1 + 1e-14, \
+            f"completion should not worsen error; {err_before} -> {err_after}"
 
     def test_completion_max_iter_respected(self):
         from pychebyshev.tensor_train import ChebyshevTT

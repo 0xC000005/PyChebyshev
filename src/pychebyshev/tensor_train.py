@@ -1303,6 +1303,13 @@ class ChebyshevTT:
         ------
         RuntimeError
             If the TT has not been built, or if ``self.function`` is None.
+
+        Notes
+        -----
+        Completion evaluates ``self.function`` on the full tensor-product grid
+        (``prod(n_nodes)`` points), which may dwarf the cost of a prior
+        ``method='cross'`` build. The eval cache is rebuilt fresh, not reused
+        from the original build.
         """
         self._check_built()
         if self.function is None:
