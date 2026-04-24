@@ -157,3 +157,28 @@ class TestValidation:
                 n_nodes=[[11, 11], 13],
                 special_points=[[0.0], []],
             )
+
+    def test_non_list_inner_raises(self):
+        with pytest.raises(ValueError, match="must be a list/tuple"):
+            ChebyshevApproximation(
+                _abs1d, 1, [[-1, 1]],
+                n_nodes=[[11, 11]],
+                special_points=[0.0],   # forgot inner list
+            )
+
+    def test_none_inner_raises(self):
+        with pytest.raises(ValueError, match="must be a list/tuple"):
+            ChebyshevApproximation(
+                _abs_sum_2d, 2, [[-1, 1], [-1, 1]],
+                n_nodes=[11, 11],
+                special_points=[None, [0.0]],
+            )
+
+    def test_outer_length_mismatch_all_empty_raises(self):
+        # All-empty inner lists must still fail outer-length validation.
+        with pytest.raises(ValueError, match="must have 2 entries"):
+            ChebyshevApproximation(
+                _abs_sum_2d, 2, [[-1, 1], [-1, 1]],
+                n_nodes=[11, 11],
+                special_points=[[], [], []],
+            )
