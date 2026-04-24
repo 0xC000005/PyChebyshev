@@ -57,7 +57,7 @@ from pychebyshev import ChebyshevTT
 import numpy as np
 from scipy.stats import norm
 
-def black_scholes(x):
+def black_scholes(x, _=None):
     S, K, r, sigma, T = x
     d1 = (np.log(S / K) + (r + 0.5 * sigma**2) * T) / (sigma * np.sqrt(T))
     d2 = d1 - sigma * np.sqrt(T)
@@ -65,25 +65,27 @@ def black_scholes(x):
 
 domain = [(80.0, 120.0), (90.0, 110.0), (0.02, 0.06), (0.15, 0.35), (0.5, 2.0)]
 tt = ChebyshevTT(black_scholes, 5, domain, [8, 8, 6, 6, 6],
-                 method='als', tolerance=1e-5, max_rank=10)
-tt.build(verbose=True)
+                 tolerance=1e-5, max_rank=10)
+tt.build(verbose=True, method='als')
 print(tt.eval([100.0, 100.0, 0.04, 0.25, 1.0]))
 ```
 
 ## Worked example 2: Refining a Cross build with completion
 
 ```python
-tt = ChebyshevTT(f, 3, domain, n_nodes, method='cross', tolerance=1e-3)
-tt.build()
+tt = ChebyshevTT(f, 3, domain, n_nodes, tolerance=1e-3)
+tt.build(method='cross')  # 'cross' is the default, but shown for clarity
 print(tt.error_estimate())       # e.g. 3e-4
 
 tt.run_completion(tolerance=1e-10, max_iter=20)
 print(tt.error_estimate())       # e.g. 2e-8 — same cores, sharpened
 ```
 
-Completion does not re-sample the function — it refines coefficients on
-the existing cached grid. If the TT was loaded from disk and the original
-function is unavailable, `run_completion()` raises `RuntimeError`.
+Completion evaluates `function` on the full Chebyshev product grid
+(`prod(n_nodes)` points) into a fresh local cache and then runs
+fixed-rank ALS sweeps. Rank does not grow. If the TT was loaded from
+disk without a callable function, `run_completion()` raises
+`RuntimeError` — reassign `tt.function = f` before calling.
 
 ## Inner product
 
@@ -113,15 +115,17 @@ composing with other TT operations manually).
 
 ## Caveats
 
-- `error_estimate()` is a **sampled** estimator (20 random points by
-  default), not an exact error. For very tight tolerances you may see
-  occasional false convergence; increase `max_rank` and rebuild, or
-  follow with `run_completion` at higher `max_iter`.
-- `run_completion()` reuses grid samples from the original build; it
-  does **not** call `function` again after initial re-sampling into its
-  local cache. If the cache coverage is poor (e.g., coming from a Cross
-  build that visited few grid points), completion may not converge as
-  tightly as a fresh `method='als'` build.
+- `error_estimate()` is a heuristic based on the magnitude of the last
+  Chebyshev coefficient slice of each TT core (the TT-format analog of
+  the standard Chebyshev truncation-error proxy, Trefethen 2013 Ch. 18).
+  It is deterministic and cheap but conservative on highly-aliased
+  functions; for tight tolerances, cross-check against a held-out
+  evaluation set.
+- `run_completion()` materializes the full Chebyshev product grid
+  (`prod(n_nodes)` function evaluations in a fresh local cache). For
+  TTs originally built with `method='cross'` (which samples O(d·n·r²)
+  points), completion's full-grid cost may dwarf the original build
+  cost — consider this before calling on very large grids.
 
 ## References
 

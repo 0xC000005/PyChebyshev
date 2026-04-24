@@ -12,7 +12,8 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - `ChebyshevTT` now supports `method='als'` — rank-adaptive Alternating
   Least Squares build, alongside the existing `'cross'` and `'svd'`
   methods. Starts at rank 1 and increments by 1 per outer iteration
-  until `error_estimate() < tolerance` or `max_rank` is reached.
+  until the relative grid-Frobenius residual
+  `‖T_als − T_grid‖_F / ‖T_grid‖_F < tolerance` or `max_rank` is reached.
 - `ChebyshevTT.run_completion(tolerance, max_iter)` — refines an already-
   built TT (from any method) at fixed rank via ALS sweeps. Sharpens a
   fast Cross build without rebuilding.
