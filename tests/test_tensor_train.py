@@ -529,7 +529,7 @@ class TestInnerProduct:
                          tolerance=1e-8, max_rank=8)
         tt.build(verbose=False, method="cross", seed=0)
         ip = tt.inner_product(tt)
-        # Explicit sum of squared values over the grid
+        # T is the full Chebyshev coefficient tensor; sum(T*T) is its squared Frobenius norm
         def full_tensor(tt):
             T = tt._coeff_cores[0]
             for k in range(1, tt.num_dimensions):

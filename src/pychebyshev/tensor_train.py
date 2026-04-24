@@ -946,11 +946,16 @@ class ChebyshevTT:
             )
 
     def inner_product(self, other: "ChebyshevTT") -> float:
-        """Compute the TT inner product :math:`\\sum_{i} T_{self}[i] \\, T_{other}[i]`.
+        """Frobenius inner product of the Chebyshev coefficient tensors of two TTs.
 
-        Performs a core-by-core contraction, O(d \\cdot n \\cdot r_s^2 \\cdot r_o^2)
-        operations and O(r_s \\cdot r_o) extra memory where :math:`r_s, r_o`
-        are the TT ranks of ``self`` and ``other``.
+        Because ``_coeff_cores`` stores Chebyshev expansion coefficients
+        (DCT-II applied during ``build()``), contracting the cores core-by-core
+        yields $\\sum_{i_1,\\ldots,i_d} C_{\\text{self}}[i_1,\\ldots,i_d] \\,
+        C_{\\text{other}}[i_1,\\ldots,i_d]$, where $C$ denotes the full
+        coefficient tensor. The core-by-core contraction costs
+        $O(d \\cdot n \\cdot r_s^2 \\cdot r_o^2)$ operations and
+        $O(r_s \\cdot r_o)$ extra memory, where $r_s, r_o$ are the TT ranks
+        of ``self`` and ``other``.
 
         Parameters
         ----------
@@ -960,7 +965,8 @@ class ChebyshevTT:
         Returns
         -------
         float
-            The sum of elementwise products over the full tensor grid.
+            Frobenius inner product of the two Chebyshev coefficient tensors,
+            $\\sum_{i_1,\\ldots,i_d} C_{\\text{self}}[i] \\, C_{\\text{other}}[i]$.
 
         Raises
         ------
