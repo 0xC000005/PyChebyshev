@@ -84,6 +84,7 @@ Not part of the library. Compare Chebyshev barycentric against alternative metho
 
 - `test.yml` — pytest on Python 3.10-3.13 (triggers on push/PR to main)
 - `publish.yml` — `uv build && uv publish` via OIDC trusted publishing (triggers on GitHub release creation)
+- `dependabot-automerge.yml` — auto-approves and merges Dependabot patch/minor version bumps
 
 ### Docs (`docs/`)
 
