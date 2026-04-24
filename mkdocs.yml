@@ -64,6 +64,7 @@ nav:
       - Pre-computed Values: user-guide/from-values.md
       - Error Estimation: user-guide/error-estimation.md
       - Error-Driven Construction: user-guide/error-driven-construction.md
+      - Special Points: user-guide/special-points.md
   - API Reference: api/reference.md
   - Benchmarks: benchmarks.md
   - Roadmap: roadmap.md
