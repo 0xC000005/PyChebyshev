@@ -14,7 +14,7 @@ documentation. Target: production-stable v1.0.0.
 
 ---
 
-## v0.11 — Error-Driven Construction :material-clock-outline:
+## v0.11 — Error-Driven Construction :material-progress-clock:
 
 Auto-calibrate node counts from a precision target instead of specifying
 `n_nodes` by hand.
