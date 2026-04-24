@@ -379,3 +379,59 @@ class TestSplineErrorThreshold:
         # Post-build: sum of per-piece n_evaluations
         assert spl.total_build_evals > 0
         assert spl.total_build_evals == sum(p.n_evaluations for p in spl._pieces)
+
+    def test_spline_neither_n_nor_threshold_raises(self):
+        """ChebyshevSpline: omitting both n_nodes and error_threshold -> ValueError."""
+        from pychebyshev import ChebyshevSpline
+
+        with pytest.raises(ValueError, match="n_nodes.*error_threshold"):
+            ChebyshevSpline(_sin2d, 2, [[-1, 1], [-1, 1]])
+
+    def test_spline_none_without_threshold_raises(self):
+        """ChebyshevSpline: None entries in n_nodes without error_threshold -> ValueError."""
+        from pychebyshev import ChebyshevSpline
+
+        with pytest.raises(ValueError, match="error_threshold"):
+            ChebyshevSpline(
+                _sin2d, 2, [[-1, 1], [-1, 1]],
+                n_nodes=[None, 11],
+            )
+
+    def test_spline_knots_default_to_empty_per_dim(self):
+        """ChebyshevSpline: omitting knots defaults to empty lists per dim."""
+        from pychebyshev import ChebyshevSpline
+
+        spl = ChebyshevSpline(
+            _sin2d, 2, [[-1, 1], [-1, 1]], error_threshold=1e-6,
+        )
+        # knots was normalized to [[], []] internally
+        assert spl.knots == [[], []]
+        spl.build(verbose=False)
+        # Single piece, since every dim has empty knots
+        assert len(spl._pieces) == 1
+
+    def test_spline_verbose_auto_n_prints(self, capsys):
+        """Auto-N spline with verbose=True exercises the spline-level banner."""
+        from pychebyshev import ChebyshevSpline
+
+        spl = ChebyshevSpline(
+            _sin2d, 2, [[-1, 1], [-1, 1]],
+            n_nodes=[None, None],
+            error_threshold=1e-4,
+        )
+        spl.build(verbose=True)
+        captured = capsys.readouterr()
+        # Spline-level banner mentions auto-N
+        assert "auto-N" in captured.out
+        assert "error_threshold" in captured.out
+
+    def test_approximation_verbose_auto_n_prints(self, capsys):
+        """Auto-N ChebyshevApproximation with verbose=True prints [auto-N] line."""
+        cheb = ChebyshevApproximation(
+            _sin2d, 2, [[-1, 1], [-1, 1]],
+            error_threshold=1e-4,
+        )
+        cheb.build(verbose=True)
+        captured = capsys.readouterr()
+        # _build_with_threshold prints [auto-N] n_nodes=..., error=... each iter
+        assert "[auto-N]" in captured.out
