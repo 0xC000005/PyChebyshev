@@ -5,6 +5,7 @@ from __future__ import annotations
 import math
 import warnings
 
+import numpy as np
 import pytest
 
 from pychebyshev import ChebyshevApproximation
@@ -186,7 +187,6 @@ class TestMaxNCap:
         ), f"Expected RuntimeWarning mentioning 'max_n', got: {[str(w.message) for w in caught]}"
 
         # Object still usable — eval returns finite value
-        import numpy as np
         value = cheb.vectorized_eval([0.1], [0])
         assert np.isfinite(value)
 
