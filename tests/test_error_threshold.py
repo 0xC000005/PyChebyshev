@@ -210,3 +210,21 @@ class TestMaxNCap:
             f"Expected no RuntimeWarnings, got: "
             f"{[str(w.message) for w in runtime_warnings]}"
         )
+
+
+class TestGetErrorThreshold:
+    """Tests for the get_error_threshold() accessor."""
+
+    def test_returns_threshold_when_set(self):
+        cheb = ChebyshevApproximation(
+            _sin2d, 2, [[-1, 1], [-1, 1]], error_threshold=1e-6,
+        )
+        cheb.build(verbose=False)
+        assert cheb.get_error_threshold() == 1e-6
+
+    def test_returns_none_when_not_set(self):
+        cheb = ChebyshevApproximation(
+            _sin2d, 2, [[-1, 1], [-1, 1]], n_nodes=[11, 11],
+        )
+        cheb.build(verbose=False)
+        assert cheb.get_error_threshold() is None

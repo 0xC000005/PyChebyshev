@@ -787,6 +787,21 @@ class ChebyshevApproximation:
         self._cached_error_estimate = total
         return total
 
+    def get_error_threshold(self) -> float | None:
+        """Return the error_threshold passed to ``__init__``, or None if unset.
+
+        This is the *target* precision specified at construction time, not
+        the achieved error after build. For the post-build achieved error
+        estimate, use :meth:`error_estimate`.
+
+        Returns
+        -------
+        float or None
+            The ``error_threshold`` kwarg from construction, or ``None``
+            if the object was built with an explicit fixed grid.
+        """
+        return self.error_threshold
+
     # ------------------------------------------------------------------
     # Serialization
     # ------------------------------------------------------------------
