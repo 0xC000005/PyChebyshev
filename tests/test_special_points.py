@@ -444,3 +444,77 @@ class TestEdgeCases:
         )
         assert type(cheb) is ChebyshevSpline
         assert cheb._built is False
+
+
+class TestCoverageBranches:
+    """Targeted tests for v0.12 defensive branches that would otherwise be
+    uncovered in Codecov patch coverage."""
+
+    def test_nested_none_without_error_threshold_raises(self):
+        # Nested n_nodes with any None entry and no error_threshold must
+        # raise during __init__ (spline.py ~L199).  __new__ dispatches to
+        # ChebyshevSpline, which does the validation itself.
+        with pytest.raises(ValueError, match="require error_threshold"):
+            ChebyshevApproximation(
+                _abs1d, 1, [[-1, 1]],
+                n_nodes=[[None, 11]],
+                special_points=[[0.0]],
+            )
+
+    def test_build_without_function_raises(self):
+        # from_values() produces a spline with self.function = None.  Calling
+        # .build() on that must raise RuntimeError (spline.py ~L227).
+        grids = ChebyshevSpline.nodes(1, [[-1, 1]], n_nodes=[11], knots=[[0.0]])
+        piece_values = []
+        for pd in grids['pieces']:
+            pts = pd['full_grid']
+            vals = np.array([abs(p[0]) for p in pts]).reshape((11,))
+            piece_values.append(vals)
+        sp = ChebyshevSpline.from_values(
+            piece_values, 1, [[-1, 1]], n_nodes=[11], knots=[[0.0]]
+        )
+        with pytest.raises(RuntimeError, match="no function assigned"):
+            sp.build(verbose=False)
+
+    def test_verbose_build_nested_auto_n(self, capsys):
+        # Verbose build with nested form + auto-N entries exercises the
+        # nested has_auto branch (spline.py ~L239).
+        cheb = ChebyshevApproximation(
+            _abs1d, 1, [[-1, 1]],
+            n_nodes=[[None, None]],
+            special_points=[[0.0]],
+            error_threshold=1e-6,
+        )
+        cheb.build(verbose=True)
+        out = capsys.readouterr().out
+        assert "auto-N" in out or "auto" in out
+
+    def test_unbuilt_nested_total_build_evals_concrete(self):
+        # Unbuilt nested-form spline with all concrete Ns exercises the
+        # product-over-pieces branch (spline.py ~L558-559).
+        cheb = ChebyshevApproximation(
+            _abs1d, 1, [[-1, 1]],
+            n_nodes=[[11, 13]],
+            special_points=[[0.0]],
+        )
+        assert cheb._built is False
+        # 11 + 13 = 24 evaluations across the two disjoint pieces.
+        assert cheb.total_build_evals == 24
+
+    def test_setstate_backward_compat_missing_n_nodes_nested(self):
+        # __setstate__ backward-compat shim (spline.py ~L604): when loading
+        # a pre-v0.12 pickle without the _n_nodes_nested attr, infer it.
+        cheb = ChebyshevApproximation(
+            _abs1d, 1, [[-1, 1]],
+            n_nodes=[[11, 11]],
+            special_points=[[0.0]],
+        )
+        cheb.build(verbose=False)
+        state = cheb.__getstate__() if hasattr(cheb, "__getstate__") else cheb.__dict__.copy()
+        state.pop("_n_nodes_nested", None)
+        loaded = ChebyshevSpline.__new__(ChebyshevSpline)
+        loaded.__setstate__(state)
+        assert hasattr(loaded, "_n_nodes_nested")
+        assert loaded._n_nodes_nested is True
+        for x in [-0.5, 0.3]:
+            assert loaded.eval([x], [0]) == cheb.eval([x], [0])
