@@ -72,6 +72,7 @@ The convergence plots demonstrate exponential error decay as node count increase
 - **Integration, rootfinding & optimization** — spectral calculus directly on interpolants, no re-evaluation needed
 - **Analytical derivatives** via spectral differentiation matrices (no finite differences)
 - **Vectorized evaluation** using BLAS matrix-vector products (~0.065ms/query)
+- **Error-driven construction** — pass `error_threshold=ε` and PyChebyshev auto-picks node counts per dimension
 - **Pure Python** — NumPy + SciPy only, no compiled extensions needed
 
 ## Acknowledgments
