@@ -33,7 +33,9 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
   doubling loop.
 - Backward-compat `__setstate__` shim populates `_original_n_nodes`
   from `n_nodes` when loading pre-v0.11 pickles.
-- 21 new tests in `tests/test_error_threshold.py` (runs in CI).
+- 30 new tests across `tests/test_error_threshold.py` (27) and
+  `tests/test_barycentric.py` (3, `TestErrorEstimatePerDim`). All
+  run in CI.
 - New user-guide page: *Error-Driven Construction* with motivation,
   algorithm, Black-Scholes 5D example, and references.
 - `compare_error_threshold.py` — local MoCaX value-match benchmark

@@ -80,6 +80,28 @@ class TestConstructorValidation:
         )
         assert cheb.max_n == 128
 
+    def test_str_on_unbuilt_auto_n(self):
+        """__str__ must not crash on an unbuilt auto-N object."""
+        cheb = ChebyshevApproximation(
+            _sin2d, 2, [[-1, 1], [-1, 1]], error_threshold=1e-6,
+        )
+        # Pre-build: np.prod([None, None]) would raise TypeError without guard
+        s = str(cheb)
+        assert isinstance(s, str)
+        assert "ChebyshevApproximation" in s
+
+    def test_str_on_built_auto_n(self):
+        """__str__ on a built auto-N object shows the resolved n_nodes."""
+        cheb = ChebyshevApproximation(
+            _sin2d, 2, [[-1, 1], [-1, 1]], error_threshold=1e-6,
+        )
+        cheb.build(verbose=False)
+        s = str(cheb)
+        assert isinstance(s, str)
+        # Now n_nodes is all ints, normal path
+        assert all(isinstance(n, int) for n in cheb.n_nodes)
+        assert str(cheb.n_nodes[0]) in s
+
 
 class TestDoublingLoop:
     """Tests that auto-N build actually achieves the target ε."""

@@ -1687,7 +1687,12 @@ class ChebyshevApproximation:
 
     def __str__(self) -> str:
         built = self.tensor_values is not None
-        total_nodes = int(np.prod(self.n_nodes))
+        has_none = any(n is None for n in self.n_nodes)
+        if has_none:
+            # Auto-N mode, not yet resolved: avoid np.prod([None]) TypeError
+            total_nodes_str = "auto"
+        else:
+            total_nodes_str = f"{int(np.prod(self.n_nodes)):,}"
         status = "built" if built else "not built"
 
         # Truncate display for high-dimensional objects (>6 dims)
@@ -1712,7 +1717,7 @@ class ChebyshevApproximation:
 
         lines = [
             f"ChebyshevApproximation ({self.num_dimensions}D, {status})",
-            f"  Nodes:       {nodes_str} ({total_nodes:,} total)",
+            f"  Nodes:       {nodes_str} ({total_nodes_str} total)",
             f"  Domain:      {domain_str}",
         ]
 
