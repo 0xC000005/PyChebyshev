@@ -1,4 +1,5 @@
 MoCaXSuite-1.2.0/
+.worktrees/
 __pycache__/
 *.pyc
 *.pyo
