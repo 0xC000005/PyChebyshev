@@ -38,7 +38,7 @@ estimates.
 **Closes MoCaX gaps:** error-threshold ctor, semi-variable ctor,
 `get_optimal_n1`.
 
-## v0.12 — Special Points in the Core API :material-clock-outline:
+## v0.12 — Special Points in the Core API :material-check:
 
 Declare domain kinks at construction time on `ChebyshevApproximation` itself —
 no need to reach for `ChebyshevSpline` manually. Optional per-sub-interval
