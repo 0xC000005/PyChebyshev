@@ -5,6 +5,33 @@ All notable changes to PyChebyshev will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [0.12.0] - 2026-04-24
+
+### Added
+- `special_points` kwarg on `ChebyshevApproximation.__init__` — declare
+  domain kinks directly at construction. Constructor dispatches
+  transparently to `ChebyshevSpline` when any dim is non-empty (precedent:
+  `pathlib.Path`).
+- Per-sub-interval `n_nodes` in `ChebyshevSpline` — accept nested
+  `List[List[int | None]]` form where `n_nodes[d][i]` is the node count
+  for piece `i` along dimension `d`.
+- `compare_special_points.py` — MoCaX `MocaxSpecialPoints` value-match
+  benchmark at the repo root (local-only, not in CI). Values agree with
+  MoCaX to ~6.7e-16 (machine epsilon) across 1D and 2D cases.
+- User guide: `docs/user-guide/special-points.md` — motivation, API,
+  worked examples (abs(x), barrier option payoff).
+
+### Changed
+- `ChebyshevApproximation(f, d, dom, n_nodes, ..., special_points=[[...]])`
+  returns a `ChebyshevSpline` instance when `special_points` declares any
+  kink. This matches MoCaX parity and what was actually built.
+- Nested-form `n_nodes` validation in `ChebyshevSpline` is strict: all
+  dims must be nested when any is; inner length must equal
+  `len(knots[d]) + 1`.
+
+### MoCaX parity (4.3.1)
+Closes: core `special_points` kwarg; per-sub-interval Ns.
+
 ## [0.11.0] - 2026-04-24
 
 ### Added
