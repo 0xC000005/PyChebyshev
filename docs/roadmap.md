@@ -138,9 +138,9 @@ Every release on this roadmap follows the same template:
 - **CHANGELOG.md** entry under a new version heading
 - **README update** for major capabilities (Tier 1 items)
 
-The detailed per-version design spec lives at
-[`docs/superpowers/specs/`](https://github.com/0xC000005/PyChebyshev/tree/main/docs/superpowers/specs)
-in the repo — written before implementation begins on each release.
+Each release is preceded by an internal design spec and implementation plan
+kept in the author's working tree (not published). The user-guide page and
+CHANGELOG entry capture everything users need at release time.
 
 ---
 

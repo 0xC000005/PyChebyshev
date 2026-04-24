@@ -205,6 +205,13 @@ class ChebyshevApproximation:
         self.num_dimensions = num_dimensions
         self.domain = domain
         self.error_threshold = error_threshold
+        if max_n < 3:
+            raise ValueError(
+                f"max_n must be at least 3 (the initial N of the doubling "
+                f"loop), got max_n={max_n}. For a grid smaller than 3 per "
+                f"dimension, pass n_nodes explicitly instead of using "
+                f"error-threshold auto-calibration."
+            )
         self.max_n = max_n
         self.max_derivative_order = max_derivative_order
 
@@ -368,6 +375,14 @@ class ChebyshevApproximation:
             # Largest per-dim error first; ties → lowest index
             candidates.sort(key=lambda t: (-t[0], t[1]))
             worst_dim = candidates[0][1]
+            # Schedule: plain doubling of the single worst-contributing
+            # dim, capped at max_n. Alternatives considered in the
+            # v0.11 design spec §8 (n+2, ceil(1.5*n), adaptive per-dim)
+            # were deferred pending empirics; doubling is the safe
+            # default for exponentially-convergent analytic functions.
+            # A ``schedule=`` kwarg can be threaded through __init__ if
+            # mixed-frequency functions ever prove the default
+            # inefficient in practice.
             current[worst_dim] = min(2 * current[worst_dim], self.max_n)
 
         # Commit accumulated counters (overwrite per-iteration values)
@@ -1013,7 +1028,16 @@ class ChebyshevApproximation:
             function, 1, [[lo, hi]],
             error_threshold=error_threshold, max_n=max_n,
         )
-        cheb.build(verbose=False)
+        # Bypass the public build() wrapper and invoke the doubling
+        # loop directly.  Rationale: the RuntimeWarning in
+        # _build_with_threshold uses stacklevel=3, which points at
+        #   user_code --(stacklevel=3)--> cheb.build() --> _build_with_threshold
+        # when called through build().  When called through
+        # get_optimal_n1, the extra build() frame pushes the pointer
+        # off the user's call site.  Calling _build_with_threshold
+        # directly re-aligns the stack so stacklevel=3 correctly
+        # points at the user's get_optimal_n1(...) line.
+        cheb._build_with_threshold(verbose=False)
         return int(cheb.n_nodes[0])
 
     @classmethod

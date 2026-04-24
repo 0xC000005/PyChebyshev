@@ -101,6 +101,13 @@ class ChebyshevSpline:
         self.num_dimensions = num_dimensions
         self.domain = domain
         self.error_threshold = error_threshold
+        if max_n < 3:
+            raise ValueError(
+                f"max_n must be at least 3 (the initial N of the doubling "
+                f"loop), got max_n={max_n}. For a grid smaller than 3 per "
+                f"dimension, pass n_nodes explicitly instead of using "
+                f"error-threshold auto-calibration."
+            )
         self.max_n = max_n
 
         # Normalize n_nodes — None means "auto this dim" (mirrors

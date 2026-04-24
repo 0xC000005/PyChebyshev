@@ -1,5 +1,6 @@
 MoCaXSuite-1.2.0/
 .worktrees/
+docs/superpowers/
 __pycache__/
 *.pyc
 *.pyo

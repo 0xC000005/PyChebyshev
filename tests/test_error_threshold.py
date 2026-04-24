@@ -80,6 +80,23 @@ class TestConstructorValidation:
         )
         assert cheb.max_n == 128
 
+    def test_max_n_below_minimum_raises(self):
+        """max_n < 3 fails fast with a clear message (doubling loop starts at N=3)."""
+        for bad in (2, 1, 0, -1):
+            with pytest.raises(ValueError, match="max_n must be at least 3"):
+                ChebyshevApproximation(
+                    _sin2d, 2, [[-1, 1], [-1, 1]],
+                    error_threshold=1e-6, max_n=bad,
+                )
+
+    def test_max_n_equal_to_minimum_accepted(self):
+        """max_n=3 is the lower bound (degenerate: no doubling, just a single iteration)."""
+        cheb = ChebyshevApproximation(
+            _sin2d, 2, [[-1, 1], [-1, 1]],
+            error_threshold=1e-6, max_n=3,
+        )
+        assert cheb.max_n == 3
+
     def test_str_on_unbuilt_auto_n(self):
         """__str__ must not crash on an unbuilt auto-N object."""
         cheb = ChebyshevApproximation(
@@ -395,6 +412,16 @@ class TestSplineErrorThreshold:
             ChebyshevSpline(
                 _sin2d, 2, [[-1, 1], [-1, 1]],
                 n_nodes=[None, 11],
+            )
+
+    def test_spline_max_n_below_minimum_raises(self):
+        """ChebyshevSpline: max_n < 3 fails fast (mirrors ChebyshevApproximation)."""
+        from pychebyshev import ChebyshevSpline
+
+        with pytest.raises(ValueError, match="max_n must be at least 3"):
+            ChebyshevSpline(
+                _sin2d, 2, [[-1, 1], [-1, 1]],
+                error_threshold=1e-6, max_n=2,
             )
 
     def test_spline_knots_default_to_empty_per_dim(self):
