@@ -891,39 +891,63 @@ class TestCrossFeatureALS:
         for i, p in enumerate(pts):
             assert abs(batch[i] - tt.eval(p.tolist())) < 1e-12
 
-    def test_orth_is_idempotent_on_canonical_cores(self):
-        """Calling orth_left twice at the same position should not change eval."""
+    def test_inner_product_als_vs_cross_matches_reference(self):
+        """inner_product on mixed ALS/cross TTs should match explicit full-tensor contraction."""
         from pychebyshev.tensor_train import ChebyshevTT
 
         def f(x, data=None):
-            return np.cos(x[0]) * np.sin(x[1])
-
-        tt = ChebyshevTT(f, 2, [(-1.0, 1.0)] * 2, [8, 8],
-                         tolerance=1e-5, max_rank=5)
-        tt.build(verbose=False, method="cross")
-        tt.orth_left(position=1)
-        val1 = tt.eval([0.2, 0.3])
-        tt.orth_left(position=1)  # idempotent
-        val2 = tt.eval([0.2, 0.3])
-        assert abs(val1 - val2) < 1e-10
-
-    def test_inner_product_then_orth_preserves_value(self):
-        """Orthogonalizing both TTs should not change their inner product."""
-        from pychebyshev.tensor_train import ChebyshevTT
-
-        def f(x, data=None):
-            return np.sin(x[0]) + x[1]
+            return np.sin(x[0]) + 0.5 * x[1]
 
         def g(x, data=None):
             return np.cos(x[0]) * x[1]
 
-        kwargs = dict(tolerance=1e-6, max_rank=5)
-        tt_a = ChebyshevTT(f, 2, [(-1.0, 1.0)] * 2, [8, 8], **kwargs)
-        tt_b = ChebyshevTT(g, 2, [(-1.0, 1.0)] * 2, [8, 8], **kwargs)
-        tt_a.build(verbose=False, method="cross")
-        tt_b.build(verbose=False, method="cross")
-        ip_before = tt_a.inner_product(tt_b)
-        tt_a.orth_left(position=1)
-        tt_b.orth_right(position=0)
-        ip_after = tt_a.inner_product(tt_b)
-        assert abs(ip_before - ip_after) < 1e-9
+        domain = [(-1.0, 1.0), (-1.0, 1.0)]
+        n_nodes = [10, 10]
+        kwargs = dict(tolerance=1e-6, max_rank=8)
+        tt_als = ChebyshevTT(f, 2, domain, n_nodes, **kwargs)
+        tt_cross = ChebyshevTT(g, 2, domain, n_nodes, **kwargs)
+        tt_als.build(verbose=False, method="als", seed=0)
+        tt_cross.build(verbose=False, method="cross", seed=0)
+
+        ip = tt_als.inner_product(tt_cross)
+
+        # Reference: contract full TT tensors explicitly via einsum on cores
+        def full_tensor(tt):
+            T = tt._coeff_cores[0]  # (1, n, r1)
+            for k in range(1, tt.num_dimensions):
+                T = np.einsum("...i,ijk->...jk", T, tt._coeff_cores[k])
+            return T.squeeze()
+
+        T_als = full_tensor(tt_als)
+        T_cross = full_tensor(tt_cross)
+        ref = np.sum(T_als * T_cross)
+        assert abs(ip - ref) < 1e-10, f"inner_product {ip} != reference {ref}"
+
+    def test_run_completion_works_after_save_load(self, tmp_path):
+        """run_completion should work on an ALS TT that was saved and reloaded."""
+        from pychebyshev.tensor_train import ChebyshevTT
+
+        def f(x, data=None):
+            return np.exp(x[0] * x[1])
+
+        tt = ChebyshevTT(f, 2, [(-1.0, 1.0)] * 2, [10, 10],
+                         tolerance=1e-4, max_rank=3)
+        tt.build(verbose=False, method="als", seed=0)
+        err_before = tt.error_estimate()
+
+        path = tmp_path / "als_pre_completion.pkl"
+        tt.save(path)
+        tt2 = ChebyshevTT.load(path)
+        # save/load strips the function by design; reassign it to re-enable
+        # grid-resampling operations like run_completion
+        tt2.function = f
+
+        # run_completion re-samples the grid; it raises RuntimeError if
+        # self.function is None, so a successful call confirms the reassigned
+        # function is being used
+        tt2.run_completion(tolerance=1e-6, max_iter=20, verbose=False)
+        err_after = tt2.error_estimate()
+
+        assert err_after <= err_before * 1.1 + 1e-14, (
+            f"completion increased error: before={err_before:.3e}, after={err_after:.3e}"
+        )
