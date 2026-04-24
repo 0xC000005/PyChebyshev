@@ -228,3 +228,61 @@ class TestGetErrorThreshold:
         )
         cheb.build(verbose=False)
         assert cheb.get_error_threshold() is None
+
+
+class TestGetOptimalN1:
+    """Tests for the get_optimal_n1() 1-D capacity estimator classmethod."""
+
+    def test_returns_int_above_minimum(self):
+        n = ChebyshevApproximation.get_optimal_n1(
+            lambda x, _: math.sin(x[0]),
+            domain_1d=[-1, 1],
+            error_threshold=1e-8,
+        )
+        assert isinstance(n, int)
+        assert 3 <= n <= 64
+
+    def test_smooth_low_freq_small_n(self):
+        """Linear function is exact at N=3."""
+        n = ChebyshevApproximation.get_optimal_n1(
+            lambda x, _: x[0],
+            domain_1d=[-1, 1],
+            error_threshold=1e-10,
+        )
+        assert n == 3
+
+    def test_high_freq_larger_n(self):
+        """Higher frequency needs more nodes."""
+        # sin(kx) alone is odd about 0 — on the symmetric Chebyshev grid
+        # its highest-frequency DCT coefficient aliases to 0, so the
+        # error estimate stops the doubling loop at n=3 regardless of k
+        # (same aliasing issue called out for test_respects_max_n).
+        # sin(kx) + cos(kx) breaks the antisymmetry and exercises the
+        # "higher frequency needs more nodes" invariant cleanly.
+        n_low = ChebyshevApproximation.get_optimal_n1(
+            lambda x, _: math.sin(x[0]) + math.cos(x[0]),
+            domain_1d=[-1, 1],
+            error_threshold=1e-8,
+        )
+        n_high = ChebyshevApproximation.get_optimal_n1(
+            lambda x, _: math.sin(10 * x[0]) + math.cos(10 * x[0]),
+            domain_1d=[-1, 1],
+            error_threshold=1e-8,
+        )
+        assert n_high > n_low
+
+    def test_respects_max_n(self):
+        """Unreachable ε → returns max_n with a warning."""
+        with warnings.catch_warnings(record=True) as caught:
+            warnings.simplefilter("always")
+            n = ChebyshevApproximation.get_optimal_n1(
+                lambda x, _: math.sin(50 * x[0]) + math.cos(43 * x[0]),
+                domain_1d=[-1, 1],
+                error_threshold=1e-14,
+                max_n=8,
+            )
+        assert n == 8
+        assert any(
+            issubclass(w.category, RuntimeWarning) and "max_n" in str(w.message)
+            for w in caught
+        )

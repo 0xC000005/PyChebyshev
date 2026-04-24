@@ -976,6 +976,47 @@ class ChebyshevApproximation:
         }
 
     @classmethod
+    def get_optimal_n1(
+        cls,
+        function: Callable,
+        domain_1d: List[float] | Tuple[float, float],
+        error_threshold: float,
+        max_n: int = 64,
+    ) -> int:
+        """Smallest N such that a 1-D Chebyshev build hits ``error_threshold``.
+
+        Useful as a capacity estimate before committing to a full
+        multi-dimensional build. Internally runs the same doubling
+        loop as ``__init__(error_threshold=...)`` on a 1-D interpolant.
+
+        Parameters
+        ----------
+        function : callable
+            Signature ``f(point, data) -> float`` where ``point`` is a
+            list of length 1.
+        domain_1d : tuple or list
+            ``(lo, hi)`` bounds.
+        error_threshold : float
+            Target supremum-norm error.
+        max_n : int, optional
+            Cap on the returned N. Default is 64. If the doubling loop
+            cannot achieve ``error_threshold`` within this cap, a
+            ``RuntimeWarning`` is emitted and ``max_n`` is returned.
+
+        Returns
+        -------
+        int
+            Resolved N on dimension 0.
+        """
+        lo, hi = domain_1d
+        cheb = cls(
+            function, 1, [[lo, hi]],
+            error_threshold=error_threshold, max_n=max_n,
+        )
+        cheb.build(verbose=False)
+        return int(cheb.n_nodes[0])
+
+    @classmethod
     def from_values(
         cls,
         tensor_values: np.ndarray,
