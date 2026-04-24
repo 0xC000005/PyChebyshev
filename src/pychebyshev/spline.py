@@ -26,7 +26,7 @@ import numpy as np
 from pychebyshev.barycentric import ChebyshevApproximation
 
 
-def _is_nested_n_nodes(n_nodes):
+def _is_nested_n_nodes(n_nodes: list) -> bool:
     """Return True if n_nodes is in nested (per-sub-interval) form."""
     return any(isinstance(x, (list, tuple)) for x in n_nodes)
 
@@ -53,11 +53,22 @@ class ChebyshevSpline:
         Number of input dimensions.
     domain : list of (float, float)
         Bounds [lo, hi] for each dimension.
-    n_nodes : list of (int or None), optional
-        Number of Chebyshev nodes per dimension *per piece*.  Entries
-        may be ``None`` when ``error_threshold`` is set, signalling
-        auto-N mode for that dimension (each piece runs its own
-        doubling loop independently).  If omitted entirely,
+    n_nodes : list, optional
+        Number of Chebyshev nodes per dimension.  Accepts two shapes:
+
+        * **Flat form** ``List[int | None]`` — one N per dim, applied to
+          every piece.  Example: ``[11, 13]`` on a 2D spline uses 11 nodes
+          per piece along dim 0 and 13 per piece along dim 1.
+        * **Nested form (v0.12+)** ``List[List[int | None]]`` — per-piece
+          Ns along each dim.  Inner length must equal ``len(knots[d]) + 1``.
+          Example on a 2D spline with ``knots=[[0.0], []]``:
+          ``[[11, 13], [15]]`` gives piece-0-along-dim-0 eleven nodes,
+          piece-1-along-dim-0 thirteen nodes, and the single dim-1 piece
+          fifteen nodes.
+
+        When any dim is nested, all dims must be (no mixing).  Entries may
+        be ``None`` when ``error_threshold`` is set, signalling auto-N mode
+        for that (dim, piece).  If ``n_nodes`` is omitted entirely,
         ``error_threshold`` must be provided.  Default is ``None``.
     knots : list of list of float, optional
         Interior knots for each dimension.  Each sub-list must be sorted
@@ -96,7 +107,7 @@ class ChebyshevSpline:
         function: Callable,
         num_dimensions: int,
         domain: List[Tuple[float, float]],
-        n_nodes: List[int | None] | None = None,
+        n_nodes: List[int | None] | List[List[int | None]] | None = None,
         knots: List[List[float]] | None = None,
         max_derivative_order: int = 2,
         error_threshold: float | None = None,

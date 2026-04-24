@@ -741,3 +741,16 @@ class TestNestedNNodes:
                 n_nodes=[[11]],
                 knots=[[0.0]],
             )
+
+    def test_total_build_evals_unbuilt_nested_auto(self):
+        # Unbuilt nested-form spline with auto-N entries must report 0.
+        def f(x, _):
+            return abs(x[0])
+        sp = ChebyshevSpline(
+            f, 1, [[-1, 1]],
+            n_nodes=[[None, 15]],
+            knots=[[0.0]],
+            error_threshold=1e-6,
+        )
+        assert sp._built is False
+        assert sp.total_build_evals == 0
