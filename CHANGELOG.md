@@ -5,6 +5,59 @@ All notable changes to PyChebyshev will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [0.11.0] - 2026-04-24
+
+### Added
+
+- Error-driven construction for `ChebyshevApproximation` and
+  `ChebyshevSpline`. Constructors now accept `error_threshold` and
+  `max_n` kwargs, and `n_nodes` entries may be `None` (signalling
+  auto-N mode). The build-time doubling loop doubles the
+  worst-contributing auto dim each iteration until the sup-norm error
+  estimate falls below the target or `max_n` is hit.
+- `ChebyshevApproximation.get_optimal_n1()` classmethod — 1-D
+  capacity estimator returning the smallest N that satisfies
+  `error_threshold` over a 1-D domain.
+- `ChebyshevApproximation.get_error_threshold()` — accessor returning
+  the target threshold passed to `__init__` (or `None` if unset).
+- `ChebyshevSpline.error_threshold` / `max_n` kwargs, applied per
+  piece — pieces near kinks refine more than smooth pieces.
+- `ChebyshevSpline.knots` parameter is now optional; defaults to
+  `[[] for _ in range(num_dimensions)]` (single piece per dim).
+- Internal `_error_estimate_per_dim()` helper on
+  `ChebyshevApproximation` — per-dim last-coefficient magnitudes used
+  by the doubling loop.
+- Internal `_original_n_nodes` attribute — preserves the user's
+  original `n_nodes` (including `None` sentinels) so `build()` can be
+  called a second time with a tightened threshold to re-run the
+  doubling loop.
+- Backward-compat `__setstate__` shim populates `_original_n_nodes`
+  from `n_nodes` when loading pre-v0.11 pickles.
+- 30 new tests across `tests/test_error_threshold.py` (27) and
+  `tests/test_barycentric.py` (3, `TestErrorEstimatePerDim`). All
+  run in CI.
+- New user-guide page: *Error-Driven Construction* with motivation,
+  algorithm, Black-Scholes 5D example, and references.
+- `compare_error_threshold.py` — local MoCaX value-match benchmark
+  (not in CI; imports gitignored `mocax_lib/`).
+
+### Changed
+
+- `ChebyshevApproximation.__init__` signature: `n_nodes` is now
+  `list of (int or None), optional` (was mandatory `list of int`).
+  Either `n_nodes` or `error_threshold` must be supplied. `None`
+  entries in `n_nodes` require `error_threshold` to be set.
+- `ChebyshevSpline.__init__` signature: same as above; `knots` is
+  now optional.
+- `ChebyshevApproximation.build()` refactored into a public wrapper
+  that dispatches to `_build_fixed_grid` (original behavior) or
+  `_build_with_threshold` (new doubling loop). No behavior change
+  for explicit-N builds.
+- In auto-N mode, `n_evaluations` and `build_time` now accumulate
+  across doubling iterations (not just the final iteration).
+- `ChebyshevSpline.total_build_evals` handles heterogeneous-N auto-N
+  builds by summing per-piece `n_evaluations`.
+
 ## [0.10.1] - 2026-02-20
 
 ### Fixed

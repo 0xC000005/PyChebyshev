@@ -15,6 +15,9 @@ theme:
       primary: indigo
       accent: indigo
 
+exclude_docs: |
+  superpowers/
+
 markdown_extensions:
   - pymdownx.arithmatex:
       generic: true
@@ -60,5 +63,7 @@ nav:
       - Chebyshev Calculus: user-guide/calculus.md
       - Pre-computed Values: user-guide/from-values.md
       - Error Estimation: user-guide/error-estimation.md
+      - Error-Driven Construction: user-guide/error-driven-construction.md
   - API Reference: api/reference.md
   - Benchmarks: benchmarks.md
+  - Roadmap: roadmap.md
