@@ -908,6 +908,11 @@ def _tt_als(
     rank = 1
     cores = make_cores(rank)
     while True:
+        # Inner loop measures relative change between ALS sweeps; outer loop
+        # measures grid residual vs. target tensor -- two different quantities.
+        # The 0.1 factor tightens inner convergence so the outer check isn't
+        # starved; max_iter=5 caps inner work because rank growth, not more
+        # sweeps, handles residuals the current rank can't reach.
         cores = _als_fixed_rank_sweeps(
             cores, evals_at, n_nodes=list(n_nodes),
             tolerance=tol * 0.1, max_iter=5, verbose=verbose,
@@ -1004,6 +1009,7 @@ class ChebyshevTT:
         self._build_time: float = 0.0
         self._total_build_evals: int = 0
         self._cached_error_estimate: float | None = None
+        self.method: str | None = None
 
     def build(
         self,
@@ -1018,9 +1024,10 @@ class ChebyshevTT:
         1. **Generate Chebyshev grids.** Compute Type I Chebyshev nodes
            in each dimension, scaled to the specified domain.
         2. **Build value cores.** Either TT-Cross (evaluating at
-           $O(d \\cdot n \\cdot r^2)$ strategically selected points) or
+           $O(d \\cdot n \\cdot r^2)$ strategically selected points),
            TT-SVD (evaluating the full $O(n^d)$ tensor, then decomposing
-           via sequential SVD).
+           via sequential SVD), or TT-ALS (rank-adaptive alternating
+           least squares against the full Chebyshev-grid tensor).
         3. **Convert to coefficient cores.** Apply DCT-II along the node
            axis of each core to convert from function values at Chebyshev
            nodes to Chebyshev expansion coefficients. This enables
@@ -1032,14 +1039,25 @@ class ChebyshevTT:
         verbose : bool, optional
             If True, print build progress. Default is True.
         seed : int or None, optional
-            Random seed for TT-Cross initialization. Default is None.
-            Ignored when ``method='svd'``.
-        method : ``'cross'`` or ``'svd'``, optional
+            Random seed for initialization. Used by ``method='cross'`` to
+            seed TT-Cross initialization and by ``method='als'`` to
+            deterministically seed the initial cores. Ignored when
+            ``method='svd'``.
+        method : ``'cross'``, ``'svd'``, or ``'als'``, optional
             Build algorithm. ``'cross'`` (default) uses TT-Cross to
             evaluate the function at $O(d \\cdot n \\cdot r^2)$ strategically
             selected points. ``'svd'`` builds the full tensor and decomposes
             via truncated SVD -- only feasible for moderate dimensions
-            ($d \\leq 6$) but useful for validation.
+            ($d \\leq 6$) but useful for validation. ``'als'`` runs
+            rank-adaptive alternating least squares: it starts at rank 1
+            and grows the TT rank by $+1$ per outer iteration until the
+            grid residual falls below ``tolerance`` or the rank reaches
+            ``max_rank``. The residual is the relative Frobenius norm
+            $\\|T_{\\text{als}} - T_{\\text{grid}}\\|_F / \\|T_{\\text{grid}}\\|_F$
+            measured over the Chebyshev grid. Like ``'svd'``, ALS
+            materializes a target tensor of $\\prod_k n_k$ floats, so it
+            is feasible for typical grids; users with very large grids
+            should prefer ``'cross'``.
         """
         from scipy.fft import dct
 
