@@ -5,6 +5,27 @@ All notable changes to PyChebyshev will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [0.13.0] - 2026-04-24
+
+### Added
+
+- `ChebyshevTT` now supports `method='als'` — rank-adaptive Alternating
+  Least Squares build, alongside the existing `'cross'` and `'svd'`
+  methods. Starts at rank 1 and increments by 1 per outer iteration
+  until `error_estimate() < tolerance` or `max_rank` is reached.
+- `ChebyshevTT.run_completion(tolerance, max_iter)` — refines an already-
+  built TT (from any method) at fixed rank via ALS sweeps. Sharpens a
+  fast Cross build without rebuilding.
+- `ChebyshevTT.inner_product(other)` — exact TT inner product via
+  core-by-core contraction. Strict grid-compat validation.
+- `ChebyshevTT.orth_left(position)` / `orth_right(position)` — in-place
+  QR/LQ canonicalization sweeps. The represented tensor is unchanged.
+
+### MoCaX parity
+
+Closes: `MOCAX_CONSTRUCTOR_TT_ALS`, `MocaxTT.runCompletion`,
+`MocaxTT.innerProduct`, `MocaxTT.orthLeft`/`orthRight`.
+
 ## [0.12.0] - 2026-04-24
 
 ### Added

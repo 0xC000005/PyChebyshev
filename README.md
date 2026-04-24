@@ -66,6 +66,9 @@ The convergence plots demonstrate exponential error decay as node count increase
 - **Full tensor interpolation** via `ChebyshevApproximation` — spectral accuracy for up to ~5 dimensions
 - **Piecewise Chebyshev (splines)** via `ChebyshevSpline` — knots at kinks/discontinuities restore spectral convergence for non-smooth functions
 - **Tensor Train decomposition** via `ChebyshevTT` — TT-Cross builds from O(d·n·r²) evaluations for 5+ dimensions
+- **Tensor Train ALS and algebra** — `method='als'` rank-adaptive build,
+  `run_completion()` to sharpen any TT without rebuilding, TT-level
+  `inner_product()` and `orth_left`/`orth_right` canonicalization sweeps.
 - **Sliding technique** via `ChebyshevSlider` — additive decomposition for separable high-dimensional functions
 - **Arithmetic operators** (`+`, `-`, `*`, `/`) — combine interpolants into portfolio-level proxies with no re-evaluation
 - **Extrusion & slicing** — add or fix dimensions to combine interpolants across different risk-factor sets
