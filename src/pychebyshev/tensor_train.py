@@ -633,6 +633,51 @@ def _tt_svd(
 
 
 # ======================================================================
+# Orthogonalization primitives
+# ======================================================================
+
+def _orth_left_core(
+    core_k: np.ndarray, core_k1: np.ndarray
+) -> tuple[np.ndarray, np.ndarray]:
+    """QR-orthogonalize core_k from the left; absorb R into core_k1.
+
+    Parameters
+    ----------
+    core_k : np.ndarray of shape (r_k, n_k, r_{k+1})
+    core_k1 : np.ndarray of shape (r_{k+1}, n_{k+1}, r_{k+2})
+
+    Returns
+    -------
+    new_core_k : left-orthogonal (Q^T Q = I after unfolding)
+    new_core_k1 : R absorbed into the left bond
+    """
+    r0, n, r1 = core_k.shape
+    Q, R = np.linalg.qr(core_k.reshape(r0 * n, r1))
+    new_core_k = Q.reshape(r0, n, Q.shape[1])
+    new_core_k1 = np.einsum("ij,jpk->ipk", R, core_k1)
+    return new_core_k, new_core_k1
+
+
+def _orth_right_core(
+    core_k_minus_1: np.ndarray, core_k: np.ndarray
+) -> tuple[np.ndarray, np.ndarray]:
+    """LQ-orthogonalize core_k from the right; absorb L into core_{k-1}.
+
+    Implemented via QR on the transposed unfolding.
+    """
+    r_prev, n, r_next = core_k.shape
+    # Unfold core_k as (r_prev, n * r_next). Right-orthogonality means rows
+    # of this matrix are orthonormal: M M^T = I. Achieve via QR of M^T.
+    M = core_k.reshape(r_prev, n * r_next)
+    Qt, Rt = np.linalg.qr(M.T)  # Qt: (n*r_next, k), Rt: (k, r_prev)
+    new_core_k = Qt.T.reshape(Qt.shape[1], n, r_next)
+    L = Rt.T  # (r_prev, k)
+    r_prev_prev, n_prev, _ = core_k_minus_1.shape
+    new_core_k_minus_1 = np.einsum("ipk,kj->ipj", core_k_minus_1, L)
+    return new_core_k_minus_1, new_core_k
+
+
+# ======================================================================
 # ChebyshevTT class
 # ======================================================================
 
@@ -837,6 +882,68 @@ class ChebyshevTT:
         """Raise RuntimeError if build() has not been called."""
         if not self._built:
             raise RuntimeError("Call build() before using this method.")
+
+    def orth_left(self, position: int) -> None:
+        """Left-orthogonalize cores ``[0..position-1]`` in place.
+
+        After the call, each core ``C_k`` for ``k < position``, reshaped as
+        an ``(r_k * n_k, r_{k+1})`` matrix, satisfies ``C^T C = I``. The R
+        factors are absorbed rightward into ``core[position]``; the
+        represented tensor is unchanged.
+
+        Parameters
+        ----------
+        position : int
+            Pivot core index, must be in ``range(1, num_dimensions)``.
+
+        Raises
+        ------
+        RuntimeError
+            If the TT has not been built.
+        ValueError
+            If ``position`` is outside ``[1, num_dimensions - 1]``.
+        """
+        self._check_built()
+        d = self.num_dimensions
+        if not (1 <= position < d):
+            raise ValueError(
+                f"position must be in [1, {d - 1}] for orth_left, got {position}"
+            )
+        for k in range(position):
+            self._coeff_cores[k], self._coeff_cores[k + 1] = _orth_left_core(
+                self._coeff_cores[k], self._coeff_cores[k + 1]
+            )
+
+    def orth_right(self, position: int) -> None:
+        """Right-orthogonalize cores ``[position+1..d-1]`` in place.
+
+        Mirror of :meth:`orth_left`. Each core ``C_k`` for ``k > position``,
+        reshaped as an ``(r_k, n_k * r_{k+1})`` matrix, satisfies
+        ``C C^T = I``. L factors are absorbed leftward; the tensor is
+        unchanged.
+
+        Parameters
+        ----------
+        position : int
+            Pivot core index, must be in ``range(0, num_dimensions - 1)``.
+
+        Raises
+        ------
+        RuntimeError
+            If the TT has not been built.
+        ValueError
+            If ``position`` is outside ``[0, num_dimensions - 2]``.
+        """
+        self._check_built()
+        d = self.num_dimensions
+        if not (0 <= position < d - 1):
+            raise ValueError(
+                f"position must be in [0, {d - 2}] for orth_right, got {position}"
+            )
+        for k in range(d - 1, position, -1):
+            self._coeff_cores[k - 1], self._coeff_cores[k] = _orth_right_core(
+                self._coeff_cores[k - 1], self._coeff_cores[k]
+            )
 
     def eval(self, point: List[float]) -> float:
         """Evaluate at a single point via TT inner product.

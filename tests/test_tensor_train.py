@@ -419,3 +419,71 @@ class TestCoverageGaps:
         # d^3f/dx0 dx1 dx2 for separable f = 0
         results = tt_sin_3d.eval_multi(pt, [[1, 1, 1]])
         assert abs(results[0]) < 0.1, f"Triple cross deriv = {results[0]:.4e}"
+
+
+class TestOrthogonalization:
+    """Tests for ChebyshevTT.orth_left / orth_right (v0.13)."""
+
+    @pytest.fixture
+    def tt_3d(self):
+        from pychebyshev.tensor_train import ChebyshevTT
+        def f(x, _):
+            return np.sin(x[0]) * np.cos(x[1]) + 0.3 * x[2] ** 2
+        tt = ChebyshevTT(f, 3, [(-1.0, 1.0)] * 3, [11, 11, 11],
+                         tolerance=1e-6, max_rank=6)
+        tt.build(verbose=False, method="cross", seed=42)
+        return tt
+
+    def test_orth_left_produces_left_orthogonal_cores(self, tt_3d):
+        tt_3d.orth_left(position=2)
+        # Cores 0 and 1 must satisfy Q^T Q = I after unfolding as (r_k*n_k, r_{k+1})
+        for k in (0, 1):
+            C = tt_3d._coeff_cores[k]
+            r0, n, r1 = C.shape
+            Q = C.reshape(r0 * n, r1)
+            gram = Q.T @ Q
+            assert np.allclose(gram, np.eye(r1), atol=1e-10), \
+                f"core {k} not left-orthogonal after orth_left(2)"
+
+    def test_orth_right_produces_right_orthogonal_cores(self, tt_3d):
+        tt_3d.orth_right(position=0)
+        # Cores 1 and 2 must satisfy Q Q^T = I after unfolding as (r_k, n_k*r_{k+1})
+        for k in (1, 2):
+            C = tt_3d._coeff_cores[k]
+            r0, n, r1 = C.shape
+            Q = C.reshape(r0, n * r1)
+            gram = Q @ Q.T
+            assert np.allclose(gram, np.eye(r0), atol=1e-10), \
+                f"core {k} not right-orthogonal after orth_right(0)"
+
+    def test_orth_left_preserves_eval(self, tt_3d):
+        pts = np.array([[0.1, -0.2, 0.3], [0.5, 0.5, -0.5], [-0.9, 0.1, 0.7]])
+        before = np.array([tt_3d.eval(p.tolist()) for p in pts])
+        tt_3d.orth_left(position=2)
+        after = np.array([tt_3d.eval(p.tolist()) for p in pts])
+        assert np.allclose(before, after, atol=1e-10)
+
+    def test_orth_right_preserves_eval(self, tt_3d):
+        pts = np.array([[0.1, -0.2, 0.3], [0.5, 0.5, -0.5], [-0.9, 0.1, 0.7]])
+        before = np.array([tt_3d.eval(p.tolist()) for p in pts])
+        tt_3d.orth_right(position=0)
+        after = np.array([tt_3d.eval(p.tolist()) for p in pts])
+        assert np.allclose(before, after, atol=1e-10)
+
+    def test_orth_left_position_zero_raises(self, tt_3d):
+        with pytest.raises(ValueError, match="position must be in"):
+            tt_3d.orth_left(position=0)
+
+    def test_orth_right_position_last_raises(self, tt_3d):
+        with pytest.raises(ValueError, match="position must be in"):
+            tt_3d.orth_right(position=2)  # d=3, last valid is d-2=1
+
+    def test_orth_left_out_of_range_raises(self, tt_3d):
+        with pytest.raises(ValueError, match="position must be in"):
+            tt_3d.orth_left(position=5)
+
+    def test_orth_left_on_unbuilt_raises(self):
+        from pychebyshev.tensor_train import ChebyshevTT
+        tt = ChebyshevTT(lambda x: x[0], 2, [(-1.0, 1.0)] * 2, [5, 5])
+        with pytest.raises(RuntimeError, match="Call build"):
+            tt.orth_left(position=1)
