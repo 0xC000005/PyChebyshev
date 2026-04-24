@@ -255,12 +255,104 @@ class ChebyshevApproximation:
             self.nodes.append(np.sort(nodes_scaled))
 
     def build(self, verbose: bool = True) -> None:
-        """Evaluate the function at all node combinations and pre-compute weights.
+        """Build the Chebyshev approximation by evaluating the function on the grid.
+
+        If ``error_threshold`` was provided to ``__init__``, runs the
+        doubling loop until the target precision is reached (or
+        ``max_n`` is hit on all auto dims). Otherwise builds on the
+        fixed grid specified by ``n_nodes``.
 
         Parameters
         ----------
         verbose : bool, optional
             If True, print build progress. Default is True.
+
+        Raises
+        ------
+        RuntimeError
+            If ``function`` is None (e.g., object was produced via
+            ``from_values()``, ``load()``, algebra, ``slice``, or
+            ``extrude`` — use those factories directly).
+        """
+        if self.function is None:
+            raise RuntimeError(
+                "Cannot build: no function assigned. "
+                "This object was created via from_values() or load()."
+            )
+        if any(n is None for n in self.n_nodes):
+            self._build_with_threshold(verbose=verbose)
+        else:
+            self._build_fixed_grid(verbose=verbose)
+
+    def _build_with_threshold(self, verbose: bool = True) -> None:
+        """Iteratively double auto-dim Ns until error_estimate <= threshold.
+
+        The dim with the largest per-dimension last-coefficient
+        magnitude is doubled each iteration (capped at ``max_n``).
+        Accumulates ``n_evaluations`` and ``build_time`` across
+        iterations so the post-build counters reflect the *total*
+        work done, not just the final iteration.
+        """
+        assert self.error_threshold is not None
+        assert any(n is None for n in self.n_nodes), (
+            "_build_with_threshold called with all Ns resolved"
+        )
+
+        # Resolve: ints stay, None starts at 3
+        current: List[int] = [n if n is not None else 3 for n in self.n_nodes]
+        auto_dims = [i for i, n in enumerate(self.n_nodes) if n is None]
+
+        total_evals = 0
+        total_build_time = 0.0
+
+        while True:
+            self.n_nodes = list(current)
+            self._cached_error_estimate = None
+            self._generate_nodes()
+            self._build_fixed_grid(verbose=verbose)
+            total_evals += self.n_evaluations
+            total_build_time += self.build_time
+
+            err = self.error_estimate()
+            if verbose:
+                print(f"[auto-N] n_nodes={current}, error={err:.3e}")
+
+            if err <= self.error_threshold:
+                break
+
+            # Pick worst auto dim not yet at max_n
+            per_dim = self._error_estimate_per_dim()
+            candidates = [
+                (per_dim[i], i)
+                for i in auto_dims
+                if current[i] < self.max_n
+            ]
+            if not candidates:
+                warnings.warn(
+                    f"max_n={self.max_n} reached on all auto dims "
+                    f"before error_threshold={self.error_threshold:.2e} "
+                    f"satisfied (last error={err:.3e}). "
+                    f"Increase max_n or relax error_threshold.",
+                    RuntimeWarning,
+                    stacklevel=3,
+                )
+                break
+
+            # Largest per-dim error first; ties → lowest index
+            candidates.sort(key=lambda t: (-t[0], t[1]))
+            worst_dim = candidates[0][1]
+            current[worst_dim] = min(2 * current[worst_dim], self.max_n)
+
+        # Commit accumulated counters (overwrite per-iteration values)
+        self.n_evaluations = total_evals
+        self.build_time = total_build_time
+
+    def _build_fixed_grid(self, verbose: bool = True) -> None:
+        """Build tensor values on the already-resolved (all-int) grid.
+
+        Original body of build() — now called by the public build()
+        wrapper for the fixed-N path, and by _build_with_threshold for
+        each iteration of the doubling loop.
         """
         if self.function is None:
             raise RuntimeError(
