@@ -945,6 +945,56 @@ class ChebyshevTT:
                 self._coeff_cores[k - 1], self._coeff_cores[k]
             )
 
+    def inner_product(self, other: "ChebyshevTT") -> float:
+        """Compute the TT inner product :math:`\\sum_{i} T_{self}[i] \\, T_{other}[i]`.
+
+        Performs a core-by-core contraction, O(d \\cdot n \\cdot r_s^2 \\cdot r_o^2)
+        operations and O(r_s \\cdot r_o) extra memory where :math:`r_s, r_o`
+        are the TT ranks of ``self`` and ``other``.
+
+        Parameters
+        ----------
+        other : ChebyshevTT
+            Must have the same ``domain`` and the same ``n_nodes`` as ``self``.
+
+        Returns
+        -------
+        float
+            The sum of elementwise products over the full tensor grid.
+
+        Raises
+        ------
+        RuntimeError
+            If either TT is not built.
+        ValueError
+            If ``other`` is not a ChebyshevTT, or has a different ``domain``
+            or ``n_nodes``.
+        """
+        self._check_built()
+        if not isinstance(other, ChebyshevTT):
+            raise ValueError(
+                f"other must be a ChebyshevTT, got {type(other).__name__}"
+            )
+        other._check_built()
+        if self.domain != other.domain:
+            raise ValueError(
+                "inner_product requires matching domains; "
+                f"got {self.domain} vs {other.domain}"
+            )
+        if list(self.n_nodes) != list(other.n_nodes):
+            raise ValueError(
+                "inner_product requires matching n_nodes; "
+                f"got {self.n_nodes} vs {other.n_nodes}"
+            )
+
+        M = np.array([[1.0]])  # (r_self_0, r_other_0) = (1, 1)
+        for k in range(self.num_dimensions):
+            A = self._coeff_cores[k]   # (r_self_k, n_k, r_self_{k+1})
+            B = other._coeff_cores[k]  # (r_other_k, n_k, r_other_{k+1})
+            # M[i,j] * A[i,p,a] * B[j,p,b] -> new_M[a,b]
+            M = np.einsum("ij,ipa,jpb->ab", M, A, B)
+        return float(M[0, 0])
+
     def eval(self, point: List[float]) -> float:
         """Evaluate at a single point via TT inner product.
 

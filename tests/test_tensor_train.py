@@ -487,3 +487,102 @@ class TestOrthogonalization:
         tt = ChebyshevTT(lambda x: x[0], 2, [(-1.0, 1.0)] * 2, [5, 5])
         with pytest.raises(RuntimeError, match="Call build"):
             tt.orth_left(position=1)
+
+
+class TestInnerProduct:
+    """Tests for ChebyshevTT.inner_product (v0.13)."""
+
+    def test_inner_product_matches_explicit_contraction_2d(self):
+        from pychebyshev.tensor_train import ChebyshevTT
+        def f(x, data=None):
+            return np.sin(x[0]) + 0.5 * x[1]
+        def g(x, data=None):
+            return np.cos(x[0]) * x[1]
+        domain = [(-1.0, 1.0), (-1.0, 1.0)]
+        n_nodes = [8, 8]
+        tt_a = ChebyshevTT(f, 2, domain, n_nodes,
+                           tolerance=1e-8, max_rank=8)
+        tt_b = ChebyshevTT(g, 2, domain, n_nodes,
+                           tolerance=1e-8, max_rank=8)
+        tt_a.build(verbose=False, method="cross", seed=1)
+        tt_b.build(verbose=False, method="cross", seed=2)
+
+        ip = tt_a.inner_product(tt_b)
+
+        # Reference: contract full TT tensors explicitly via einsum on cores
+        def full_tensor(tt):
+            T = tt._coeff_cores[0]  # (1, n, r1)
+            for k in range(1, tt.num_dimensions):
+                T = np.einsum("...i,ijk->...jk", T, tt._coeff_cores[k])
+            return T.squeeze()
+
+        Ta = full_tensor(tt_a)
+        Tb = full_tensor(tt_b)
+        ref = np.sum(Ta * Tb)
+        assert abs(ip - ref) < 1e-10, f"inner_product {ip} != reference {ref}"
+
+    def test_self_inner_product_is_squared_norm(self):
+        from pychebyshev.tensor_train import ChebyshevTT
+        def f(x, data=None):
+            return np.cos(x[0]) + x[1] ** 2
+        tt = ChebyshevTT(f, 2, [(-1.0, 1.0)] * 2, [10, 10],
+                         tolerance=1e-8, max_rank=8)
+        tt.build(verbose=False, method="cross", seed=0)
+        ip = tt.inner_product(tt)
+        # Explicit sum of squared values over the grid
+        def full_tensor(tt):
+            T = tt._coeff_cores[0]
+            for k in range(1, tt.num_dimensions):
+                T = np.einsum("...i,ijk->...jk", T, tt._coeff_cores[k])
+            return T.squeeze()
+        T = full_tensor(tt)
+        assert abs(ip - float(np.sum(T * T))) < 1e-10
+        assert ip > 0  # squared norm is positive
+
+    def test_inner_product_raises_on_non_tt(self):
+        from pychebyshev.tensor_train import ChebyshevTT
+        tt = ChebyshevTT(lambda x, _=None: x[0], 2, [(-1.0, 1.0)] * 2, [5, 5],
+                         tolerance=1e-4, max_rank=3)
+        tt.build(verbose=False, method="cross")
+        with pytest.raises(ValueError, match="must be a ChebyshevTT"):
+            tt.inner_product("not a tt")
+
+    def test_inner_product_raises_on_domain_mismatch(self):
+        from pychebyshev.tensor_train import ChebyshevTT
+        tt_a = ChebyshevTT(lambda x, _=None: x[0], 2, [(-1.0, 1.0)] * 2, [5, 5],
+                           tolerance=1e-4, max_rank=3)
+        tt_b = ChebyshevTT(lambda x, _=None: x[0], 2, [(-2.0, 2.0)] * 2, [5, 5],
+                           tolerance=1e-4, max_rank=3)
+        tt_a.build(verbose=False, method="cross")
+        tt_b.build(verbose=False, method="cross")
+        with pytest.raises(ValueError, match="matching domains"):
+            tt_a.inner_product(tt_b)
+
+    def test_inner_product_raises_on_n_nodes_mismatch(self):
+        from pychebyshev.tensor_train import ChebyshevTT
+        tt_a = ChebyshevTT(lambda x, _=None: x[0], 2, [(-1.0, 1.0)] * 2, [5, 5],
+                           tolerance=1e-4, max_rank=3)
+        tt_b = ChebyshevTT(lambda x, _=None: x[0], 2, [(-1.0, 1.0)] * 2, [7, 7],
+                           tolerance=1e-4, max_rank=3)
+        tt_a.build(verbose=False, method="cross")
+        tt_b.build(verbose=False, method="cross")
+        with pytest.raises(ValueError, match="matching n_nodes"):
+            tt_a.inner_product(tt_b)
+
+    def test_inner_product_raises_on_unbuilt_self(self):
+        from pychebyshev.tensor_train import ChebyshevTT
+        tt_a = ChebyshevTT(lambda x, _=None: x[0], 2, [(-1.0, 1.0)] * 2, [5, 5])
+        tt_b = ChebyshevTT(lambda x, _=None: x[0], 2, [(-1.0, 1.0)] * 2, [5, 5],
+                           tolerance=1e-4, max_rank=3)
+        tt_b.build(verbose=False, method="cross")
+        with pytest.raises(RuntimeError, match="Call build"):
+            tt_a.inner_product(tt_b)
+
+    def test_inner_product_raises_on_unbuilt_other(self):
+        from pychebyshev.tensor_train import ChebyshevTT
+        tt_a = ChebyshevTT(lambda x, _=None: x[0], 2, [(-1.0, 1.0)] * 2, [5, 5],
+                           tolerance=1e-4, max_rank=3)
+        tt_b = ChebyshevTT(lambda x, _=None: x[0], 2, [(-1.0, 1.0)] * 2, [5, 5])
+        tt_a.build(verbose=False, method="cross")
+        with pytest.raises(RuntimeError, match="Call build"):
+            tt_a.inner_product(tt_b)
