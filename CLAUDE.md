@@ -12,7 +12,7 @@ PyChebyshev is a pip-installable Python library for multi-dimensional Chebyshev 
 # Setup
 uv sync
 
-# Run tests (~457 tests, ~120s due to 5D Black-Scholes builds)
+# Run tests (~543 tests, ~110s due to 5D Black-Scholes builds)
 uv run pytest tests/ -v
 
 # Run a single test
@@ -63,6 +63,7 @@ Not part of the library. Compare Chebyshev barycentric against alternative metho
 - `compare_algebra.py` — PyChebyshev Chebyshev algebra vs MoCaX comparison (requires `mocaxextend_lib/`)
 - `compare_extrude_slice.py` — PyChebyshev extrusion/slicing vs MoCaX comparison (requires `mocaxextend_lib/`)
 - `compare_from_values.py` — PyChebyshev nodes()/from_values() vs MoCaX Extend comparison (requires `mocaxextend_lib/`)
+- `compare_special_points.py` — PyChebyshev special_points vs MoCaX MocaxSpecialPoints + MocaxNs comparison (requires `mocax_lib/`)
 
 ### Tests (`tests/`)
 
@@ -75,6 +76,8 @@ Not part of the library. Compare Chebyshev barycentric against alternative metho
 - `test_extrude_slice.py` — 63 tests: extrusion and slicing for ChebyshevApproximation, ChebyshevSpline, and ChebyshevSlider; round-trip identity; derivatives; serialization; portfolio via extrude+algebra; edge cases (min nodes, boundary slicing, batch/multi eval, error estimates).
 - `test_calculus.py` — 74 tests: integration (full-domain and sub-interval), rootfinding, and optimization for ChebyshevApproximation and ChebyshevSpline; 1-D and multi-D; partial integration; spline piece merging and overlap clipping; edge cases.
 - `test_from_values.py` — 65 tests: nodes() and from_values() for ChebyshevApproximation and ChebyshevSpline; bit-identical equivalence with build(); derivatives, calculus, algebra, extrude/slice, save/load; edge cases (NaN/Inf, shape mismatch, 1-node dim, build guard, 4D, boundary eval, negative/wide/tight domains, duplicate knots, algebra chains, domain validation).
+- `test_special_points.py` — 37 tests: `ChebyshevApproximation.__new__` dispatch to `ChebyshevSpline` when `special_points` declares any kink (option A, precedent `pathlib.Path`); validation of special_points shape + nested `n_nodes`; 1D/2D correctness (abs kink recovery to machine precision; plateau control); cross-feature (save/load, algebra, integrate, extrude/slice, from_values); edge cases.
+- `test_error_threshold.py` — 37 tests: v0.11 auto-N doubling loop, max_n cap, get_optimal_n1, semi-auto mixed-N paths, verbose prints, spline per-piece doubling.
 
 ### CI/CD (`.github/workflows/`)
 
