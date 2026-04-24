@@ -11,7 +11,7 @@
       
       
       
-        <link rel="prev" href="../../user-guide/error-driven-construction/">
+        <link rel="prev" href="../../user-guide/special-points/">
       
       
         <link rel="next" href="../../benchmarks/">
@@ -711,6 +711,34 @@
 
               
             
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../user-guide/special-points/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Special Points
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
           </ul>
         </nav>
       
@@ -800,6 +828,17 @@
     <span class="md-ellipsis">
       
         ChebyshevApproximation
+      
+    </span>
+  </a>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#pychebyshev.ChebyshevApproximation.__new__" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        __new__
       
     </span>
   </a>
@@ -1735,6 +1774,17 @@
     <span class="md-ellipsis">
       
         ChebyshevApproximation
+      
+    </span>
+  </a>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#pychebyshev.ChebyshevApproximation.__new__" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        __new__
       
     </span>
   </a>
@@ -2738,6 +2788,29 @@ refines auto dims. Default is 64.</p>
                   <code>64</code>
             </td>
           </tr>
+          <tr class="doc-section-item">
+            <td>
+                <code>special_points</code>
+            </td>
+            <td>
+                  <code>list of list of float</code>
+            </td>
+            <td>
+              <div class="doc-md-description">
+                <p>Per-dimension kinks or discontinuities.  When any dimension has at
+least one point, construction transparently returns a
+:class:<code>ChebyshevSpline</code> via <code>__new__</code> dispatch (precedent:
+:class:<code>pathlib.Path</code>).  Each inner list must be strictly inside
+its domain interval, sorted, and free of duplicates.  When set,
+<code>n_nodes</code> must be nested as <code>List[List[int | None]]</code> with
+<code>len(n_nodes[d]) == len(special_points[d]) + 1</code>.  Default is
+<code>None</code>.</p>
+              </div>
+            </td>
+            <td>
+                  <code>None</code>
+            </td>
+          </tr>
       </tbody>
     </table>
 
@@ -2752,6 +2825,15 @@ refines auto dims. Default is 64.</p>
 <a id="__codelineno-0-7" name="__codelineno-0-7" href="#__codelineno-0-7"></a><span class="go">0.7764...</span>
 </code></pre></div>
 
+
+<details class="note" open>
+  <summary>Notes</summary>
+  <p>When <code>special_points</code> is provided with any kink, the return value is
+a :class:<code>ChebyshevSpline</code> instance — not a :class:<code>ChebyshevApproximation</code>.
+Use <code>type(obj)</code> or <code>isinstance(obj, ChebyshevSpline)</code> to distinguish
+if needed.  All downstream features (eval, integrate, algebra,
+extrude/slice, save/load) work identically on either type.</p>
+</details>
 
 
 
@@ -2772,6 +2854,32 @@ refines auto dims. Default is 64.</p>
 
 
 
+
+<div class="doc doc-object doc-function">
+
+
+<h2 id="pychebyshev.ChebyshevApproximation.__new__" class="doc doc-heading">
+            <code class="highlight language-python"><span class="fm">__new__</span><span class="p">(</span><span class="n">function</span><span class="o">=</span><span class="kc">None</span><span class="p">,</span> <span class="n">num_dimensions</span><span class="o">=</span><span class="kc">None</span><span class="p">,</span> <span class="n">domain</span><span class="o">=</span><span class="kc">None</span><span class="p">,</span> <span class="n">n_nodes</span><span class="o">=</span><span class="kc">None</span><span class="p">,</span> <span class="n">max_derivative_order</span><span class="o">=</span><span class="mi">2</span><span class="p">,</span> <span class="n">error_threshold</span><span class="o">=</span><span class="kc">None</span><span class="p">,</span> <span class="n">max_n</span><span class="o">=</span><span class="mi">64</span><span class="p">,</span> <span class="n">special_points</span><span class="o">=</span><span class="kc">None</span><span class="p">)</span></code>
+
+<a href="#pychebyshev.ChebyshevApproximation.__new__" class="headerlink" title="Permanent link">&para;</a></h2>
+
+
+    <div class="doc doc-contents ">
+
+        <p>Dispatch to ChebyshevSpline when special_points declares any kink.</p>
+<p>Python skips <code>__init__</code> on this class when <code>__new__</code> returns an
+instance that is not an instance of <code>cls</code> (or subclass).
+ChebyshevSpline is not a subclass of ChebyshevApproximation, so the
+spline's own <code>__init__</code> (already run inside the return expression
+below) is not overwritten.</p>
+<p>All parameters default to <code>None</code> so pickle/copy protocols can call
+<code>__new__(cls)</code> without positional arguments; real construction
+still goes through <code>__init__</code>.</p>
+
+
+    </div>
+
+</div>
 
 <div class="doc doc-object doc-function">
 
@@ -6058,14 +6166,25 @@ additional data (can be None).</p>
                 <code>n_nodes</code>
             </td>
             <td>
-                  <code>list of (int or None)</code>
+                  <code><span title="list">list</span></code>
             </td>
             <td>
               <div class="doc-md-description">
-                <p>Number of Chebyshev nodes per dimension <em>per piece</em>.  Entries
-may be <code>None</code> when <code>error_threshold</code> is set, signalling
-auto-N mode for that dimension (each piece runs its own
-doubling loop independently).  If omitted entirely,
+                <p>Number of Chebyshev nodes per dimension.  Accepts two shapes:</p>
+<ul>
+<li><strong>Flat form</strong> <code>List[int | None]</code> — one N per dim, applied to
+  every piece.  Example: <code>[11, 13]</code> on a 2D spline uses 11 nodes
+  per piece along dim 0 and 13 per piece along dim 1.</li>
+<li><strong>Nested form (v0.12+)</strong> <code>List[List[int | None]]</code> — per-piece
+  Ns along each dim.  Inner length must equal <code>len(knots[d]) + 1</code>.
+  Example on a 2D spline with <code>knots=[[0.0], []]</code>:
+  <code>[[11, 13], [15]]</code> gives piece-0-along-dim-0 eleven nodes,
+  piece-1-along-dim-0 thirteen nodes, and the single dim-1 piece
+  fifteen nodes.</li>
+</ul>
+<p>When any dim is nested, all dims must be (no mixing).  Entries may
+be <code>None</code> when <code>error_threshold</code> is set, signalling auto-N mode
+for that (dim, piece).  If <code>n_nodes</code> is omitted entirely,
 <code>error_threshold</code> must be provided.  Default is <code>None</code>.</p>
               </div>
             </td>
@@ -6219,13 +6338,13 @@ piece's doubling loop.  Default is 64.</p>
 
     <div class="doc doc-contents ">
 
-        <p>Total number of function evaluations used during build.</p>
-<p>In auto-N mode each piece may end up at a different resolved
-grid size (and may have run a doubling loop), so we sum each
-piece's own <code>n_evaluations</code> counter rather than assuming a
-uniform grid.  Falls back to the old uniform-grid formula if
-pieces have not been built yet.  For an unbuilt auto-N spline
-the total cannot be predicted up-front, so we return 0.</p>
+        <p>Total number of function evaluations across all pieces.</p>
+<p>After <code>build()</code> the total is computed by summing each piece's
+own <code>n_evaluations</code> counter, which handles auto-N mode where
+different pieces may end up at different grid sizes.  For an
+unbuilt spline we predict from <code>n_nodes</code> when possible (both
+flat and nested forms); auto-N pieces with <code>None</code> entries
+return 0 because the total cannot be known up-front.</p>
 
     </div>
 

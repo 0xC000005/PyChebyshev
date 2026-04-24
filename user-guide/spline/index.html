@@ -1240,6 +1240,34 @@
 
               
             
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../special-points/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Special Points
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
           </ul>
         </nav>
       
@@ -2274,14 +2302,25 @@ additional data (can be None).</p>
                 <code>n_nodes</code>
             </td>
             <td>
-                  <code>list of (int or None)</code>
+                  <code><span title="list">list</span></code>
             </td>
             <td>
               <div class="doc-md-description">
-                <p>Number of Chebyshev nodes per dimension <em>per piece</em>.  Entries
-may be <code>None</code> when <code>error_threshold</code> is set, signalling
-auto-N mode for that dimension (each piece runs its own
-doubling loop independently).  If omitted entirely,
+                <p>Number of Chebyshev nodes per dimension.  Accepts two shapes:</p>
+<ul>
+<li><strong>Flat form</strong> <code>List[int | None]</code> — one N per dim, applied to
+  every piece.  Example: <code>[11, 13]</code> on a 2D spline uses 11 nodes
+  per piece along dim 0 and 13 per piece along dim 1.</li>
+<li><strong>Nested form (v0.12+)</strong> <code>List[List[int | None]]</code> — per-piece
+  Ns along each dim.  Inner length must equal <code>len(knots[d]) + 1</code>.
+  Example on a 2D spline with <code>knots=[[0.0], []]</code>:
+  <code>[[11, 13], [15]]</code> gives piece-0-along-dim-0 eleven nodes,
+  piece-1-along-dim-0 thirteen nodes, and the single dim-1 piece
+  fifteen nodes.</li>
+</ul>
+<p>When any dim is nested, all dims must be (no mixing).  Entries may
+be <code>None</code> when <code>error_threshold</code> is set, signalling auto-N mode
+for that (dim, piece).  If <code>n_nodes</code> is omitted entirely,
 <code>error_threshold</code> must be provided.  Default is <code>None</code>.</p>
               </div>
             </td>
@@ -2435,13 +2474,13 @@ piece's doubling loop.  Default is 64.</p>
 
     <div class="doc doc-contents ">
 
-        <p>Total number of function evaluations used during build.</p>
-<p>In auto-N mode each piece may end up at a different resolved
-grid size (and may have run a doubling loop), so we sum each
-piece's own <code>n_evaluations</code> counter rather than assuming a
-uniform grid.  Falls back to the old uniform-grid formula if
-pieces have not been built yet.  For an unbuilt auto-N spline
-the total cannot be predicted up-front, so we return 0.</p>
+        <p>Total number of function evaluations across all pieces.</p>
+<p>After <code>build()</code> the total is computed by summing each piece's
+own <code>n_evaluations</code> counter, which handles auto-N mode where
+different pieces may end up at different grid sizes.  For an
+unbuilt spline we predict from <code>n_nodes</code> when possible (both
+flat and nested forms); auto-N pieces with <code>None</code> entries
+return 0 because the total cannot be known up-front.</p>
 
     </div>
 
