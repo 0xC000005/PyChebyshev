@@ -3,6 +3,7 @@
 from __future__ import annotations
 
 import math
+import warnings
 
 import pytest
 
@@ -156,3 +157,56 @@ class TestDoublingLoop:
         assert cheb.error_estimate() <= 1e-10
         # Tighter threshold should force at least as many nodes as before
         assert cheb.n_nodes[0] >= n_first
+
+
+class TestMaxNCap:
+    """Tests for max_n cap behavior in the auto-N doubling loop."""
+
+    def test_cap_warns_and_returns_usable_object(self):
+        """Deliberately unreachable ε with small max_n → warn, still usable."""
+        # Oscillatory function + tight ε + tiny cap → cap kicks in.
+        # Use sin(20x) + cos(17x) rather than sin(50x): the latter
+        # aliases to antisymmetric values at n=3, causing the
+        # last-coefficient error estimate to be 0 and the doubling
+        # loop to exit before the cap is reached.
+        def wiggly(x, _):
+            return math.sin(20 * x[0]) + math.cos(17 * x[0])
+
+        cheb = ChebyshevApproximation(
+            wiggly, 1, [[-1, 1]],
+            error_threshold=1e-12, max_n=16,
+        )
+        with warnings.catch_warnings(record=True) as caught:
+            warnings.simplefilter("always")
+            cheb.build(verbose=False)
+        assert any(
+            issubclass(w.category, RuntimeWarning)
+            and "max_n" in str(w.message)
+            for w in caught
+        ), f"Expected RuntimeWarning mentioning 'max_n', got: {[str(w.message) for w in caught]}"
+
+        # Object still usable — eval returns finite value
+        import numpy as np
+        value = cheb.vectorized_eval([0.1], [0])
+        assert np.isfinite(value)
+
+        # Final N respects cap
+        assert cheb.n_nodes[0] <= 16
+
+    def test_no_warning_when_threshold_met(self):
+        """Successful auto-N build should not emit any RuntimeWarning."""
+        cheb = ChebyshevApproximation(
+            lambda x, _: math.sin(x[0]) + math.sin(x[1]),
+            2, [[-1, 1], [-1, 1]], error_threshold=1e-6,
+        )
+        with warnings.catch_warnings(record=True) as caught:
+            warnings.simplefilter("always")
+            cheb.build(verbose=False)
+        runtime_warnings = [
+            w for w in caught
+            if issubclass(w.category, RuntimeWarning)
+        ]
+        assert not runtime_warnings, (
+            f"Expected no RuntimeWarnings, got: "
+            f"{[str(w.message) for w in runtime_warnings]}"
+        )
