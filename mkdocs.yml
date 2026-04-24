@@ -63,6 +63,7 @@ nav:
       - Chebyshev Calculus: user-guide/calculus.md
       - Pre-computed Values: user-guide/from-values.md
       - Error Estimation: user-guide/error-estimation.md
+      - Error-Driven Construction: user-guide/error-driven-construction.md
   - API Reference: api/reference.md
   - Benchmarks: benchmarks.md
   - Roadmap: roadmap.md
