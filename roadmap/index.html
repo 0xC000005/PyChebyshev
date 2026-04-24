@@ -548,6 +548,34 @@
   
   
     <li class="md-nav__item">
+      <a href="../user-guide/tensor-train-als/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Tensor Train ALS
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
       <a href="../user-guide/algebra/" class="md-nav__link">
         
   
@@ -887,10 +915,10 @@
 </li>
       
         <li class="md-nav__item">
-  <a href="#v013-tensor-train-algebra-and-als-material-clock-outline" class="md-nav__link">
+  <a href="#v013-tensor-train-algebra-and-als-material-check" class="md-nav__link">
     <span class="md-ellipsis">
       
-        v0.13 — Tensor Train Algebra and ALS :material-clock-outline:
+        v0.13 — Tensor Train Algebra and ALS :material-check:
       
     </span>
   </a>
@@ -1020,10 +1048,10 @@
 </li>
       
         <li class="md-nav__item">
-  <a href="#v013-tensor-train-algebra-and-als-material-clock-outline" class="md-nav__link">
+  <a href="#v013-tensor-train-algebra-and-als-material-check" class="md-nav__link">
     <span class="md-ellipsis">
       
-        v0.13 — Tensor Train Algebra and ALS :material-clock-outline:
+        v0.13 — Tensor Train Algebra and ALS :material-check:
       
     </span>
   </a>
@@ -1174,19 +1202,18 @@ node counts for fine-grained control.</p>
 </code></pre></div>
 <p><code>ChebyshevSpline</code> remains available as the direct power-user API.</p>
 <p><strong>Closes MoCaX gaps:</strong> core <code>special_points</code> kwarg, per-sub-interval Ns.</p>
-<h2 id="v013-tensor-train-algebra-and-als-material-clock-outline">v0.13 — Tensor Train Algebra and ALS :material-clock-outline:<a class="headerlink" href="#v013-tensor-train-algebra-and-als-material-clock-outline" title="Permanent link">&para;</a></h2>
+<h2 id="v013-tensor-train-algebra-and-als-material-check">v0.13 — Tensor Train Algebra and ALS :material-check:<a class="headerlink" href="#v013-tensor-train-algebra-and-als-material-check" title="Permanent link">&para;</a></h2>
 <p>Alternating Least Squares as a new build method alongside TT-Cross and
 TT-SVD, plus TT-level algebra primitives.</p>
-<div class="highlight"><pre><span></span><code><a id="__codelineno-2-1" name="__codelineno-2-1" href="#__codelineno-2-1"></a><span class="n">tt</span> <span class="o">=</span> <span class="n">ChebyshevTT</span><span class="p">(</span><span class="n">f</span><span class="p">,</span> <span class="mi">5</span><span class="p">,</span> <span class="n">domain</span><span class="p">,</span> <span class="n">n_nodes</span><span class="p">,</span> <span class="n">method</span><span class="o">=</span><span class="s1">&#39;als&#39;</span><span class="p">,</span>
-<a id="__codelineno-2-2" name="__codelineno-2-2" href="#__codelineno-2-2"></a>                 <span class="n">tolerance</span><span class="o">=</span><span class="mf">1e-6</span><span class="p">,</span> <span class="n">max_rank</span><span class="o">=</span><span class="mi">10</span><span class="p">)</span>
-<a id="__codelineno-2-3" name="__codelineno-2-3" href="#__codelineno-2-3"></a><span class="n">tt</span><span class="o">.</span><span class="n">build</span><span class="p">()</span>
-<a id="__codelineno-2-4" name="__codelineno-2-4" href="#__codelineno-2-4"></a>
-<a id="__codelineno-2-5" name="__codelineno-2-5" href="#__codelineno-2-5"></a><span class="c1"># Refine an existing TT at fixed rank</span>
-<a id="__codelineno-2-6" name="__codelineno-2-6" href="#__codelineno-2-6"></a><span class="n">tt</span><span class="o">.</span><span class="n">run_completion</span><span class="p">(</span><span class="n">tolerance</span><span class="o">=</span><span class="mf">1e-8</span><span class="p">)</span>
-<a id="__codelineno-2-7" name="__codelineno-2-7" href="#__codelineno-2-7"></a>
-<a id="__codelineno-2-8" name="__codelineno-2-8" href="#__codelineno-2-8"></a><span class="c1"># TT inner product + orthogonalization sweeps</span>
-<a id="__codelineno-2-9" name="__codelineno-2-9" href="#__codelineno-2-9"></a><span class="n">scalar</span> <span class="o">=</span> <span class="n">tt_a</span><span class="o">.</span><span class="n">inner_product</span><span class="p">(</span><span class="n">tt_b</span><span class="p">)</span>
-<a id="__codelineno-2-10" name="__codelineno-2-10" href="#__codelineno-2-10"></a><span class="n">tt</span><span class="o">.</span><span class="n">orth_left</span><span class="p">(</span><span class="n">position</span><span class="o">=</span><span class="mi">2</span><span class="p">)</span>
+<div class="highlight"><pre><span></span><code><a id="__codelineno-2-1" name="__codelineno-2-1" href="#__codelineno-2-1"></a><span class="n">tt</span> <span class="o">=</span> <span class="n">ChebyshevTT</span><span class="p">(</span><span class="n">f</span><span class="p">,</span> <span class="mi">5</span><span class="p">,</span> <span class="n">domain</span><span class="p">,</span> <span class="n">n_nodes</span><span class="p">,</span> <span class="n">tolerance</span><span class="o">=</span><span class="mf">1e-6</span><span class="p">,</span> <span class="n">max_rank</span><span class="o">=</span><span class="mi">10</span><span class="p">)</span>
+<a id="__codelineno-2-2" name="__codelineno-2-2" href="#__codelineno-2-2"></a><span class="n">tt</span><span class="o">.</span><span class="n">build</span><span class="p">(</span><span class="n">method</span><span class="o">=</span><span class="s1">&#39;als&#39;</span><span class="p">)</span>
+<a id="__codelineno-2-3" name="__codelineno-2-3" href="#__codelineno-2-3"></a>
+<a id="__codelineno-2-4" name="__codelineno-2-4" href="#__codelineno-2-4"></a><span class="c1"># Refine an existing TT at fixed rank</span>
+<a id="__codelineno-2-5" name="__codelineno-2-5" href="#__codelineno-2-5"></a><span class="n">tt</span><span class="o">.</span><span class="n">run_completion</span><span class="p">(</span><span class="n">tolerance</span><span class="o">=</span><span class="mf">1e-8</span><span class="p">)</span>
+<a id="__codelineno-2-6" name="__codelineno-2-6" href="#__codelineno-2-6"></a>
+<a id="__codelineno-2-7" name="__codelineno-2-7" href="#__codelineno-2-7"></a><span class="c1"># TT inner product + orthogonalization sweeps</span>
+<a id="__codelineno-2-8" name="__codelineno-2-8" href="#__codelineno-2-8"></a><span class="n">scalar</span> <span class="o">=</span> <span class="n">tt_a</span><span class="o">.</span><span class="n">inner_product</span><span class="p">(</span><span class="n">tt_b</span><span class="p">)</span>
+<a id="__codelineno-2-9" name="__codelineno-2-9" href="#__codelineno-2-9"></a><span class="n">tt</span><span class="o">.</span><span class="n">orth_left</span><span class="p">(</span><span class="n">position</span><span class="o">=</span><span class="mi">2</span><span class="p">)</span>
 </code></pre></div>
 <p>Adds guidance on when to choose <strong>Cross vs SVD vs ALS</strong> as the build method.</p>
 <p><strong>Closes MoCaX gaps:</strong> rank-adaptive ALS, completion sweep, TT inner

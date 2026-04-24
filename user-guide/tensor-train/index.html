@@ -14,7 +14,7 @@
         <link rel="prev" href="../spline/">
       
       
-        <link rel="next" href="../algebra/">
+        <link rel="next" href="../tensor-train-als/">
       
       
         
@@ -1071,6 +1071,50 @@
 </li>
       
         <li class="md-nav__item">
+  <a href="#pychebyshev.tensor_train.ChebyshevTT.orth_left" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        orth_left
+      
+    </span>
+  </a>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#pychebyshev.tensor_train.ChebyshevTT.orth_right" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        orth_right
+      
+    </span>
+  </a>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#pychebyshev.tensor_train.ChebyshevTT.run_completion" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        run_completion
+      
+    </span>
+  </a>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#pychebyshev.tensor_train.ChebyshevTT.inner_product" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        inner_product
+      
+    </span>
+  </a>
+  
+</li>
+      
+        <li class="md-nav__item">
   <a href="#pychebyshev.tensor_train.ChebyshevTT.eval" class="md-nav__link">
     <span class="md-ellipsis">
       
@@ -1162,6 +1206,34 @@
   
 </nav>
       
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../tensor-train-als/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Tensor Train ALS
+  
+
+    
+  </span>
+  
+  
+
+      </a>
     </li>
   
 
@@ -1958,6 +2030,50 @@
     <span class="md-ellipsis">
       
         build
+      
+    </span>
+  </a>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#pychebyshev.tensor_train.ChebyshevTT.orth_left" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        orth_left
+      
+    </span>
+  </a>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#pychebyshev.tensor_train.ChebyshevTT.orth_right" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        orth_right
+      
+    </span>
+  </a>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#pychebyshev.tensor_train.ChebyshevTT.run_completion" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        run_completion
+      
+    </span>
+  </a>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#pychebyshev.tensor_train.ChebyshevTT.inner_product" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        inner_product
       
     </span>
   </a>
@@ -3123,9 +3239,10 @@ Default is 10.</p>
 <li><strong>Generate Chebyshev grids.</strong> Compute Type I Chebyshev nodes
    in each dimension, scaled to the specified domain.</li>
 <li><strong>Build value cores.</strong> Either TT-Cross (evaluating at
-   <span class="arithmatex">\(O(d \cdot n \cdot r^2)\)</span> strategically selected points) or
+   <span class="arithmatex">\(O(d \cdot n \cdot r^2)\)</span> strategically selected points),
    TT-SVD (evaluating the full <span class="arithmatex">\(O(n^d)\)</span> tensor, then decomposing
-   via sequential SVD).</li>
+   via sequential SVD), or TT-ALS (rank-adaptive alternating
+   least squares against the full Chebyshev-grid tensor).</li>
 <li><strong>Convert to coefficient cores.</strong> Apply DCT-II along the node
    axis of each core to convert from function values at Chebyshev
    nodes to Chebyshev expansion coefficients. This enables
@@ -3170,8 +3287,10 @@ Default is 10.</p>
             </td>
             <td>
               <div class="doc-md-description">
-                <p>Random seed for TT-Cross initialization. Default is None.
-Ignored when <code>method='svd'</code>.</p>
+                <p>Random seed for initialization. Used by <code>method='cross'</code> to
+seed TT-Cross initialization and by <code>method='als'</code> to
+deterministically seed the initial cores. Ignored when
+<code>method='svd'</code>.</p>
               </div>
             </td>
             <td>
@@ -3183,7 +3302,7 @@ Ignored when <code>method='svd'</code>.</p>
                 <code>method</code>
             </td>
             <td>
-                  <code>``&#39;cross&#39;`` or ``&#39;svd&#39;``</code>
+                  <code>``&#39;cross&#39;``, ``&#39;svd&#39;``, or ``&#39;als&#39;``</code>
             </td>
             <td>
               <div class="doc-md-description">
@@ -3191,11 +3310,425 @@ Ignored when <code>method='svd'</code>.</p>
 evaluate the function at <span class="arithmatex">\(O(d \cdot n \cdot r^2)\)</span> strategically
 selected points. <code>'svd'</code> builds the full tensor and decomposes
 via truncated SVD -- only feasible for moderate dimensions
-(<span class="arithmatex">\(d \leq 6\)</span>) but useful for validation.</p>
+(<span class="arithmatex">\(d \leq 6\)</span>) but useful for validation. <code>'als'</code> runs
+rank-adaptive alternating least squares: it starts at rank 1
+and grows the TT rank by <span class="arithmatex">\(+1\)</span> per outer iteration until the
+grid residual falls below <code>tolerance</code> or the rank reaches
+<code>max_rank</code>. The residual is the relative Frobenius norm
+<span class="arithmatex">\(\|T_{\text{als}} - T_{\text{grid}}\|_F / \|T_{\text{grid}}\|_F\)</span>
+measured over the Chebyshev grid. Like <code>'svd'</code>, ALS
+materializes a target tensor of <span class="arithmatex">\(\prod_k n_k\)</span> floats, so it
+is feasible for typical grids; users with very large grids
+should prefer <code>'cross'</code>.</p>
               </div>
             </td>
             <td>
                   <code>&#39;cross&#39;</code>
+            </td>
+          </tr>
+      </tbody>
+    </table>
+
+
+    </div>
+
+</div>
+
+<div class="doc doc-object doc-function">
+
+
+<h2 id="pychebyshev.tensor_train.ChebyshevTT.orth_left" class="doc doc-heading">
+            <code class="highlight language-python"><span class="n">orth_left</span><span class="p">(</span><span class="n">position</span><span class="p">)</span></code>
+
+<a href="#pychebyshev.tensor_train.ChebyshevTT.orth_left" class="headerlink" title="Permanent link">&para;</a></h2>
+
+
+    <div class="doc doc-contents ">
+
+        <p>Left-orthogonalize cores <code>[0..position-1]</code> in place.</p>
+<p>After the call, each core <code>C_k</code> for <code>k &lt; position</code>, reshaped as
+an <code>(r_k * n_k, r_{k+1})</code> matrix, satisfies <code>C^T C = I</code>. The R
+factors are absorbed rightward into <code>core[position]</code>; the
+represented tensor is unchanged.</p>
+
+
+<p><span class="doc-section-title">Parameters:</span></p>
+    <table>
+      <thead>
+        <tr>
+          <th>Name</th>
+          <th>Type</th>
+          <th>Description</th>
+          <th>Default</th>
+        </tr>
+      </thead>
+      <tbody>
+          <tr class="doc-section-item">
+            <td>
+                <code>position</code>
+            </td>
+            <td>
+                  <code><span title="int">int</span></code>
+            </td>
+            <td>
+              <div class="doc-md-description">
+                <p>Pivot core index, must be in <code>range(1, num_dimensions)</code>.</p>
+              </div>
+            </td>
+            <td>
+                <em>required</em>
+            </td>
+          </tr>
+      </tbody>
+    </table>
+
+
+<p><span class="doc-section-title">Raises:</span></p>
+    <table>
+      <thead>
+        <tr>
+          <th>Type</th>
+          <th>Description</th>
+        </tr>
+      </thead>
+      <tbody>
+          <tr class="doc-section-item">
+            <td>
+                  <code><span title="RuntimeError">RuntimeError</span></code>
+            </td>
+            <td>
+              <div class="doc-md-description">
+                <p>If the TT has not been built.</p>
+              </div>
+            </td>
+          </tr>
+          <tr class="doc-section-item">
+            <td>
+                  <code><span title="ValueError">ValueError</span></code>
+            </td>
+            <td>
+              <div class="doc-md-description">
+                <p>If <code>position</code> is outside <code>[1, num_dimensions - 1]</code>.</p>
+              </div>
+            </td>
+          </tr>
+      </tbody>
+    </table>
+
+
+    </div>
+
+</div>
+
+<div class="doc doc-object doc-function">
+
+
+<h2 id="pychebyshev.tensor_train.ChebyshevTT.orth_right" class="doc doc-heading">
+            <code class="highlight language-python"><span class="n">orth_right</span><span class="p">(</span><span class="n">position</span><span class="p">)</span></code>
+
+<a href="#pychebyshev.tensor_train.ChebyshevTT.orth_right" class="headerlink" title="Permanent link">&para;</a></h2>
+
+
+    <div class="doc doc-contents ">
+
+        <p>Right-orthogonalize cores <code>[position+1..d-1]</code> in place.</p>
+<p>Mirror of :meth:<code>orth_left</code>. Each core <code>C_k</code> for <code>k &gt; position</code>,
+reshaped as an <code>(r_k, n_k * r_{k+1})</code> matrix, satisfies
+<code>C C^T = I</code>. L factors are absorbed leftward; the tensor is
+unchanged.</p>
+
+
+<p><span class="doc-section-title">Parameters:</span></p>
+    <table>
+      <thead>
+        <tr>
+          <th>Name</th>
+          <th>Type</th>
+          <th>Description</th>
+          <th>Default</th>
+        </tr>
+      </thead>
+      <tbody>
+          <tr class="doc-section-item">
+            <td>
+                <code>position</code>
+            </td>
+            <td>
+                  <code><span title="int">int</span></code>
+            </td>
+            <td>
+              <div class="doc-md-description">
+                <p>Pivot core index, must be in <code>range(0, num_dimensions - 1)</code>.</p>
+              </div>
+            </td>
+            <td>
+                <em>required</em>
+            </td>
+          </tr>
+      </tbody>
+    </table>
+
+
+<p><span class="doc-section-title">Raises:</span></p>
+    <table>
+      <thead>
+        <tr>
+          <th>Type</th>
+          <th>Description</th>
+        </tr>
+      </thead>
+      <tbody>
+          <tr class="doc-section-item">
+            <td>
+                  <code><span title="RuntimeError">RuntimeError</span></code>
+            </td>
+            <td>
+              <div class="doc-md-description">
+                <p>If the TT has not been built.</p>
+              </div>
+            </td>
+          </tr>
+          <tr class="doc-section-item">
+            <td>
+                  <code><span title="ValueError">ValueError</span></code>
+            </td>
+            <td>
+              <div class="doc-md-description">
+                <p>If <code>position</code> is outside <code>[0, num_dimensions - 2]</code>.</p>
+              </div>
+            </td>
+          </tr>
+      </tbody>
+    </table>
+
+
+    </div>
+
+</div>
+
+<div class="doc doc-object doc-function">
+
+
+<h2 id="pychebyshev.tensor_train.ChebyshevTT.run_completion" class="doc doc-heading">
+            <code class="highlight language-python"><span class="n">run_completion</span><span class="p">(</span><span class="n">tolerance</span><span class="o">=</span><span class="mf">1e-08</span><span class="p">,</span> <span class="n">max_iter</span><span class="o">=</span><span class="mi">50</span><span class="p">,</span> <span class="n">verbose</span><span class="o">=</span><span class="kc">False</span><span class="p">)</span></code>
+
+<a href="#pychebyshev.tensor_train.ChebyshevTT.run_completion" class="headerlink" title="Permanent link">&para;</a></h2>
+
+
+    <div class="doc doc-contents ">
+
+        <p>Refine the TT at its current rank via ALS sweeps.</p>
+<p>Works on any built TT (from <code>cross</code>, <code>svd</code>, or <code>als</code>). Rank
+does not grow; only per-core coefficients are refined.</p>
+<p>Requires <code>self.function</code> to be callable -- completion re-samples
+the grid to build the LS right-hand side. TTs loaded from pickle
+typically retain the function unless it was pickled without a
+closure; see Notes.</p>
+
+
+<p><span class="doc-section-title">Parameters:</span></p>
+    <table>
+      <thead>
+        <tr>
+          <th>Name</th>
+          <th>Type</th>
+          <th>Description</th>
+          <th>Default</th>
+        </tr>
+      </thead>
+      <tbody>
+          <tr class="doc-section-item">
+            <td>
+                <code>tolerance</code>
+            </td>
+            <td>
+                  <code><span title="float">float</span></code>
+            </td>
+            <td>
+              <div class="doc-md-description">
+                <p>Stop when inner-sweep relative change falls below this value.</p>
+              </div>
+            </td>
+            <td>
+                  <code>1e-08</code>
+            </td>
+          </tr>
+          <tr class="doc-section-item">
+            <td>
+                <code>max_iter</code>
+            </td>
+            <td>
+                  <code><span title="int">int</span></code>
+            </td>
+            <td>
+              <div class="doc-md-description">
+                <p>Maximum number of outer sweeps.</p>
+              </div>
+            </td>
+            <td>
+                  <code>50</code>
+            </td>
+          </tr>
+          <tr class="doc-section-item">
+            <td>
+                <code>verbose</code>
+            </td>
+            <td>
+                  <code><span title="bool">bool</span></code>
+            </td>
+            <td>
+              <div class="doc-md-description">
+                <p>Print per-sweep residuals.</p>
+              </div>
+            </td>
+            <td>
+                  <code>False</code>
+            </td>
+          </tr>
+      </tbody>
+    </table>
+
+
+<p><span class="doc-section-title">Raises:</span></p>
+    <table>
+      <thead>
+        <tr>
+          <th>Type</th>
+          <th>Description</th>
+        </tr>
+      </thead>
+      <tbody>
+          <tr class="doc-section-item">
+            <td>
+                  <code><span title="RuntimeError">RuntimeError</span></code>
+            </td>
+            <td>
+              <div class="doc-md-description">
+                <p>If the TT has not been built, or if <code>self.function</code> is None.</p>
+              </div>
+            </td>
+          </tr>
+      </tbody>
+    </table>
+
+
+<details class="note" open>
+  <summary>Notes</summary>
+  <p>Completion evaluates <code>self.function</code> on the full tensor-product grid
+(<code>prod(n_nodes)</code> points), which may dwarf the cost of a prior
+<code>method='cross'</code> build. The eval cache is rebuilt fresh, not reused
+from the original build.</p>
+</details>
+
+    </div>
+
+</div>
+
+<div class="doc doc-object doc-function">
+
+
+<h2 id="pychebyshev.tensor_train.ChebyshevTT.inner_product" class="doc doc-heading">
+            <code class="highlight language-python"><span class="n">inner_product</span><span class="p">(</span><span class="n">other</span><span class="p">)</span></code>
+
+<a href="#pychebyshev.tensor_train.ChebyshevTT.inner_product" class="headerlink" title="Permanent link">&para;</a></h2>
+
+
+    <div class="doc doc-contents ">
+
+        <p>Frobenius inner product of the Chebyshev coefficient tensors of two TTs.</p>
+<p>Because <code>_coeff_cores</code> stores Chebyshev expansion coefficients
+(DCT-II applied during <code>build()</code>), contracting the cores core-by-core
+yields <span class="arithmatex">\(\sum_{i_1,\ldots,i_d} C_{\text{self}}[i_1,\ldots,i_d] \,
+C_{\text{other}}[i_1,\ldots,i_d]\)</span>, where <span class="arithmatex">\(C\)</span> denotes the full
+coefficient tensor. The core-by-core contraction costs
+<span class="arithmatex">\(O(d \cdot n \cdot r_s^2 \cdot r_o^2)\)</span> operations and
+<span class="arithmatex">\(O(r_s \cdot r_o)\)</span> extra memory, where <span class="arithmatex">\(r_s, r_o\)</span> are the TT ranks
+of <code>self</code> and <code>other</code>.</p>
+
+
+<p><span class="doc-section-title">Parameters:</span></p>
+    <table>
+      <thead>
+        <tr>
+          <th>Name</th>
+          <th>Type</th>
+          <th>Description</th>
+          <th>Default</th>
+        </tr>
+      </thead>
+      <tbody>
+          <tr class="doc-section-item">
+            <td>
+                <code>other</code>
+            </td>
+            <td>
+                  <code><a class="autorefs autorefs-internal" title="pychebyshev.tensor_train.ChebyshevTT" href="#pychebyshev.tensor_train.ChebyshevTT">ChebyshevTT</a></code>
+            </td>
+            <td>
+              <div class="doc-md-description">
+                <p>Must have the same <code>domain</code> and the same <code>n_nodes</code> as <code>self</code>.</p>
+              </div>
+            </td>
+            <td>
+                <em>required</em>
+            </td>
+          </tr>
+      </tbody>
+    </table>
+
+
+    <p><span class="doc-section-title">Returns:</span></p>
+    <table>
+      <thead>
+        <tr>
+          <th>Type</th>
+          <th>Description</th>
+        </tr>
+      </thead>
+      <tbody>
+          <tr class="doc-section-item">
+            <td>
+                  <code><span title="float">float</span></code>
+            </td>
+            <td>
+              <div class="doc-md-description">
+                <p>Frobenius inner product of the two Chebyshev coefficient tensors,
+<span class="arithmatex">\(\sum_{i_1,\ldots,i_d} C_{\text{self}}[i] \, C_{\text{other}}[i]\)</span>.</p>
+              </div>
+            </td>
+          </tr>
+      </tbody>
+    </table>
+
+
+<p><span class="doc-section-title">Raises:</span></p>
+    <table>
+      <thead>
+        <tr>
+          <th>Type</th>
+          <th>Description</th>
+        </tr>
+      </thead>
+      <tbody>
+          <tr class="doc-section-item">
+            <td>
+                  <code><span title="RuntimeError">RuntimeError</span></code>
+            </td>
+            <td>
+              <div class="doc-md-description">
+                <p>If either TT is not built.</p>
+              </div>
+            </td>
+          </tr>
+          <tr class="doc-section-item">
+            <td>
+                  <code><span title="ValueError">ValueError</span></code>
+            </td>
+            <td>
+              <div class="doc-md-description">
+                <p>If <code>other</code> is not a ChebyshevTT, or has a different <code>domain</code>
+or <code>n_nodes</code>.</p>
+              </div>
             </td>
           </tr>
       </tbody>
