@@ -48,14 +48,26 @@ class ChebyshevSpline:
         Number of input dimensions.
     domain : list of (float, float)
         Bounds [lo, hi] for each dimension.
-    n_nodes : list of int
-        Number of Chebyshev nodes per dimension *per piece*.
+    n_nodes : list of (int or None), optional
+        Number of Chebyshev nodes per dimension *per piece*.  Entries
+        may be ``None`` when ``error_threshold`` is set, signalling
+        auto-N mode for that dimension (each piece runs its own
+        doubling loop independently).  If omitted entirely,
+        ``error_threshold`` must be provided.  Default is ``None``.
     knots : list of list of float
         Interior knots for each dimension.  Each sub-list must be sorted
         and every knot must lie strictly inside the corresponding domain
         interval.  Use an empty list ``[]`` for dimensions with no knots.
     max_derivative_order : int, optional
         Maximum derivative order to pre-compute (default 2).
+    error_threshold : float, optional
+        When set, enables error-driven auto-N construction on every
+        piece: each piece is built with this threshold, so pieces near
+        kinks may refine to higher N than smooth pieces.  Default is
+        ``None``.
+    max_n : int, optional
+        Upper cap on per-dimension node count passed through to each
+        piece's doubling loop.  Default is 64.
 
     Examples
     --------
@@ -75,14 +87,38 @@ class ChebyshevSpline:
         function: Callable,
         num_dimensions: int,
         domain: List[Tuple[float, float]],
-        n_nodes: List[int],
-        knots: List[List[float]],
+        n_nodes: List[int | None] | None = None,
+        knots: List[List[float]] | None = None,
         max_derivative_order: int = 2,
+        error_threshold: float | None = None,
+        max_n: int = 64,
     ):
         self.function = function
         self.num_dimensions = num_dimensions
         self.domain = domain
+        self.error_threshold = error_threshold
+        self.max_n = max_n
+
+        # Normalize n_nodes — None means "auto this dim" (mirrors
+        # ChebyshevApproximation.__init__).
+        if n_nodes is None:
+            if error_threshold is None:
+                raise ValueError(
+                    "Must provide either n_nodes (explicit) or error_threshold "
+                    "(auto-N). Got neither."
+                )
+            n_nodes = [None] * num_dimensions
+        else:
+            n_nodes = list(n_nodes)
+            if any(n is None for n in n_nodes) and error_threshold is None:
+                raise ValueError(
+                    "None entries in n_nodes require error_threshold to be set "
+                    "(auto-N mode)."
+                )
+
         self.n_nodes = n_nodes
+        if knots is None:
+            knots = [[] for _ in range(num_dimensions)]
         self.knots = knots
         self.max_derivative_order = max_derivative_order
 
@@ -140,14 +176,23 @@ class ChebyshevSpline:
         start = time.time()
         self._cached_error_estimate = None
         total_pieces = int(np.prod(self._shape))
-        per_piece_evals = int(np.prod(self.n_nodes))
 
         if verbose:
-            print(
-                f"Building {self.num_dimensions}D Chebyshev Spline "
-                f"({total_pieces} pieces, "
-                f"{total_pieces * per_piece_evals:,} total evaluations)..."
-            )
+            # Per-piece eval count is unknown up-front in auto-N mode;
+            # fall back to "auto" rather than crashing on None entries.
+            if any(n is None for n in self.n_nodes):
+                print(
+                    f"Building {self.num_dimensions}D Chebyshev Spline "
+                    f"({total_pieces} pieces, auto-N per piece "
+                    f"with error_threshold={self.error_threshold:.2e})..."
+                )
+            else:
+                per_piece_evals = int(np.prod(self.n_nodes))
+                print(
+                    f"Building {self.num_dimensions}D Chebyshev Spline "
+                    f"({total_pieces} pieces, "
+                    f"{total_pieces * per_piece_evals:,} total evaluations)..."
+                )
 
         for flat_idx, multi_idx in enumerate(
             itertools.product(*[range(s) for s in self._shape])
@@ -164,6 +209,8 @@ class ChebyshevSpline:
                 sub_domain,
                 self.n_nodes,
                 max_derivative_order=self.max_derivative_order,
+                error_threshold=self.error_threshold,
+                max_n=self.max_n,
             )
             piece.build(verbose=False)
             self._pieces[flat_idx] = piece
@@ -171,7 +218,7 @@ class ChebyshevSpline:
             if verbose:
                 print(
                     f"  Piece {flat_idx + 1}/{total_pieces}: "
-                    f"domain {sub_domain}"
+                    f"domain {sub_domain}, n_nodes={piece.n_nodes}"
                 )
 
         self._build_time = time.time() - start
@@ -416,7 +463,16 @@ class ChebyshevSpline:
 
     @property
     def total_build_evals(self) -> int:
-        """Total number of function evaluations used during build."""
+        """Total number of function evaluations used during build.
+
+        In auto-N mode each piece may end up at a different resolved
+        grid size (and may have run a doubling loop), so we sum each
+        piece's own ``n_evaluations`` counter rather than assuming a
+        uniform grid.  Falls back to the old uniform-grid formula if
+        pieces have not been built yet.
+        """
+        if self._built and all(p is not None for p in self._pieces):
+            return sum(int(p.n_evaluations) for p in self._pieces)
         return self.num_pieces * int(np.prod(self.n_nodes))
 
     @property

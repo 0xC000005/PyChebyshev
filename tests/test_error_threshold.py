@@ -286,3 +286,57 @@ class TestGetOptimalN1:
             issubclass(w.category, RuntimeWarning) and "max_n" in str(w.message)
             for w in caught
         )
+
+
+class TestSplineErrorThreshold:
+    """error_threshold applied per-piece in ChebyshevSpline."""
+
+    def test_1d_with_knot(self):
+        from pychebyshev import ChebyshevSpline
+
+        def abs_fn(x, _):
+            return abs(x[0])
+
+        spl = ChebyshevSpline(
+            abs_fn, 1, [[-1, 1]],
+            n_nodes=[None],
+            knots=[[0.0]],
+            error_threshold=1e-6,
+        )
+        spl.build(verbose=False)
+        # Each piece should have fully-resolved Ns and hit the threshold
+        for piece in spl._pieces:
+            assert all(n is not None for n in piece.n_nodes)
+            assert piece.error_estimate() <= 1e-6
+
+    def test_2d_no_knots_matches_flat(self):
+        """Spline with empty knots lists should behave like a single ChebyshevApproximation."""
+        from pychebyshev import ChebyshevSpline
+
+        spl = ChebyshevSpline(
+            _sin2d, 2, [[-1, 1], [-1, 1]],
+            n_nodes=[None, None],
+            knots=[[], []],
+            error_threshold=1e-6,
+        )
+        spl.build(verbose=False)
+        # Single piece (flat list)
+        assert len(spl._pieces) == 1
+        assert spl._pieces[0].error_estimate() <= 1e-6
+
+    def test_explicit_n_still_works(self):
+        """Backward compat: existing fixed-N spline builds unchanged."""
+        from pychebyshev import ChebyshevSpline
+
+        def abs_fn(x, _):
+            return abs(x[0])
+
+        spl = ChebyshevSpline(
+            abs_fn, 1, [[-1, 1]],
+            n_nodes=[15],
+            knots=[[0.0]],
+        )
+        spl.build(verbose=False)
+        # Pieces should use the explicit N
+        for piece in spl._pieces:
+            assert piece.n_nodes == [15]
