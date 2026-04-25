@@ -260,3 +260,86 @@ class TestGetEvaluationPoints:
         pts = cheb.get_evaluation_points()
         assert len(pts) == cheb.get_num_evaluation_points()
         assert len(pts) == 5 * 7
+
+
+# ============================================================================
+# A1: clone()
+# ============================================================================
+
+class TestClone:
+    @pytest.mark.parametrize("fixture_name", [
+        "cheb_sin_3d", "spline_abs_1d", "tt_sin_3d",
+    ])
+    def test_clone_returns_distinct_object(self, request, fixture_name):
+        original = request.getfixturevalue(fixture_name)
+        clone = original.clone()
+        assert clone is not original
+
+    def test_slider_clone(self):
+        def f(x, _):
+            return math.sin(x[0]) + math.sin(x[1])
+
+        slider = ChebyshevSlider(
+            f, 2, [[-1, 1], [-1, 1]], [8, 8], partition=[[0], [1]],
+            pivot_point=[0.0, 0.0],
+        )
+        slider.build(verbose=False)
+        clone = slider.clone()
+        assert clone is not slider
+
+    def test_clone_eval_matches_original(self, cheb_sin_3d):
+        clone = cheb_sin_3d.clone()
+        deriv = [0, 0, 0]
+        for x in [[0.0, 0.0, 2.0], [0.5, -0.5, 1.5]]:
+            assert clone.eval(x, deriv) == cheb_sin_3d.eval(x, deriv)
+
+    def test_clone_descriptor_isolation(self, cheb_sin_3d):
+        cheb_sin_3d.set_descriptor("original")
+        clone = cheb_sin_3d.clone()
+        clone.set_descriptor("modified")
+        assert cheb_sin_3d.get_descriptor() == "original"
+        assert clone.get_descriptor() == "modified"
+
+    def test_clone_tensor_isolation(self, cheb_sin_3d):
+        clone = cheb_sin_3d.clone()
+        # Mutating the clone's tensor must not affect the original
+        original_value = cheb_sin_3d.tensor_values[0, 0, 0]
+        clone.tensor_values[0, 0, 0] = -999.0
+        assert cheb_sin_3d.tensor_values[0, 0, 0] == original_value
+
+    def test_clone_preserves_additional_data(self):
+        sentinel = {"sentinel": 42}
+
+        def f(x, ad):
+            return ad["sentinel"] + x[0]
+
+        cheb = ChebyshevApproximation(
+            f, 1, [[-1, 1]], [4], additional_data=sentinel,
+        )
+        cheb.build(verbose=False)
+        clone = cheb.clone()
+        # additional_data is deepcopied
+        assert clone.additional_data == sentinel
+        assert clone.additional_data is not sentinel
+
+    def test_clone_of_factory_built_object(self):
+        """Object built via from_values has function=None; clone preserves that."""
+        def f(x, _):
+            return x[0] ** 2
+
+        original = ChebyshevApproximation(f, 1, [[-1, 1]], [5])
+        original.build(verbose=False)
+        from_vals = ChebyshevApproximation.from_values(
+            original.tensor_values, 1, [[-1, 1]], [5],
+        )
+        clone = from_vals.clone()
+        assert clone.function is None
+        assert clone.eval([0.5], [0]) == from_vals.eval([0.5], [0])
+
+    def test_clone_preserves_derivative_id_registry(self, cheb_sin_3d):
+        cheb_sin_3d.get_derivative_id([1, 0, 0])  # register
+        clone = cheb_sin_3d.clone()
+        # Same derivative order returns the same id on the clone
+        original_id = cheb_sin_3d.get_derivative_id([1, 0, 0])
+        clone_id = clone.get_derivative_id([1, 0, 0])
+        assert original_id == clone_id

@@ -1890,6 +1890,20 @@ class ChebyshevTT:
         grids = np.meshgrid(*per_dim, indexing="ij")
         return np.stack([g.ravel() for g in grids], axis=-1).astype(np.float64)
 
+    def clone(self) -> "ChebyshevTT":
+        """Return an independent deep copy of this interpolant.
+
+        All mutable state (TT cores, descriptor, additional_data) is
+        duplicated. Mutating the clone does not affect the original.
+
+        Returns
+        -------
+        ChebyshevTT
+            A new instance with deep-copied state.
+        """
+        import copy
+        return copy.deepcopy(self)
+
     @staticmethod
     def is_dimensionality_allowed(num_dimensions: int) -> bool:
         """Return whether this interpolant class supports the given number of

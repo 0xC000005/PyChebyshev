@@ -802,6 +802,21 @@ class ChebyshevSpline:
         parts = [piece.get_evaluation_points() for piece in self._pieces]
         return np.concatenate(parts, axis=0)
 
+    def clone(self) -> "ChebyshevSpline":
+        """Return an independent deep copy of this interpolant.
+
+        All mutable state (piece tensors, descriptor, additional_data,
+        derivative-id registry) is duplicated. Mutating the clone does not
+        affect the original.
+
+        Returns
+        -------
+        ChebyshevSpline
+            A new instance with deep-copied state.
+        """
+        import copy
+        return copy.deepcopy(self)
+
     def get_special_points(self) -> list[list[float]] | None:
         """Return the per-dimension knot/kink locations this spline was built
         around.

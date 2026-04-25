@@ -483,6 +483,20 @@ class ChebyshevSlider:
             rows.append(full)
         return np.concatenate(rows, axis=0)
 
+    def clone(self) -> "ChebyshevSlider":
+        """Return an independent deep copy of this interpolant.
+
+        All mutable state (slides, descriptor, additional_data) is duplicated.
+        Mutating the clone does not affect the original.
+
+        Returns
+        -------
+        ChebyshevSlider
+            A new instance with deep-copied state.
+        """
+        import copy
+        return copy.deepcopy(self)
+
     @staticmethod
     def is_dimensionality_allowed(num_dimensions: int) -> bool:
         """Return whether this interpolant class supports the given number of

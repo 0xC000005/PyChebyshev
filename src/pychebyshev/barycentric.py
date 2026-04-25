@@ -1176,6 +1176,21 @@ class ChebyshevApproximation:
         grids = np.meshgrid(*self.nodes, indexing="ij")
         return np.stack([g.ravel() for g in grids], axis=-1).astype(np.float64)
 
+    def clone(self) -> "ChebyshevApproximation":
+        """Return an independent deep copy of this interpolant.
+
+        All mutable state (tensors, descriptor, additional_data,
+        derivative-id registry) is duplicated. Mutating the clone does not
+        affect the original.
+
+        Returns
+        -------
+        ChebyshevApproximation
+            A new instance with deep-copied state.
+        """
+        import copy
+        return copy.deepcopy(self)
+
     # ------------------------------------------------------------------
     # Serialization
     # ------------------------------------------------------------------
