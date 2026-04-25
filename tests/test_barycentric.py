@@ -435,9 +435,15 @@ class TestCoverageGaps:
         with pytest.raises(RuntimeError, match="build"):
             cheb.vectorized_eval_multi([0.5], [[0]])
 
-    def test_get_derivative_id(self, cheb_sin_3d):
-        """get_derivative_id() should return the input as-is."""
-        assert cheb_sin_3d.get_derivative_id([1, 0, 0]) == [1, 0, 0]
+    def test_get_derivative_id_returns_int(self, cheb_sin_3d):
+        """get_derivative_id() returns a stable int per orders tuple."""
+        first = cheb_sin_3d.get_derivative_id([1, 0, 0])
+        assert isinstance(first, int)
+        # Same orders → same id
+        assert cheb_sin_3d.get_derivative_id([1, 0, 0]) == first
+        # Different orders → different id
+        other = cheb_sin_3d.get_derivative_id([0, 1, 0])
+        assert other != first
 
     def test_load_wrong_type_raises(self, tmp_path):
         """Loading a non-ChebyshevApproximation object should raise TypeError."""

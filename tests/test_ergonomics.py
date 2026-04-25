@@ -382,3 +382,60 @@ class TestAdditionalDataSliderTT:
         tt.save(str(path))
         restored = ChebyshevTT.load(str(path))
         assert restored.additional_data == payload
+
+
+class TestDerivativeIdApprox:
+    """get_derivative_id() registry + eval(derivative_id=...) on ChebyshevApproximation."""
+
+    def test_first_call_returns_zero(self):
+        cheb = _build_approx_3d()
+        assert cheb.get_derivative_id([0, 0, 0]) == 0
+
+    def test_sequential_ids(self):
+        cheb = _build_approx_3d()
+        a = cheb.get_derivative_id([0, 0, 0])
+        b = cheb.get_derivative_id([1, 0, 0])
+        c = cheb.get_derivative_id([0, 1, 0])
+        assert (a, b, c) == (0, 1, 2)
+
+    def test_same_orders_returns_same_id(self):
+        cheb = _build_approx_3d()
+        first = cheb.get_derivative_id([1, 0, 0])
+        second = cheb.get_derivative_id([1, 0, 0])
+        assert first == second
+
+    def test_eval_via_id_matches_eval_via_orders(self):
+        cheb = _build_approx_3d()
+        orders = [1, 0, 0]
+        d_id = cheb.get_derivative_id(orders)
+        point = [0.3, -0.2, 0.5]
+        a = cheb.eval(point, derivative_order=orders)
+        b = cheb.eval(point, derivative_id=d_id)
+        assert a == b
+
+    def test_eval_both_kwargs_raises(self):
+        cheb = _build_approx_3d()
+        d_id = cheb.get_derivative_id([0, 0, 0])
+        with pytest.raises(ValueError, match="not both"):
+            cheb.eval([0.0, 0.0, 0.0], derivative_order=[0, 0, 0], derivative_id=d_id)
+
+    def test_eval_neither_kwarg_raises(self):
+        cheb = _build_approx_3d()
+        with pytest.raises(ValueError, match="must provide"):
+            cheb.eval([0.0, 0.0, 0.0])
+
+    def test_eval_unknown_id_raises(self):
+        cheb = _build_approx_3d()
+        with pytest.raises(KeyError, match="unknown derivative_id"):
+            cheb.eval([0.0, 0.0, 0.0], derivative_id=999)
+
+    def test_pickle_preserves_registry(self, tmp_path):
+        cheb = _build_approx_3d()
+        d_id = cheb.get_derivative_id([1, 0, 0])
+        path = tmp_path / "cheb.pkl"
+        cheb.save(str(path))
+        restored = ChebyshevApproximation.load(str(path))
+        assert restored.get_derivative_id([1, 0, 0]) == d_id
+        a = restored.eval([0.1, 0.2, 0.3], derivative_id=d_id)
+        b = restored.eval([0.1, 0.2, 0.3], derivative_order=[1, 0, 0])
+        assert a == b
