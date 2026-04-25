@@ -6,7 +6,7 @@ any other language** read PyChebyshev interpolants without a Python runtime.
 
 The format is intentionally minimal — a fixed header, length-prefixed
 sections, raw little-endian `f64` blobs. A C reference reader at
-`examples/binary_reader/` weighs ~190 lines.
+`examples/binary_reader/` weighs ~240 lines.
 
 ## When to use which format
 
@@ -184,7 +184,7 @@ The format is small enough to implement in an afternoon:
    barycentric weights from node positions, evaluate by dim-by-dim collapse.
 
 `examples/binary_reader/reader.c` is the reference. It is intentionally
-minimal: ~190 lines, stdlib + `libm` only.
+minimal: ~240 lines, stdlib + `libm` only.
 
 ## What the format does not store
 

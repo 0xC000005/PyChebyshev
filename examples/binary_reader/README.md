@@ -1,6 +1,6 @@
 # PyChebyshev `.pcb` Binary Reader (C Reference)
 
-A ~190-line C program that reads a v1 `.pcb` file (`ChebyshevApproximation`
+A ~240-line C program that reads a v1 `.pcb` file (`ChebyshevApproximation`
 class) and evaluates it at a query point. It is the reference proof that
 the format is implementable from scratch in another language. It assumes
 a little-endian host (matches the on-disk format); a port to big-endian
