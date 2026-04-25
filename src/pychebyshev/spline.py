@@ -157,6 +157,7 @@ class ChebyshevSpline:
             knots = [[] for _ in range(num_dimensions)]
         self.knots = knots
         self.max_derivative_order = max_derivative_order
+        self.descriptor: str = ""
 
         # Validate knots: each must be strictly inside domain and sorted
         for d in range(num_dimensions):
@@ -603,6 +604,29 @@ class ChebyshevSpline:
         if not hasattr(self, "_n_nodes_nested"):
             self._n_nodes_nested = _is_nested_n_nodes(self.n_nodes)
 
+    def set_descriptor(self, descriptor: str) -> None:
+        """Set a free-form text label on this spline.
+
+        Parameters
+        ----------
+        descriptor : str
+            Label to attach to this spline.
+
+        Raises
+        ------
+        TypeError
+            If ``descriptor`` is not a string.
+        """
+        if not isinstance(descriptor, str):
+            raise TypeError(
+                f"descriptor must be str, got {type(descriptor).__name__}"
+            )
+        self.descriptor = descriptor
+
+    def get_descriptor(self) -> str:
+        """Return the descriptor label (default ``""``)."""
+        return self.descriptor
+
     def save(
         self,
         path: str | os.PathLike,
@@ -934,6 +958,7 @@ class ChebyshevSpline:
         obj._built = True
         obj._build_time = 0.0
         obj._cached_error_estimate = None
+        obj.descriptor = ""
 
         return obj
 
@@ -958,6 +983,7 @@ class ChebyshevSpline:
         obj._built = True
         obj._build_time = 0.0
         obj._cached_error_estimate = None
+        obj.descriptor = ""
         return obj
 
     # ------------------------------------------------------------------

@@ -347,6 +347,7 @@ class ChebyshevApproximation:
             )
         self.max_n = max_n
         self.max_derivative_order = max_derivative_order
+        self.descriptor: str = ""
 
         # Normalize n_nodes — None means "auto this dim"
         if n_nodes is None:
@@ -835,6 +836,29 @@ class ChebyshevApproximation:
             results.append(float(current))
         return results
 
+    def set_descriptor(self, descriptor: str) -> None:
+        """Set a free-form text label on this interpolant.
+
+        Parameters
+        ----------
+        descriptor : str
+            Label to attach to this interpolant.
+
+        Raises
+        ------
+        TypeError
+            If ``descriptor`` is not a string.
+        """
+        if not isinstance(descriptor, str):
+            raise TypeError(
+                f"descriptor must be str, got {type(descriptor).__name__}"
+            )
+        self.descriptor = descriptor
+
+    def get_descriptor(self) -> str:
+        """Return the descriptor label (default ``""``)."""
+        return self.descriptor
+
     def get_derivative_id(self, derivative_order: List[int]) -> List[int]:
         """Return derivative order as-is (for API compatibility)."""
         return derivative_order
@@ -1310,6 +1334,7 @@ class ChebyshevApproximation:
         obj.build_time = 0.0
         obj.n_evaluations = 0
         obj._cached_error_estimate = None
+        obj.descriptor = ""
 
         # Pre-allocate eval cache for deprecated fast_eval()
         obj._eval_cache = {}
@@ -1343,6 +1368,7 @@ class ChebyshevApproximation:
         obj.build_time = 0.0
         obj.n_evaluations = 0
         obj._cached_error_estimate = None
+        obj.descriptor = ""
         # Pre-allocate eval cache for deprecated fast_eval()
         obj._eval_cache = {}
         for d in range(obj.num_dimensions - 1, 0, -1):

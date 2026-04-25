@@ -93,6 +93,7 @@ class ChebyshevSlider:
         self.partition = partition
         self.pivot_point = list(pivot_point)
         self.max_derivative_order = max_derivative_order
+        self.descriptor: str = ""
 
         # Validate partition
         all_dims = sorted(d for group in partition for d in group)
@@ -336,6 +337,29 @@ class ChebyshevSlider:
         # Ensure fields added in later versions exist (backward compat)
         if not hasattr(self, "_cached_error_estimate"):
             self._cached_error_estimate = None
+
+    def set_descriptor(self, descriptor: str) -> None:
+        """Set a free-form text label on this slider.
+
+        Parameters
+        ----------
+        descriptor : str
+            Label to attach to this slider.
+
+        Raises
+        ------
+        TypeError
+            If ``descriptor`` is not a string.
+        """
+        if not isinstance(descriptor, str):
+            raise TypeError(
+                f"descriptor must be str, got {type(descriptor).__name__}"
+            )
+        self.descriptor = descriptor
+
+    def get_descriptor(self) -> str:
+        """Return the descriptor label (default ``""``)."""
+        return self.descriptor
 
     def save(self, path: str | os.PathLike) -> None:
         """Save the built slider to a file.

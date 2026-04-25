@@ -1059,6 +1059,7 @@ class ChebyshevTT:
         # Build-time state
         self._coeff_cores: List[np.ndarray] | None = None
         self._built: bool = False
+        self.descriptor: str = ""
         self._tt_ranks: List[int] | None = None
         self._build_time: float = 0.0
         self._total_build_evals: int = 0
@@ -1794,6 +1795,29 @@ class ChebyshevTT:
         # Ensure fields added in later versions exist (backward compat)
         if not hasattr(self, "_cached_error_estimate"):
             self._cached_error_estimate = None
+
+    def set_descriptor(self, descriptor: str) -> None:
+        """Set a free-form text label on this TT interpolant.
+
+        Parameters
+        ----------
+        descriptor : str
+            Label to attach to this TT interpolant.
+
+        Raises
+        ------
+        TypeError
+            If ``descriptor`` is not a string.
+        """
+        if not isinstance(descriptor, str):
+            raise TypeError(
+                f"descriptor must be str, got {type(descriptor).__name__}"
+            )
+        self.descriptor = descriptor
+
+    def get_descriptor(self) -> str:
+        """Return the descriptor label (default ``""``)."""
+        return self.descriptor
 
     def save(self, path: str | os.PathLike) -> None:
         """Save the built TT interpolant to a file.
