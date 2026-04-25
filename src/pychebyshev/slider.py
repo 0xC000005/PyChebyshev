@@ -452,6 +452,17 @@ class ChebyshevSlider:
         via ``eval(point, derivative_order=...)``."""
         return self.max_derivative_order
 
+    def get_num_evaluation_points(self) -> int:
+        """Return the number of points where ``f`` was evaluated during
+        sliding decomposition (across all slides + pivot).
+
+        Returns
+        -------
+        int
+            Total number of function evaluations consumed during build.
+        """
+        return int(self.total_build_evals)
+
     @staticmethod
     def is_dimensionality_allowed(num_dimensions: int) -> bool:
         """Return whether this interpolant class supports the given number of

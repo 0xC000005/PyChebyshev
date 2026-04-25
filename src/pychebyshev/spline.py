@@ -769,6 +769,17 @@ class ChebyshevSpline:
         or ``None`` if no threshold was specified (fixed-N construction)."""
         return self.error_threshold
 
+    def get_num_evaluation_points(self) -> int:
+        """Return the number of points where ``f`` was evaluated, summed
+        across all pieces.
+
+        Returns
+        -------
+        int
+            Total number of grid points evaluated during construction.
+        """
+        return int(self.total_build_evals)
+
     def get_special_points(self) -> list[list[float]] | None:
         """Return the per-dimension knot/kink locations this spline was built
         around.

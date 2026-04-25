@@ -1855,6 +1855,17 @@ class ChebyshevTT:
         via ``eval_multi(point, derivative_orders=...)``."""
         return self.max_derivative_order
 
+    def get_num_evaluation_points(self) -> int:
+        """Return the number of TT-Cross / TT-SVD / ALS function evaluations
+        consumed during build.
+
+        Returns
+        -------
+        int
+            Total number of function evaluations consumed during construction.
+        """
+        return int(self.total_build_evals)
+
     @staticmethod
     def is_dimensionality_allowed(num_dimensions: int) -> bool:
         """Return whether this interpolant class supports the given number of

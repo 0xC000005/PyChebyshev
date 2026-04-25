@@ -1152,6 +1152,18 @@ class ChebyshevApproximation:
         """
         return self.error_threshold
 
+    def get_num_evaluation_points(self) -> int:
+        """Return the number of points where ``f`` was (or will be) evaluated.
+
+        For a fixed-grid construction this is ``prod(n_nodes)``.
+
+        Returns
+        -------
+        int
+            Total number of grid points at which ``f`` is evaluated.
+        """
+        return int(np.prod(self.n_nodes))
+
     # ------------------------------------------------------------------
     # Serialization
     # ------------------------------------------------------------------

@@ -158,3 +158,34 @@ class TestIsDimensionalityAllowed:
         # Type signature
         result = cls.is_dimensionality_allowed(3)
         assert isinstance(result, bool)
+
+
+# ============================================================================
+# A6: get_num_evaluation_points()
+# ============================================================================
+
+class TestGetNumEvaluationPoints:
+    def test_approximation_product_of_n_nodes(self, cheb_sin_3d):
+        # Built with [10, 8, 4]
+        assert cheb_sin_3d.get_num_evaluation_points() == 10 * 8 * 4
+
+    def test_spline_sum_across_pieces(self, spline_abs_1d):
+        # 1-D spline with one knot at 0.0, two pieces, 8 nodes each
+        # by spline_abs_1d fixture
+        n = spline_abs_1d.get_num_evaluation_points()
+        # exact value depends on fixture; verify it equals total_build_evals
+        assert n == spline_abs_1d.total_build_evals
+
+    def test_slider_matches_total_build_evals(self):
+        def f(x, _):
+            return math.sin(x[0]) + math.sin(x[1])
+
+        slider = ChebyshevSlider(
+            f, 2, [[-1, 1], [-1, 1]], [8, 8], partition=[[0], [1]],
+            pivot_point=[0.0, 0.0],
+        )
+        slider.build(verbose=False)
+        assert slider.get_num_evaluation_points() == slider.total_build_evals
+
+    def test_tt_matches_total_build_evals(self, tt_sin_3d):
+        assert tt_sin_3d.get_num_evaluation_points() == tt_sin_3d.total_build_evals
