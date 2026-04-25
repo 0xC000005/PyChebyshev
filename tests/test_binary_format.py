@@ -511,3 +511,329 @@ class TestSplineSaveLoadIntegration:
         s.build(verbose=False)
         with pytest.raises(NotImplementedError, match="binary format requires flat"):
             s.save(tmp_path / "x.pcb", format="binary")
+
+
+class TestGoldenVectors:
+    """Lock down the exact byte layout against accidental drift."""
+
+    def test_approx_2d_xy_exact_bytes(self):
+        """f(x,y) = x+y on [-1,1]², n=[3,3] -> exactly 128 bytes."""
+        from pychebyshev import ChebyshevApproximation
+        cheb = ChebyshevApproximation(
+            function=lambda pt, _: pt[0] + pt[1],
+            num_dimensions=2,
+            domain=[(-1.0, 1.0), (-1.0, 1.0)],
+            n_nodes=[3, 3],
+        )
+        cheb.build(verbose=False)
+
+        buf = io.BytesIO()
+        _binary.write_approx(buf, cheb)
+        data = buf.getvalue()
+
+        # Header (12)
+        assert data[:4] == _binary.MAGIC
+        assert data[4] == 1   # major
+        assert data[5] == 0   # minor
+        assert data[6:8] == struct.pack("<H", _binary.CLASS_TAG_APPROX)
+        assert data[8:12] == b"\x00\x00\x00\x00"
+        # num_dimensions
+        assert struct.unpack_from("<I", data, 12)[0] == 2
+        # domain_lo (16 bytes), domain_hi (16 bytes)
+        lo = np.frombuffer(data[16:32], dtype="<f8")
+        hi = np.frombuffer(data[32:48], dtype="<f8")
+        assert np.array_equal(lo, [-1.0, -1.0])
+        assert np.array_equal(hi, [1.0, 1.0])
+        # n_nodes (8 bytes)
+        n = np.frombuffer(data[48:56], dtype="<u4")
+        assert np.array_equal(n, [3, 3])
+        # tensor_values (72 bytes)
+        vals = np.frombuffer(data[56:128], dtype="<f8").reshape(3, 3)
+        assert np.allclose(vals, cheb.tensor_values)
+        assert len(data) == 128
+
+    def test_approx_round_trip_from_exact_bytes(self):
+        """Bytes -> object -> bytes must be identical."""
+        from pychebyshev import ChebyshevApproximation
+        cheb = ChebyshevApproximation(
+            function=lambda pt, _: pt[0] + pt[1],
+            num_dimensions=2,
+            domain=[(-1.0, 1.0), (-1.0, 1.0)],
+            n_nodes=[3, 3],
+        )
+        cheb.build(verbose=False)
+        buf1 = io.BytesIO()
+        _binary.write_approx(buf1, cheb)
+        bytes1 = buf1.getvalue()
+
+        buf1.seek(0)
+        loaded = _binary.read_approx(buf1)
+
+        buf2 = io.BytesIO()
+        _binary.write_approx(buf2, loaded)
+        assert buf2.getvalue() == bytes1
+
+    def test_spline_1d_abs_exact_size(self):
+        """|x| on [-1,1] with knots=[[0.0]], n=[3] -> exactly 100 bytes."""
+        from pychebyshev import ChebyshevSpline
+        s = ChebyshevSpline(
+            function=lambda pt, _: abs(pt[0]),
+            num_dimensions=1,
+            domain=[(-1.0, 1.0)],
+            n_nodes=[3],
+            knots=[[0.0]],
+        )
+        s.build(verbose=False)
+        buf = io.BytesIO()
+        _binary.write_spline(buf, s)
+        data = buf.getvalue()
+        assert len(data) == 100
+        # Sanity-check the header section
+        assert data[:4] == _binary.MAGIC
+        assert struct.unpack_from("<H", data, 6)[0] == _binary.CLASS_TAG_SPLINE
+        # num_dim, domain_lo, domain_hi
+        assert struct.unpack_from("<I", data, 12)[0] == 1
+        assert np.frombuffer(data[16:24], dtype="<f8")[0] == -1.0
+        assert np.frombuffer(data[24:32], dtype="<f8")[0] == 1.0
+        # n_nodes, num_knots
+        assert struct.unpack_from("<I", data, 32)[0] == 3
+        assert struct.unpack_from("<I", data, 36)[0] == 1
+        # knots, num_pieces
+        assert np.frombuffer(data[40:48], dtype="<f8")[0] == 0.0
+        assert struct.unpack_from("<I", data, 48)[0] == 2
+
+    def test_spline_round_trip_from_exact_bytes(self):
+        from pychebyshev import ChebyshevSpline
+        s = ChebyshevSpline(
+            function=lambda pt, _: abs(pt[0]),
+            num_dimensions=1,
+            domain=[(-1.0, 1.0)],
+            n_nodes=[3],
+            knots=[[0.0]],
+        )
+        s.build(verbose=False)
+        buf1 = io.BytesIO()
+        _binary.write_spline(buf1, s)
+        bytes1 = buf1.getvalue()
+
+        buf1.seek(0)
+        loaded = _binary.read_spline(buf1)
+
+        buf2 = io.BytesIO()
+        _binary.write_spline(buf2, loaded)
+        assert buf2.getvalue() == bytes1
+
+
+class TestCorruption:
+    """Each test simulates a specific failure mode."""
+
+    @staticmethod
+    def _make_approx_bytes():
+        from pychebyshev import ChebyshevApproximation
+        cheb = ChebyshevApproximation(
+            function=lambda pt, _: pt[0] + pt[1],
+            num_dimensions=2,
+            domain=[(-1.0, 1.0), (-1.0, 1.0)],
+            n_nodes=[3, 3],
+        )
+        cheb.build(verbose=False)
+        buf = io.BytesIO()
+        _binary.write_approx(buf, cheb)
+        return buf.getvalue()
+
+    def test_truncated_header(self):
+        data = self._make_approx_bytes()
+        with pytest.raises(ValueError, match="unexpected EOF"):
+            _binary.read_approx(io.BytesIO(data[:8]))
+
+    def test_truncated_at_tensor_values(self):
+        data = self._make_approx_bytes()
+        # Cut off in the middle of tensor_values
+        with pytest.raises(ValueError, match="unexpected EOF"):
+            _binary.read_approx(io.BytesIO(data[:64]))
+
+    def test_wrong_magic(self):
+        data = b"WRNG" + self._make_approx_bytes()[4:]
+        with pytest.raises(ValueError, match="not a PyChebyshev binary file"):
+            _binary.read_approx(io.BytesIO(data))
+
+    def test_future_major_version(self):
+        data = self._make_approx_bytes()
+        forged = data[:4] + bytes([99]) + data[5:]
+        with pytest.raises(ValueError, match="unsupported .pcb major version 99"):
+            _binary.read_approx(io.BytesIO(forged))
+
+    def test_nonzero_reserved(self):
+        data = self._make_approx_bytes()
+        forged = data[:8] + b"\xff\x00\x00\x00" + data[12:]
+        with pytest.raises(ValueError, match="reserved header bytes nonzero"):
+            _binary.read_approx(io.BytesIO(forged))
+
+    def test_class_tag_mismatch_approx_to_spline(self):
+        data = self._make_approx_bytes()
+        # Flip class tag from APPROX (1) to SPLINE (2)
+        forged = data[:6] + struct.pack("<H", _binary.CLASS_TAG_SPLINE) + data[8:]
+        with pytest.raises(ValueError, match="expected"):
+            _binary.read_approx(io.BytesIO(forged))
+
+    def test_inverted_domain(self):
+        # Build a fresh forged file with lo > hi
+        buf = io.BytesIO()
+        _binary._write_header(buf, _binary.CLASS_TAG_APPROX)
+        _binary._write_u32(buf, 1)
+        _binary._write_f64_array(buf, np.array([2.0]))   # lo
+        _binary._write_f64_array(buf, np.array([1.0]))   # hi (inverted)
+        _binary._write_u32_array(buf, np.array([3], dtype=np.uint32))
+        _binary._write_f64_array(buf, np.zeros(3))
+        buf.seek(0)
+        with pytest.raises(ValueError, match="must be < hi"):
+            _binary.read_approx(buf)
+
+    def test_n_nodes_below_two(self):
+        buf = io.BytesIO()
+        _binary._write_header(buf, _binary.CLASS_TAG_APPROX)
+        _binary._write_u32(buf, 1)
+        _binary._write_f64_array(buf, np.array([0.0]))
+        _binary._write_f64_array(buf, np.array([1.0]))
+        _binary._write_u32_array(buf, np.array([1], dtype=np.uint32))
+        _binary._write_f64_array(buf, np.zeros(1))
+        buf.seek(0)
+        with pytest.raises(ValueError, match="n_nodes\\[0\\] must be >= 2"):
+            _binary.read_approx(buf)
+
+    def test_unknown_format_kwarg_raises(self, tmp_path):
+        from pychebyshev import ChebyshevApproximation
+        cheb = ChebyshevApproximation(
+            function=lambda pt, _: pt[0],
+            num_dimensions=1,
+            domain=[(0.0, 1.0)],
+            n_nodes=[3],
+        )
+        cheb.build(verbose=False)
+        with pytest.raises(ValueError, match="format must be"):
+            cheb.save(tmp_path / "x.pcb", format="zip")
+
+    def test_unbuilt_save_binary_raises(self, tmp_path):
+        from pychebyshev import ChebyshevApproximation
+        cheb = ChebyshevApproximation(
+            function=lambda pt, _: pt[0],
+            num_dimensions=1,
+            domain=[(0.0, 1.0)],
+            n_nodes=[3],
+        )
+        with pytest.raises(RuntimeError, match="unbuilt"):
+            cheb.save(tmp_path / "x.pcb", format="binary")
+
+
+class TestCrossFeature:
+    """Binary format must work with from_values, algebra, extrude, slice."""
+
+    def test_from_values_built_round_trips(self, tmp_path):
+        from pychebyshev import ChebyshevApproximation
+        info = ChebyshevApproximation.nodes(
+            num_dimensions=2,
+            domain=[(0.0, 1.0), (0.0, 1.0)],
+            n_nodes=[5, 5],
+        )
+        grid = info["full_grid"]
+        vals = (grid[:, 0] * grid[:, 1]).reshape(info["shape"])
+        cheb = ChebyshevApproximation.from_values(
+            vals, num_dimensions=2,
+            domain=[(0.0, 1.0), (0.0, 1.0)],
+            n_nodes=[5, 5],
+        )
+        path = tmp_path / "fv.pcb"
+        cheb.save(path, format="binary")
+        loaded = ChebyshevApproximation.load(path)
+        assert loaded.function is None
+        for pt in [[0.3, 0.4], [0.7, 0.2]]:
+            assert abs(cheb.eval(pt, [0, 0]) - loaded.eval(pt, [0, 0])) < 1e-12
+
+    def test_algebra_derived_round_trips(self, tmp_path):
+        from pychebyshev import ChebyshevApproximation
+        f = ChebyshevApproximation(
+            function=lambda pt, _: pt[0],
+            num_dimensions=1, domain=[(-1.0, 1.0)], n_nodes=[5],
+        )
+        f.build(verbose=False)
+        g = ChebyshevApproximation(
+            function=lambda pt, _: pt[0]**2,
+            num_dimensions=1, domain=[(-1.0, 1.0)], n_nodes=[5],
+        )
+        g.build(verbose=False)
+        h = f + g  # algebra-derived; function is None
+        path = tmp_path / "h.pcb"
+        h.save(path, format="binary")
+        loaded = ChebyshevApproximation.load(path)
+        for x in [-0.5, 0.0, 0.4]:
+            assert abs(h.eval([x], [0]) - loaded.eval([x], [0])) < 1e-12
+
+    def test_extruded_round_trips(self, tmp_path):
+        from pychebyshev import ChebyshevApproximation
+        f = ChebyshevApproximation(
+            function=lambda pt, _: pt[0],
+            num_dimensions=1, domain=[(-1.0, 1.0)], n_nodes=[5],
+        )
+        f.build(verbose=False)
+        f2 = f.extrude((1, (-1.0, 1.0), 4))
+        path = tmp_path / "extr.pcb"
+        f2.save(path, format="binary")
+        loaded = ChebyshevApproximation.load(path)
+        assert loaded.num_dimensions == 2
+        assert abs(f2.eval([0.3, 0.5], [0, 0]) - loaded.eval([0.3, 0.5], [0, 0])) < 1e-12
+
+    def test_sliced_round_trips(self, tmp_path):
+        from pychebyshev import ChebyshevApproximation
+        f = ChebyshevApproximation(
+            function=lambda pt, _: pt[0] + 2 * pt[1],
+            num_dimensions=2, domain=[(-1.0, 1.0), (-1.0, 1.0)], n_nodes=[4, 4],
+        )
+        f.build(verbose=False)
+        f1 = f.slice((1, 0.0))
+        path = tmp_path / "sl.pcb"
+        f1.save(path, format="binary")
+        loaded = ChebyshevApproximation.load(path)
+        assert loaded.num_dimensions == 1
+        assert abs(f1.eval([0.5], [0]) - loaded.eval([0.5], [0])) < 1e-12
+
+    def test_spline_error_estimate_recomputed_after_load(self, tmp_path):
+        from pychebyshev import ChebyshevSpline
+        s = ChebyshevSpline(
+            function=lambda pt, _: abs(pt[0]),
+            num_dimensions=1,
+            domain=[(-1.0, 1.0)],
+            n_nodes=[7],
+            knots=[[0.0]],
+        )
+        s.build(verbose=False)
+        original_err = s.error_estimate()
+        path = tmp_path / "s.pcb"
+        s.save(path, format="binary")
+        loaded = ChebyshevSpline.load(path)
+        assert abs(loaded.error_estimate() - original_err) < 1e-14
+
+    def test_5d_black_scholes_round_trips(self, cheb_bs_5d):
+        """Use existing fixture — large dim, real numerical content."""
+        import tempfile, os
+        with tempfile.TemporaryDirectory() as td:
+            path = os.path.join(td, "bs.pcb")
+            cheb_bs_5d.save(path, format="binary")
+            from pychebyshev import ChebyshevApproximation
+            loaded = ChebyshevApproximation.load(path)
+            assert np.array_equal(loaded.tensor_values, cheb_bs_5d.tensor_values)
+            pt = [100.0, 0.05, 1.0, 0.2, 100.0]
+            assert abs(cheb_bs_5d.eval(pt, [0]*5) - loaded.eval(pt, [0]*5)) < 1e-10
+
+    def test_n_nodes_minimum_round_trips(self, tmp_path):
+        from pychebyshev import ChebyshevApproximation
+        cheb = ChebyshevApproximation(
+            function=lambda pt, _: pt[0] * pt[1],
+            num_dimensions=2,
+            domain=[(0.0, 1.0), (0.0, 1.0)],
+            n_nodes=[2, 2],
+        )
+        cheb.build(verbose=False)
+        path = tmp_path / "tiny.pcb"
+        cheb.save(path, format="binary")
+        loaded = ChebyshevApproximation.load(path)
+        assert np.array_equal(loaded.tensor_values, cheb.tensor_values)
