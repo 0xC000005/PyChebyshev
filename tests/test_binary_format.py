@@ -264,3 +264,111 @@ class TestApproxWriteRead:
         buf.seek(0)
         with pytest.raises(ValueError, match="n_nodes\\[0\\] must be >= 2"):
             _binary.read_approx(buf)
+
+
+class TestSplineWriteRead:
+    @staticmethod
+    def _make_simple_spline():
+        from pychebyshev import ChebyshevSpline
+        s = ChebyshevSpline(
+            function=lambda pt, _: abs(pt[0]),
+            num_dimensions=1,
+            domain=[(-1.0, 1.0)],
+            n_nodes=[3],
+            knots=[[0.0]],
+        )
+        s.build(verbose=False)
+        return s
+
+    def test_write_then_read_round_trip_in_memory(self):
+        s = self._make_simple_spline()
+        buf = io.BytesIO()
+        _binary.write_spline(buf, s)
+        buf.seek(0)
+        loaded = _binary.read_spline(buf)
+        assert loaded.num_dimensions == s.num_dimensions
+        assert [list(b) for b in loaded.domain] == [list(b) for b in s.domain]
+        assert list(loaded.n_nodes) == list(s.n_nodes)
+        assert [list(k) for k in loaded.knots] == [list(k) for k in s.knots]
+
+    def test_loaded_pieces_evaluate_correctly(self):
+        s = self._make_simple_spline()
+        buf = io.BytesIO()
+        _binary.write_spline(buf, s)
+        buf.seek(0)
+        loaded = _binary.read_spline(buf)
+        for x in [-0.7, -0.3, 0.0, 0.4, 0.8]:
+            expected = s.eval([x], [0])
+            got = loaded.eval([x], [0])
+            assert abs(expected - got) < 1e-12
+
+    def test_byte_size_matches_spec(self):
+        s = self._make_simple_spline()
+        buf = io.BytesIO()
+        _binary.write_spline(buf, s)
+        # 12 header + 4 num_dim + 8 lo + 8 hi + 4 n_nodes + 4 num_knots
+        # + 8 knots + 4 num_pieces + 2*24 piece values = 100
+        assert len(buf.getvalue()) == 100
+
+    def test_loaded_function_attr_is_none(self):
+        s = self._make_simple_spline()
+        buf = io.BytesIO()
+        _binary.write_spline(buf, s)
+        buf.seek(0)
+        loaded = _binary.read_spline(buf)
+        assert loaded.function is None
+
+    def test_2d_spline_round_trip(self):
+        from pychebyshev import ChebyshevSpline
+        s = ChebyshevSpline(
+            function=lambda pt, _: abs(pt[0]) + abs(pt[1]),
+            num_dimensions=2,
+            domain=[(-1.0, 1.0), (-1.0, 1.0)],
+            n_nodes=[5, 5],
+            knots=[[0.0], [0.0]],
+        )
+        s.build(verbose=False)
+        buf = io.BytesIO()
+        _binary.write_spline(buf, s)
+        buf.seek(0)
+        loaded = _binary.read_spline(buf)
+        for pt in [[-0.5, 0.5], [0.3, -0.3], [0.0, 0.0]]:
+            assert abs(s.eval(pt, [0, 0]) - loaded.eval(pt, [0, 0])) < 1e-12
+
+    def test_write_spline_rejects_nested_n_nodes(self):
+        from pychebyshev import ChebyshevSpline
+        s = ChebyshevSpline(
+            function=lambda pt, _: abs(pt[0]),
+            num_dimensions=1,
+            domain=[(-1.0, 1.0)],
+            n_nodes=[[3, 5]],   # nested per-piece
+            knots=[[0.0]],
+        )
+        s.build(verbose=False)
+        buf = io.BytesIO()
+        with pytest.raises(NotImplementedError, match="binary format requires flat n_nodes"):
+            _binary.write_spline(buf, s)
+
+    def test_read_spline_rejects_approx_class_tag(self):
+        buf = io.BytesIO()
+        _binary._write_header(buf, _binary.CLASS_TAG_APPROX)
+        buf.write(b"\x00" * 64)
+        buf.seek(0)
+        with pytest.raises(ValueError, match="expected"):
+            _binary.read_spline(buf)
+
+    def test_read_spline_rejects_unsorted_knots(self):
+        buf = io.BytesIO()
+        _binary._write_header(buf, _binary.CLASS_TAG_SPLINE)
+        _binary._write_u32(buf, 1)                                       # d
+        _binary._write_f64_array(buf, np.array([-1.0]))                  # lo
+        _binary._write_f64_array(buf, np.array([1.0]))                   # hi
+        _binary._write_u32_array(buf, np.array([3], dtype=np.uint32))    # n_nodes
+        _binary._write_u32_array(buf, np.array([2], dtype=np.uint32))    # num_knots
+        _binary._write_f64_array(buf, np.array([0.5, 0.2]))              # knots — unsorted
+        _binary._write_u32(buf, 3)                                       # num_pieces
+        for _ in range(3):
+            _binary._write_f64_array(buf, np.zeros(3))
+        buf.seek(0)
+        with pytest.raises(ValueError, match="not strictly ascending"):
+            _binary.read_spline(buf)

@@ -230,3 +230,139 @@ def read_approx(f: BinaryIO):
         domain=domain,
         n_nodes=n_nodes,
     )
+
+
+# --- ChebyshevSpline -----------------------------------------------------
+
+
+def _spline_uses_nested_n_nodes(spline) -> bool:
+    """True iff any per-dim entry in ``spline.n_nodes`` is itself a list."""
+    return any(isinstance(n, (list, tuple)) for n in spline.n_nodes)
+
+
+def write_spline(f: BinaryIO, spline) -> None:
+    """Write a built ``ChebyshevSpline`` to a binary stream.
+
+    Raises RuntimeError if the spline has not been built.
+    Raises NotImplementedError if the spline uses nested per-piece n_nodes
+    (the binary format requires shared n_nodes across pieces).
+    """
+    if any(p is None for p in spline._pieces):
+        raise RuntimeError("Cannot save an unbuilt ChebyshevSpline")
+
+    if _spline_uses_nested_n_nodes(spline):
+        raise NotImplementedError(
+            "binary format requires flat n_nodes (shared across pieces); "
+            "use format='pickle' for nested-n_nodes splines"
+        )
+
+    _write_header(f, CLASS_TAG_SPLINE)
+
+    d = int(spline.num_dimensions)
+    _write_u32(f, d)
+
+    domain_lo = np.array([spline.domain[i][0] for i in range(d)], dtype=np.float64)
+    domain_hi = np.array([spline.domain[i][1] for i in range(d)], dtype=np.float64)
+    _write_f64_array(f, domain_lo)
+    _write_f64_array(f, domain_hi)
+
+    n_nodes = np.array(spline.n_nodes, dtype=np.uint32)
+    _write_u32_array(f, n_nodes)
+
+    num_knots = np.array(
+        [len(spline.knots[i]) for i in range(d)], dtype=np.uint32
+    )
+    _write_u32_array(f, num_knots)
+
+    knots_concat_parts = []
+    for i in range(d):
+        if len(spline.knots[i]) > 0:
+            knots_concat_parts.append(
+                np.asarray(spline.knots[i], dtype=np.float64)
+            )
+    if knots_concat_parts:
+        _write_f64_array(f, np.concatenate(knots_concat_parts))
+
+    num_pieces = len(spline._pieces)
+    _write_u32(f, num_pieces)
+
+    for piece in spline._pieces:
+        flat = np.ascontiguousarray(
+            piece.tensor_values, dtype=np.float64
+        ).ravel(order="C")
+        _write_f64_array(f, flat)
+
+
+def read_spline(f: BinaryIO):
+    """Read a ``ChebyshevSpline`` from a binary stream.
+
+    Reconstructs via ``ChebyshevSpline.from_values``.
+    """
+    from pychebyshev import ChebyshevSpline
+
+    tag = _read_header(f)
+    if tag != CLASS_TAG_SPLINE:
+        raise ValueError(
+            f"file contains class_tag {tag}, expected "
+            f"{CLASS_TAG_SPLINE} (ChebyshevSpline)"
+        )
+
+    d = _read_u32(f)
+    if d < 1:
+        raise ValueError(f"num_dimensions must be >= 1, got {d}")
+
+    domain_lo = _read_f64_array(f, count=d)
+    domain_hi = _read_f64_array(f, count=d)
+    domain = [[float(domain_lo[i]), float(domain_hi[i])] for i in range(d)]
+    for i, (lo, hi) in enumerate(domain):
+        if lo >= hi:
+            raise ValueError(f"domain[{i}]: lo ({lo}) must be < hi ({hi})")
+
+    n_nodes_arr = _read_u32_array(f, count=d)
+    n_nodes = [int(n) for n in n_nodes_arr]
+    for i, n in enumerate(n_nodes):
+        if n < 2:
+            raise ValueError(f"n_nodes[{i}] must be >= 2, got {n}")
+
+    num_knots_arr = _read_u32_array(f, count=d)
+    num_knots = [int(k) for k in num_knots_arr]
+    total_knot_floats = sum(num_knots)
+    if total_knot_floats > 0:
+        flat_knots = _read_f64_array(f, count=total_knot_floats)
+    else:
+        flat_knots = np.array([], dtype=np.float64)
+    knots: list[list[float]] = []
+    offset = 0
+    for i in range(d):
+        k = num_knots[i]
+        knots_i = [float(x) for x in flat_knots[offset : offset + k]]
+        offset += k
+        if k > 1 and any(
+            knots_i[j] >= knots_i[j + 1] for j in range(k - 1)
+        ):
+            raise ValueError(f"knots in dim {i} not strictly ascending")
+        knots.append(knots_i)
+
+    num_pieces = _read_u32(f)
+    expected_pieces = 1
+    for k in num_knots:
+        expected_pieces *= k + 1
+    if num_pieces != expected_pieces:
+        raise ValueError(
+            f"num_pieces={num_pieces} does not match prod(num_knots+1)"
+            f"={expected_pieces}"
+        )
+
+    per_piece_floats = int(np.prod(n_nodes))
+    piece_values = []
+    for _ in range(num_pieces):
+        flat = _read_f64_array(f, count=per_piece_floats)
+        piece_values.append(flat.reshape(tuple(n_nodes), order="C"))
+
+    return ChebyshevSpline.from_values(
+        piece_values=piece_values,
+        num_dimensions=d,
+        domain=domain,
+        n_nodes=n_nodes,
+        knots=knots,
+    )
