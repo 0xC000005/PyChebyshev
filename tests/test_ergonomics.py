@@ -8,6 +8,7 @@ from __future__ import annotations
 
 import math
 
+import numpy as np
 import pytest
 
 from pychebyshev import (
@@ -110,3 +111,84 @@ class TestDescriptor:
         obj.set_descriptor("first")
         obj.set_descriptor("second")
         assert obj.get_descriptor() == "second"
+
+
+class TestIsConstructionFinished:
+    """is_construction_finished() across classes and construction paths."""
+
+    def test_false_after_bare_init_approx(self):
+        cheb = ChebyshevApproximation(_f3d, 3, [(-1, 1)] * 3, [9, 9, 9])
+        assert cheb.is_construction_finished() is False
+
+    def test_true_after_build_all_classes(self):
+        for builder in (_build_approx_3d, _build_spline_2d,
+                        _build_slider_3d, _build_tt_3d):
+            obj = builder()
+            assert obj.is_construction_finished() is True
+
+    def test_true_after_from_values_approx(self):
+        nodes = ChebyshevApproximation.nodes(3, [(-1, 1)] * 3, [9, 9, 9])
+        nodes_per_dim = nodes["nodes_per_dim"]
+        values = np.zeros((9, 9, 9))
+        for idx in np.ndindex(9, 9, 9):
+            point = [nodes_per_dim[d][idx[d]] for d in range(3)]
+            values[idx] = _f3d(point, None)
+        cheb2 = ChebyshevApproximation.from_values(
+            values, 3, [(-1, 1)] * 3, [9, 9, 9]
+        )
+        assert cheb2.is_construction_finished() is True
+
+    def test_true_after_algebra(self):
+        a = _build_approx_3d()
+        b = _build_approx_3d()
+        c = a + b
+        assert c.is_construction_finished() is True
+
+
+class TestGetConstructorType:
+    """get_constructor_type() returns the class name string."""
+
+    def test_approx(self):
+        assert _build_approx_3d().get_constructor_type() == "ChebyshevApproximation"
+
+    def test_spline(self):
+        assert _build_spline_2d().get_constructor_type() == "ChebyshevSpline"
+
+    def test_slider(self):
+        assert _build_slider_3d().get_constructor_type() == "ChebyshevSlider"
+
+    def test_tt(self):
+        assert _build_tt_3d().get_constructor_type() == "ChebyshevTT"
+
+
+class TestGetUsedNs:
+    """get_used_ns() returns the resolved per-dim node count."""
+
+    def test_approx_flat(self):
+        cheb = _build_approx_3d()
+        assert cheb.get_used_ns() == [9, 9, 9]
+
+    def test_approx_auto_n_resolved_post_build(self):
+        cheb = ChebyshevApproximation(
+            _f3d, 3, [(-1, 1)] * 3, error_threshold=1e-6, max_n=64,
+        )
+        assert any(n is None for n in cheb.get_used_ns())  # pre-build
+        cheb.build(verbose=False)
+        used = cheb.get_used_ns()
+        assert all(isinstance(n, int) for n in used)
+
+    def test_spline_preserves_nested(self):
+        # Use nested n_nodes (one piece per dim) to exercise the nested path.
+        spl = ChebyshevSpline(_f2d, 2, [(-1, 1), (-1, 1)], [[7], [7]], [[], []])
+        spl.build(verbose=False)
+        used = spl.get_used_ns()
+        assert used[0] == [7]  # nested for dim 0 (one piece)
+        assert used[1] == [7]  # also nested
+
+    def test_slider_flat(self):
+        sld = _build_slider_3d()
+        assert sld.get_used_ns() == [7, 7, 7]
+
+    def test_tt_flat(self):
+        tt = _build_tt_3d()
+        assert tt.get_used_ns() == [7, 7, 7]

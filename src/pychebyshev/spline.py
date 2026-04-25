@@ -604,6 +604,21 @@ class ChebyshevSpline:
         if not hasattr(self, "_n_nodes_nested"):
             self._n_nodes_nested = _is_nested_n_nodes(self.n_nodes)
 
+    def is_construction_finished(self) -> bool:
+        """Return True iff this spline is built and usable."""
+        return self._built
+
+    def get_constructor_type(self) -> str:
+        """Return the class name."""
+        return type(self).__name__
+
+    def get_used_ns(self) -> list:
+        """Return per-dim n_nodes preserving nested vs flat shape."""
+        return [
+            list(piece) if isinstance(piece, list) else piece
+            for piece in self.n_nodes
+        ]
+
     def set_descriptor(self, descriptor: str) -> None:
         """Set a free-form text label on this spline.
 

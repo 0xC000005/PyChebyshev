@@ -836,6 +836,18 @@ class ChebyshevApproximation:
             results.append(float(current))
         return results
 
+    def is_construction_finished(self) -> bool:
+        """Return True iff this interpolant is built and usable."""
+        return self.tensor_values is not None
+
+    def get_constructor_type(self) -> str:
+        """Return the class name (matches MoCaX getConstructorType convention)."""
+        return type(self).__name__
+
+    def get_used_ns(self) -> list:
+        """Return the resolved per-dim node count after build (or as constructed)."""
+        return list(self.n_nodes)
+
     def set_descriptor(self, descriptor: str) -> None:
         """Set a free-form text label on this interpolant.
 

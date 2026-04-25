@@ -1796,6 +1796,18 @@ class ChebyshevTT:
         if not hasattr(self, "_cached_error_estimate"):
             self._cached_error_estimate = None
 
+    def is_construction_finished(self) -> bool:
+        """Return True iff this TT interpolant is built and usable."""
+        return self._built
+
+    def get_constructor_type(self) -> str:
+        """Return the class name."""
+        return type(self).__name__
+
+    def get_used_ns(self) -> list:
+        """Return the per-dim node count list."""
+        return list(self.n_nodes)
+
     def set_descriptor(self, descriptor: str) -> None:
         """Set a free-form text label on this TT interpolant.
 
