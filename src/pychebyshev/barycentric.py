@@ -324,6 +324,7 @@ class ChebyshevApproximation:
                     error_threshold=error_threshold,
                     max_n=max_n,
                     additional_data=additional_data,
+                    defer_build=defer_build,
                 )
         return super().__new__(cls)
 
