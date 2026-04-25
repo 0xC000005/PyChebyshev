@@ -160,3 +160,107 @@ class TestDetectFormat:
         path = tmp_path / "junk.dat"
         path.write_bytes(b"GIF89a..." + b"\x00" * 100)
         assert _binary.detect_format(path) == "pickle"
+
+
+class TestApproxWriteRead:
+    @staticmethod
+    def _make_simple_approx():
+        from pychebyshev import ChebyshevApproximation
+        cheb = ChebyshevApproximation(
+            function=lambda pt, _: pt[0] + pt[1],
+            num_dimensions=2,
+            domain=[(-1.0, 1.0), (-1.0, 1.0)],
+            n_nodes=[3, 3],
+        )
+        cheb.build(verbose=False)
+        return cheb
+
+    def test_write_then_read_round_trip_in_memory(self):
+        cheb = self._make_simple_approx()
+        buf = io.BytesIO()
+        _binary.write_approx(buf, cheb)
+        buf.seek(0)
+        loaded = _binary.read_approx(buf)
+        assert loaded.num_dimensions == cheb.num_dimensions
+        assert [list(b) for b in loaded.domain] == [list(b) for b in cheb.domain]
+        assert list(loaded.n_nodes) == list(cheb.n_nodes)
+        assert np.array_equal(loaded.tensor_values, cheb.tensor_values)
+
+    def test_loaded_function_attr_is_none(self):
+        cheb = self._make_simple_approx()
+        buf = io.BytesIO()
+        _binary.write_approx(buf, cheb)
+        buf.seek(0)
+        loaded = _binary.read_approx(buf)
+        assert loaded.function is None
+
+    def test_loaded_evaluates_to_same_values(self):
+        cheb = self._make_simple_approx()
+        buf = io.BytesIO()
+        _binary.write_approx(buf, cheb)
+        buf.seek(0)
+        loaded = _binary.read_approx(buf)
+        for x in [-0.5, 0.0, 0.3]:
+            for y in [-0.7, 0.1, 0.9]:
+                expected = cheb.eval([x, y], [0, 0])
+                got = loaded.eval([x, y], [0, 0])
+                assert abs(expected - got) < 1e-12
+
+    def test_loaded_supports_derivatives(self):
+        cheb = self._make_simple_approx()
+        buf = io.BytesIO()
+        _binary.write_approx(buf, cheb)
+        buf.seek(0)
+        loaded = _binary.read_approx(buf)
+        # df/dx of x+y is 1
+        assert abs(loaded.eval([0.0, 0.0], [1, 0]) - 1.0) < 1e-12
+        # df/dy of x+y is 1
+        assert abs(loaded.eval([0.0, 0.0], [0, 1]) - 1.0) < 1e-12
+
+    def test_byte_size_matches_spec(self):
+        cheb = self._make_simple_approx()
+        buf = io.BytesIO()
+        _binary.write_approx(buf, cheb)
+        # 12 header + 4 num_dim + 16 domain_lo + 16 domain_hi + 8 n_nodes + 72 vals = 128
+        assert len(buf.getvalue()) == 128
+
+    def test_read_approx_rejects_spline_class_tag(self):
+        # Forge a file with a spline header but pass to read_approx
+        buf = io.BytesIO()
+        _binary._write_header(buf, _binary.CLASS_TAG_SPLINE)
+        buf.write(b"\x00" * 64)  # garbage body
+        buf.seek(0)
+        with pytest.raises(ValueError, match="expected"):
+            _binary.read_approx(buf)
+
+    def test_read_approx_rejects_zero_dimensions(self):
+        buf = io.BytesIO()
+        _binary._write_header(buf, _binary.CLASS_TAG_APPROX)
+        _binary._write_u32(buf, 0)  # num_dimensions = 0
+        buf.seek(0)
+        with pytest.raises(ValueError, match="num_dimensions must be"):
+            _binary.read_approx(buf)
+
+    def test_read_approx_rejects_inverted_domain(self):
+        buf = io.BytesIO()
+        _binary._write_header(buf, _binary.CLASS_TAG_APPROX)
+        _binary._write_u32(buf, 1)
+        _binary._write_f64_array(buf, np.array([1.0]))   # lo
+        _binary._write_f64_array(buf, np.array([0.0]))   # hi (inverted)
+        _binary._write_u32_array(buf, np.array([3], dtype=np.uint32))
+        _binary._write_f64_array(buf, np.zeros(3))
+        buf.seek(0)
+        with pytest.raises(ValueError, match="lo .* must be"):
+            _binary.read_approx(buf)
+
+    def test_read_approx_rejects_n_nodes_below_two(self):
+        buf = io.BytesIO()
+        _binary._write_header(buf, _binary.CLASS_TAG_APPROX)
+        _binary._write_u32(buf, 1)
+        _binary._write_f64_array(buf, np.array([0.0]))
+        _binary._write_f64_array(buf, np.array([1.0]))
+        _binary._write_u32_array(buf, np.array([1], dtype=np.uint32))  # < 2
+        _binary._write_f64_array(buf, np.zeros(1))
+        buf.seek(0)
+        with pytest.raises(ValueError, match="n_nodes\\[0\\] must be >= 2"):
+            _binary.read_approx(buf)

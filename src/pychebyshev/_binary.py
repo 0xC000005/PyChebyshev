@@ -155,3 +155,78 @@ def detect_format(path) -> str:
     if head == MAGIC:
         return "binary"
     return "pickle"
+
+
+# --- ChebyshevApproximation ---------------------------------------------
+
+
+def write_approx(f: BinaryIO, cheb) -> None:
+    """Write a built ``ChebyshevApproximation`` to a binary stream.
+
+    Raises RuntimeError if the interpolant has not been built.
+    """
+    if cheb.tensor_values is None:
+        raise RuntimeError("Cannot save an unbuilt ChebyshevApproximation")
+
+    _write_header(f, CLASS_TAG_APPROX)
+
+    d = int(cheb.num_dimensions)
+    _write_u32(f, d)
+
+    domain_lo = np.array([cheb.domain[i][0] for i in range(d)], dtype=np.float64)
+    domain_hi = np.array([cheb.domain[i][1] for i in range(d)], dtype=np.float64)
+    _write_f64_array(f, domain_lo)
+    _write_f64_array(f, domain_hi)
+
+    n_nodes = np.array(cheb.n_nodes, dtype=np.uint32)
+    _write_u32_array(f, n_nodes)
+
+    tensor_values = np.ascontiguousarray(cheb.tensor_values, dtype=np.float64)
+    _write_f64_array(f, tensor_values.ravel(order="C"))
+
+
+def read_approx(f: BinaryIO):
+    """Read a ``ChebyshevApproximation`` from a binary stream.
+
+    Reconstructs the object via ``ChebyshevApproximation.from_values`` so
+    weights, differentiation matrices, and the eval cache are recomputed
+    consistently with every other code path.
+    """
+    from pychebyshev import ChebyshevApproximation
+
+    tag = _read_header(f)
+    if tag != CLASS_TAG_APPROX:
+        raise ValueError(
+            f"file contains class_tag {tag}, expected "
+            f"{CLASS_TAG_APPROX} (ChebyshevApproximation)"
+        )
+
+    d = _read_u32(f)
+    if d < 1:
+        raise ValueError(f"num_dimensions must be >= 1, got {d}")
+
+    domain_lo = _read_f64_array(f, count=d)
+    domain_hi = _read_f64_array(f, count=d)
+    domain = [[float(domain_lo[i]), float(domain_hi[i])] for i in range(d)]
+    for i, (lo, hi) in enumerate(domain):
+        if lo >= hi:
+            raise ValueError(
+                f"domain[{i}]: lo ({lo}) must be < hi ({hi})"
+            )
+
+    n_nodes_arr = _read_u32_array(f, count=d)
+    n_nodes = [int(n) for n in n_nodes_arr]
+    for i, n in enumerate(n_nodes):
+        if n < 2:
+            raise ValueError(f"n_nodes[{i}] must be >= 2, got {n}")
+
+    total = int(np.prod(n_nodes))
+    flat_vals = _read_f64_array(f, count=total)
+    tensor_values = flat_vals.reshape(tuple(n_nodes), order="C")
+
+    return ChebyshevApproximation.from_values(
+        tensor_values=tensor_values,
+        num_dimensions=d,
+        domain=domain,
+        n_nodes=n_nodes,
+    )
