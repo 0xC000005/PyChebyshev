@@ -995,7 +995,11 @@ class ChebyshevApproximation:
                 shape = tuple(self.n_nodes[i] for i in range(d))
                 self._eval_cache[d] = np.zeros(shape)
 
-    def save(self, path: str | os.PathLike) -> None:
+    def save(
+        self,
+        path: str | os.PathLike,
+        format: str = "pickle",
+    ) -> None:
         """Save the built interpolant to a file.
 
         The original function is **not** saved — only the numerical data
@@ -1006,49 +1010,74 @@ class ChebyshevApproximation:
         ----------
         path : str or path-like
             Destination file path.
+        format : {'pickle', 'binary'}, optional
+            ``'pickle'`` (default) writes the standard Python pickle
+            stream — bit-identical to previous versions. ``'binary'``
+            writes the portable ``.pcb`` format documented at
+            ``docs/user-guide/binary-format.md``, which can be read by
+            consumers in C, Rust, Julia, and other languages.
 
         Raises
         ------
         RuntimeError
             If the interpolant has not been built yet.
+        ValueError
+            If ``format`` is not ``'pickle'`` or ``'binary'``.
+
+        Notes
+        -----
+        Pickle stays the default and is unchanged. Binary support was
+        added in v0.14 and is opt-in.
         """
         if self.tensor_values is None:
             raise RuntimeError(
-                "Cannot save an unbuilt interpolant. Call build() first."
+                "Cannot save an unbuilt ChebyshevApproximation. Call build() first."
             )
-        with open(os.fspath(path), "wb") as f:
-            pickle.dump(self, f, protocol=pickle.HIGHEST_PROTOCOL)
+
+        if format == "pickle":
+            with open(path, "wb") as f:
+                pickle.dump(self, f, protocol=pickle.HIGHEST_PROTOCOL)
+        elif format == "binary":
+            from pychebyshev import _binary
+            with open(path, "wb") as f:
+                _binary.write_approx(f, self)
+        else:
+            raise ValueError(
+                f"format must be 'pickle' or 'binary', got {format!r}"
+            )
 
     @classmethod
     def load(cls, path: str | os.PathLike) -> "ChebyshevApproximation":
-        """Load a previously saved interpolant from a file.
+        """Load a previously-saved interpolant from a file.
 
-        The loaded object can evaluate immediately; no rebuild is needed.
-        The ``function`` attribute will be ``None``. Assign a new function
-        before calling ``build()`` again if a rebuild is desired.
+        The file format is auto-detected by inspecting the first 4 bytes:
+        files beginning with the magic ``b"PCB\\x00"`` are read as the
+        portable v0.14 binary format; everything else is read as a
+        Python pickle stream.
 
         Parameters
         ----------
         path : str or path-like
-            Path to the saved file.
+            Source file path.
 
         Returns
         -------
         ChebyshevApproximation
-            The restored interpolant.
+            The loaded interpolant. ``function`` is always ``None`` —
+            re-bind it manually if you need to call ``build()`` again.
 
-        Warns
+        Notes
         -----
-        UserWarning
-            If the file was saved with a different PyChebyshev version.
-
-        .. warning::
-
-            This method uses :mod:`pickle` internally. Pickle can execute
-            arbitrary code during deserialization. **Only load files you
-            trust.**
+        Pickle deserialization runs arbitrary code from the file. Only
+        load files you trust. The binary format is safe to load from
+        untrusted sources but does not preserve the function object.
         """
-        with open(os.fspath(path), "rb") as f:
+        from pychebyshev import _binary
+        fmt = _binary.detect_format(path)
+        if fmt == "binary":
+            with open(path, "rb") as f:
+                return _binary.read_approx(f)
+        with open(path, "rb") as f:
             obj = pickle.load(f)  # noqa: S301
         if not isinstance(obj, cls):
             raise TypeError(

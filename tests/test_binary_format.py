@@ -372,3 +372,79 @@ class TestSplineWriteRead:
         buf.seek(0)
         with pytest.raises(ValueError, match="not strictly ascending"):
             _binary.read_spline(buf)
+
+
+class TestApproxSaveLoadIntegration:
+    @staticmethod
+    def _make():
+        from pychebyshev import ChebyshevApproximation
+        cheb = ChebyshevApproximation(
+            function=lambda pt, _: pt[0] + pt[1],
+            num_dimensions=2,
+            domain=[(-1.0, 1.0), (-1.0, 1.0)],
+            n_nodes=[3, 3],
+        )
+        cheb.build(verbose=False)
+        return cheb
+
+    def test_save_default_is_pickle(self, tmp_path):
+        cheb = self._make()
+        path = tmp_path / "default.pkl"
+        cheb.save(path)
+        # First byte of pickle protocol 2+ stream is 0x80
+        assert path.read_bytes()[:1] == b"\x80"
+
+    def test_save_format_binary_writes_magic(self, tmp_path):
+        cheb = self._make()
+        path = tmp_path / "model.pcb"
+        cheb.save(path, format="binary")
+        assert path.read_bytes()[:4] == _binary.MAGIC
+
+    def test_save_format_pickle_writes_pickle(self, tmp_path):
+        cheb = self._make()
+        path = tmp_path / "model.pcb"  # extension is advisory
+        cheb.save(path, format="pickle")
+        assert path.read_bytes()[:1] == b"\x80"
+
+    def test_save_unknown_format_raises(self, tmp_path):
+        cheb = self._make()
+        with pytest.raises(ValueError, match="format must be"):
+            cheb.save(tmp_path / "x.pcb", format="json")
+
+    def test_load_autodetect_binary(self, tmp_path):
+        from pychebyshev import ChebyshevApproximation
+        cheb = self._make()
+        path = tmp_path / "model.pcb"
+        cheb.save(path, format="binary")
+        loaded = ChebyshevApproximation.load(path)
+        assert loaded.function is None
+        assert np.array_equal(loaded.tensor_values, cheb.tensor_values)
+
+    def test_load_autodetect_pickle(self, tmp_path):
+        from pychebyshev import ChebyshevApproximation
+        cheb = self._make()
+        path = tmp_path / "model.pkl"
+        cheb.save(path)  # default pickle
+        loaded = ChebyshevApproximation.load(path)
+        assert np.array_equal(loaded.tensor_values, cheb.tensor_values)
+
+    def test_save_binary_unbuilt_raises(self, tmp_path):
+        from pychebyshev import ChebyshevApproximation
+        cheb = ChebyshevApproximation(
+            function=lambda pt, _: pt[0],
+            num_dimensions=1,
+            domain=[(0.0, 1.0)],
+            n_nodes=[3],
+        )
+        # NOT built
+        with pytest.raises(RuntimeError, match="unbuilt"):
+            cheb.save(tmp_path / "x.pcb", format="binary")
+
+    def test_round_trip_eval_matches_machine_precision(self, tmp_path):
+        from pychebyshev import ChebyshevApproximation
+        cheb = self._make()
+        path = tmp_path / "model.pcb"
+        cheb.save(path, format="binary")
+        loaded = ChebyshevApproximation.load(path)
+        for pt in [[-0.5, 0.5], [0.0, 0.0], [0.7, -0.3]]:
+            assert abs(cheb.eval(pt, [0, 0]) - loaded.eval(pt, [0, 0])) < 1e-14
