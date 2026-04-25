@@ -126,14 +126,17 @@ C reader:
 cd examples/binary_reader
 make
 ./reader ../../xy.pcb 0.3 0.4
-# 0.7000000000000001
+# 0.69999999999999996
 ```
 
-The same value Python returns:
+The same IEEE-754 double Python returns (`repr` truncates trailing digits):
 
 ```python
-cheb.eval([0.3, 0.4], [0, 0])  # 0.7000000000000001
+cheb.eval([0.3, 0.4], [0, 0])  # 0.7
 ```
+
+The two strings render the same `float64` value `0x3fe6666666666666`. The
+C reader prints with `%.17g`, Python with `repr` — they agree bit-for-bit.
 
 ## Writing a reader in another language
 
@@ -160,6 +163,7 @@ These fields are dropped on `format='binary'`:
 | `barycentric_weights`, `diff_matrices` | recomputed on load |
 | `_cached_error_estimate` | recomputed lazily |
 | `build_time`, `n_evaluations`, `method` | not preserved (use pickle for full fidelity) |
+| `max_derivative_order` | resets to default `2` on load — re-set manually after `load()` if you need higher orders |
 
 If you need any of those preserved, use pickle.
 

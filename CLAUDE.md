@@ -12,7 +12,7 @@ PyChebyshev is a pip-installable Python library for multi-dimensional Chebyshev 
 # Setup
 uv sync
 
-# Run tests (~661 tests, ~110s due to 5D Black-Scholes builds)
+# Run tests (~662 tests, ~110s due to 5D Black-Scholes builds)
 uv run pytest tests/ -v
 
 # Run a single test
@@ -80,7 +80,7 @@ Not part of the library. Compare Chebyshev barycentric against alternative metho
 - `test_from_values.py` — 65 tests: nodes() and from_values() for ChebyshevApproximation and ChebyshevSpline; bit-identical equivalence with build(); derivatives, calculus, algebra, extrude/slice, save/load; edge cases (NaN/Inf, shape mismatch, 1-node dim, build guard, 4D, boundary eval, negative/wide/tight domains, duplicate knots, algebra chains, domain validation).
 - `test_special_points.py` — 37 tests: `ChebyshevApproximation.__new__` dispatch to `ChebyshevSpline` when `special_points` declares any kink (option A, precedent `pathlib.Path`); validation of special_points shape + nested `n_nodes`; 1D/2D correctness (abs kink recovery to machine precision; plateau control); cross-feature (save/load, algebra, integrate, extrude/slice, from_values); edge cases.
 - `test_error_threshold.py` — 37 tests: v0.11 auto-N doubling loop, max_n cap, get_optimal_n1, semi-auto mixed-N paths, verbose prints, spline per-piece doubling.
-- `test_binary_format.py` — 75 tests: low-level helpers, header parsing, format detection, ChebyshevApproximation round-trip, ChebyshevSpline round-trip, save/load integration with `format=` kwarg + autodetect, golden vectors, corruption rejection, cross-feature (from_values, algebra, extrude, slice, 5D BS, min n_nodes).
+- `test_binary_format.py` — 76 tests: low-level helpers, header parsing, format detection, ChebyshevApproximation round-trip (incl. n=1 dim), ChebyshevSpline round-trip, save/load integration with `format=` kwarg + autodetect, golden vectors, corruption rejection, cross-feature (from_values, algebra, extrude, slice, 5D BS, min n_nodes).
 
 ### CI/CD (`.github/workflows/`)
 

@@ -253,17 +253,35 @@ class TestApproxWriteRead:
         with pytest.raises(ValueError, match="lo .* must be"):
             _binary.read_approx(buf)
 
-    def test_read_approx_rejects_n_nodes_below_two(self):
+    def test_read_approx_rejects_zero_n_nodes(self):
         buf = io.BytesIO()
         _binary._write_header(buf, _binary.CLASS_TAG_APPROX)
         _binary._write_u32(buf, 1)
         _binary._write_f64_array(buf, np.array([0.0]))
         _binary._write_f64_array(buf, np.array([1.0]))
-        _binary._write_u32_array(buf, np.array([1], dtype=np.uint32))  # < 2
-        _binary._write_f64_array(buf, np.zeros(1))
+        _binary._write_u32_array(buf, np.array([0], dtype=np.uint32))  # n=0
         buf.seek(0)
-        with pytest.raises(ValueError, match="n_nodes\\[0\\] must be >= 2"):
+        with pytest.raises(ValueError, match="n_nodes\\[0\\] must be >= 1"):
             _binary.read_approx(buf)
+
+    def test_read_approx_accepts_n_nodes_1(self):
+        """A 1-node dim is valid (constant in that dim) — must round-trip."""
+        from pychebyshev import ChebyshevApproximation
+        info = ChebyshevApproximation.nodes(
+            num_dimensions=2, domain=[(0.0, 1.0), (-1.0, 1.0)], n_nodes=[3, 1],
+        )
+        grid = info["full_grid"]
+        vals = (grid[:, 0] ** 2).reshape(info["shape"])
+        cheb = ChebyshevApproximation.from_values(
+            vals, num_dimensions=2,
+            domain=[(0.0, 1.0), (-1.0, 1.0)], n_nodes=[3, 1],
+        )
+        buf = io.BytesIO()
+        _binary.write_approx(buf, cheb)
+        buf.seek(0)
+        loaded = _binary.read_approx(buf)
+        assert list(loaded.n_nodes) == [3, 1]
+        assert np.array_equal(loaded.tensor_values, cheb.tensor_values)
 
 
 class TestSplineWriteRead:
@@ -689,16 +707,15 @@ class TestCorruption:
         with pytest.raises(ValueError, match="must be < hi"):
             _binary.read_approx(buf)
 
-    def test_n_nodes_below_two(self):
+    def test_zero_n_nodes(self):
         buf = io.BytesIO()
         _binary._write_header(buf, _binary.CLASS_TAG_APPROX)
         _binary._write_u32(buf, 1)
         _binary._write_f64_array(buf, np.array([0.0]))
         _binary._write_f64_array(buf, np.array([1.0]))
-        _binary._write_u32_array(buf, np.array([1], dtype=np.uint32))
-        _binary._write_f64_array(buf, np.zeros(1))
+        _binary._write_u32_array(buf, np.array([0], dtype=np.uint32))
         buf.seek(0)
-        with pytest.raises(ValueError, match="n_nodes\\[0\\] must be >= 2"):
+        with pytest.raises(ValueError, match="n_nodes\\[0\\] must be >= 1"):
             _binary.read_approx(buf)
 
     def test_unknown_format_kwarg_raises(self, tmp_path):

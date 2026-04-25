@@ -217,8 +217,8 @@ def read_approx(f: BinaryIO):
     n_nodes_arr = _read_u32_array(f, count=d)
     n_nodes = [int(n) for n in n_nodes_arr]
     for i, n in enumerate(n_nodes):
-        if n < 2:
-            raise ValueError(f"n_nodes[{i}] must be >= 2, got {n}")
+        if n < 1:
+            raise ValueError(f"n_nodes[{i}] must be >= 1, got {n}")
 
     total = int(np.prod(n_nodes))
     flat_vals = _read_f64_array(f, count=total)
@@ -321,8 +321,8 @@ def read_spline(f: BinaryIO):
     n_nodes_arr = _read_u32_array(f, count=d)
     n_nodes = [int(n) for n in n_nodes_arr]
     for i, n in enumerate(n_nodes):
-        if n < 2:
-            raise ValueError(f"n_nodes[{i}] must be >= 2, got {n}")
+        if n < 1:
+            raise ValueError(f"n_nodes[{i}] must be >= 1, got {n}")
 
     num_knots_arr = _read_u32_array(f, count=d)
     num_knots = [int(k) for k in num_knots_arr]
