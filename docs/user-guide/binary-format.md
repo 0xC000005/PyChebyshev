@@ -138,6 +138,39 @@ cheb.eval([0.3, 0.4], [0, 0])  # 0.7
 The two strings render the same `float64` value `0x3fe6666666666666`. The
 C reader prints with `%.17g`, Python with `repr` — they agree bit-for-bit.
 
+### Spline worked example: `|x|` on `[-1, 1]`
+
+```python
+from pychebyshev import ChebyshevSpline
+
+s = ChebyshevSpline(
+    function=lambda pt, _: abs(pt[0]),
+    num_dimensions=1,
+    domain=[(-1.0, 1.0)],
+    n_nodes=[3],
+    knots=[[0.0]],
+)
+s.build()
+s.save("abs.pcb", format='binary')
+```
+
+The resulting file is exactly **100 bytes**:
+
+```
+12  header
+ 4  num_dimensions = 1
+ 8  domain_lo  = [-1.0]
+ 8  domain_hi  = [ 1.0]
+ 4  n_nodes    = [3]
+ 4  num_knots  = [1]
+ 8  knots      = [0.0]
+ 4  num_pieces = 2
+48  piece tensor values (2 pieces × 3 × f64)
+```
+
+Two pieces because one knot at `0.0` splits the domain `[-1, 1]` into `[-1, 0]`
+and `[0, 1]`. Each piece carries its own 3-node Chebyshev grid.
+
 ## Writing a reader in another language
 
 The format is small enough to implement in an afternoon:

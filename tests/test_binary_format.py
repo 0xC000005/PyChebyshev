@@ -467,6 +467,34 @@ class TestApproxSaveLoadIntegration:
         for pt in [[-0.5, 0.5], [0.0, 0.0], [0.7, -0.3]]:
             assert abs(cheb.eval(pt, [0, 0]) - loaded.eval(pt, [0, 0])) < 1e-14
 
+    def test_max_derivative_order_resets_to_default_on_load(self, tmp_path):
+        """The binary format does not store max_derivative_order;
+        loaded objects always come back with the default 2.
+        Pickle preserves the value — see binary-format.md "What the
+        format does not store"."""
+        from pychebyshev import ChebyshevApproximation
+        cheb = ChebyshevApproximation(
+            function=lambda pt, _: pt[0] + pt[1],
+            num_dimensions=2,
+            domain=[(-1.0, 1.0), (-1.0, 1.0)],
+            n_nodes=[3, 3],
+            max_derivative_order=4,
+        )
+        cheb.build(verbose=False)
+        assert cheb.max_derivative_order == 4
+
+        # Binary path: max_derivative_order resets to default 2
+        binary_path = tmp_path / "model.pcb"
+        cheb.save(binary_path, format="binary")
+        loaded_binary = ChebyshevApproximation.load(binary_path)
+        assert loaded_binary.max_derivative_order == 2
+
+        # Pickle path: max_derivative_order is preserved
+        pickle_path = tmp_path / "model.pkl"
+        cheb.save(pickle_path)
+        loaded_pickle = ChebyshevApproximation.load(pickle_path)
+        assert loaded_pickle.max_derivative_order == 4
+
 
 class TestSplineSaveLoadIntegration:
     @staticmethod

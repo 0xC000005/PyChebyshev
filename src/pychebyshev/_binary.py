@@ -235,11 +235,6 @@ def read_approx(f: BinaryIO):
 # --- ChebyshevSpline -----------------------------------------------------
 
 
-def _spline_uses_nested_n_nodes(spline) -> bool:
-    """True iff any per-dim entry in ``spline.n_nodes`` is itself a list."""
-    return any(isinstance(n, (list, tuple)) for n in spline.n_nodes)
-
-
 def write_spline(f: BinaryIO, spline) -> None:
     """Write a built ``ChebyshevSpline`` to a binary stream.
 
@@ -250,7 +245,8 @@ def write_spline(f: BinaryIO, spline) -> None:
     if any(p is None for p in spline._pieces):
         raise RuntimeError("Cannot save an unbuilt ChebyshevSpline")
 
-    if _spline_uses_nested_n_nodes(spline):
+    from pychebyshev.spline import _is_nested_n_nodes
+    if _is_nested_n_nodes(spline.n_nodes):
         raise NotImplementedError(
             "binary format requires flat n_nodes (shared across pieces); "
             "use format='pickle' for nested-n_nodes splines"
