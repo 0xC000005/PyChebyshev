@@ -452,6 +452,13 @@ class ChebyshevSlider:
         via ``eval(point, derivative_order=...)``."""
         return self.max_derivative_order
 
+    @staticmethod
+    def is_dimensionality_allowed(num_dimensions: int) -> bool:
+        """Return whether this interpolant class supports the given number of
+        dimensions. Returns True for any ``num_dimensions >= 1``. Provided as
+        a hook for future per-class capability caps."""
+        return isinstance(num_dimensions, int) and num_dimensions >= 1
+
     def save(self, path: str | os.PathLike) -> None:
         """Save the built slider to a file.
 

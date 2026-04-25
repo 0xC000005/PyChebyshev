@@ -127,3 +127,34 @@ class TestGetSpecialPoints:
         spline_abs_1d.save(str(path), format="binary")
         loaded = ChebyshevSpline.load(str(path))
         assert loaded.get_special_points() == spline_abs_1d.get_special_points()
+
+
+# ============================================================================
+# A9: is_dimensionality_allowed() static
+# ============================================================================
+
+class TestIsDimensionalityAllowed:
+    @pytest.mark.parametrize("cls", [
+        ChebyshevApproximation, ChebyshevSpline, ChebyshevSlider, ChebyshevTT,
+    ])
+    def test_positive_dim_allowed(self, cls):
+        assert cls.is_dimensionality_allowed(1) is True
+        assert cls.is_dimensionality_allowed(2) is True
+        assert cls.is_dimensionality_allowed(10) is True
+
+    @pytest.mark.parametrize("cls", [
+        ChebyshevApproximation, ChebyshevSpline, ChebyshevSlider, ChebyshevTT,
+    ])
+    def test_zero_or_negative_disallowed(self, cls):
+        assert cls.is_dimensionality_allowed(0) is False
+        assert cls.is_dimensionality_allowed(-1) is False
+
+    @pytest.mark.parametrize("cls", [
+        ChebyshevApproximation, ChebyshevSpline, ChebyshevSlider, ChebyshevTT,
+    ])
+    def test_callable_without_instance(self, cls):
+        # Static method: callable on the class itself
+        assert callable(cls.is_dimensionality_allowed)
+        # Type signature
+        result = cls.is_dimensionality_allowed(3)
+        assert isinstance(result, bool)
