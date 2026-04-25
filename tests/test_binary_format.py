@@ -882,3 +882,32 @@ class TestCrossFeature:
         cheb.save(path, format="binary")
         loaded = ChebyshevApproximation.load(path)
         assert np.array_equal(loaded.tensor_values, cheb.tensor_values)
+
+    def test_additional_data_rejection_on_binary_save(self, tmp_path):
+        """Saving with additional_data set must raise NotImplementedError."""
+        from pychebyshev import ChebyshevApproximation
+
+        def f(point, data):
+            return point[0] + point[1]
+
+        cheb = ChebyshevApproximation(
+            f, 2, [(-1, 1), (-1, 1)], [7, 7], additional_data={"strike": 100}
+        )
+        cheb.build(verbose=False)
+        with pytest.raises(NotImplementedError, match="cannot store additional_data"):
+            cheb.save(str(tmp_path / "cheb.pcb"), format="binary")
+
+    def test_descriptor_resets_to_empty_on_binary_load(self, tmp_path):
+        """Descriptor is not stored in .pcb; binary load resets it to ""."""
+        from pychebyshev import ChebyshevApproximation
+
+        def f(point, data):
+            return point[0] + point[1]
+
+        cheb = ChebyshevApproximation(f, 2, [(-1, 1), (-1, 1)], [7, 7])
+        cheb.build(verbose=False)
+        cheb.set_descriptor("my-label")
+        path = tmp_path / "cheb.pcb"
+        cheb.save(str(path), format="binary")
+        restored = ChebyshevApproximation.load(str(path))
+        assert restored.get_descriptor() == ""
