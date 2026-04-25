@@ -635,3 +635,65 @@ class TestBackwardCompatPickle:
         restored.__setstate__(state)
         assert restored.get_descriptor() == ""
         assert restored.additional_data is None
+
+
+class TestDerivativeIdValidation:
+    """Coverage for get_derivative_id validation paths and the eval xor guard.
+
+    These paths are byte-identical across ChebyshevApproximation, ChebyshevSpline,
+    and ChebyshevSlider, so the test parametrizes over the three builders.
+    """
+
+    @pytest.mark.parametrize("builder,wrong_length", [
+        (_build_approx_3d, [1, 0]),       # 3-D needs len 3, this is len 2
+        (_build_spline_2d, [1]),          # 2-D needs len 2, this is len 1
+        (_build_slider_3d, [1, 0]),       # 3-D needs len 3, this is len 2
+    ])
+    def test_get_derivative_id_wrong_length_raises(self, builder, wrong_length):
+        obj = builder()
+        with pytest.raises(ValueError, match="does not match num_dimensions"):
+            obj.get_derivative_id(wrong_length)
+
+    @pytest.mark.parametrize("builder,bad_orders", [
+        (_build_approx_3d, [1.0, 0, 0]),
+        (_build_spline_2d, ["1", 0]),
+        (_build_slider_3d, [1, 0, None]),
+    ])
+    def test_get_derivative_id_non_int_raises(self, builder, bad_orders):
+        obj = builder()
+        with pytest.raises(ValueError, match="must be int"):
+            obj.get_derivative_id(bad_orders)
+
+    @pytest.mark.parametrize("builder,out_of_range", [
+        (_build_approx_3d, [-1, 0, 0]),
+        (_build_approx_3d, [99, 0, 0]),     # exceeds max_derivative_order=2
+        (_build_spline_2d, [-5, 0]),
+        (_build_spline_2d, [0, 99]),
+        (_build_slider_3d, [-1, 0, 0]),
+        (_build_slider_3d, [99, 0, 0]),
+    ])
+    def test_get_derivative_id_out_of_range_raises(self, builder, out_of_range):
+        obj = builder()
+        with pytest.raises(ValueError, match="out of range"):
+            obj.get_derivative_id(out_of_range)
+
+    @pytest.mark.parametrize("builder,point", [
+        (_build_spline_2d, [0.1, 0.2]),
+        (_build_slider_3d, [0.1, 0.2, 0.3]),
+    ])
+    def test_eval_neither_kwarg_raises_on_spline_and_slider(self, builder, point):
+        """Approximation already has this test; this covers Spline and Slider."""
+        obj = builder()
+        with pytest.raises(ValueError, match="must provide"):
+            obj.eval(point)
+
+    @pytest.mark.parametrize("builder,point", [
+        (_build_approx_3d, [0.1, 0.2, 0.3]),
+        (_build_spline_2d, [0.1, 0.2]),
+        (_build_slider_3d, [0.1, 0.2, 0.3]),
+    ])
+    def test_eval_negative_derivative_id_raises(self, builder, point):
+        """Negative IDs should hit the upper-bound check and raise KeyError."""
+        obj = builder()
+        with pytest.raises(KeyError, match="unknown derivative_id"):
+            obj.eval(point, derivative_id=-1)
