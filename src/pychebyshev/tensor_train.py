@@ -1041,6 +1041,12 @@ class ChebyshevTT:
         *,
         max_derivative_order: int = 2,
     ):
+        # Unwrap typed helpers (v0.16). Lazy import avoids circular dependency.
+        from pychebyshev import Domain, Ns
+        if isinstance(domain, Domain):
+            domain = list(domain.bounds)
+        if isinstance(n_nodes, Ns):
+            n_nodes = list(n_nodes.counts)
         # Validate inputs
         if len(domain) != num_dimensions:
             raise ValueError(

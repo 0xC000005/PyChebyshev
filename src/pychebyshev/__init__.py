@@ -21,10 +21,58 @@ Example
 0.7764
 """
 
+from __future__ import annotations
+
+from dataclasses import dataclass
+
 from pychebyshev._version import __version__
 from pychebyshev.barycentric import ChebyshevApproximation
 from pychebyshev.slider import ChebyshevSlider
 from pychebyshev.spline import ChebyshevSpline
 from pychebyshev.tensor_train import ChebyshevTT
 
-__all__ = ["ChebyshevApproximation", "ChebyshevSlider", "ChebyshevSpline", "ChebyshevTT", "__version__"]
+
+@dataclass(frozen=True)
+class Domain:
+    """Typed container for an interpolant's per-dimension bounds.
+
+    Equivalent to a raw ``list[tuple[float, float]]``. Constructors of
+    all four PyChebyshev classes accept either form.
+    """
+
+    bounds: list[tuple[float, float]]
+
+
+@dataclass(frozen=True)
+class Ns:
+    """Typed container for an interpolant's per-dimension node counts.
+
+    Equivalent to a raw ``list[int]``. Accepted by
+    :class:`ChebyshevApproximation`, :class:`ChebyshevSpline`,
+    :class:`ChebyshevSlider`, and :class:`ChebyshevTT`.
+    """
+
+    counts: list[int]
+
+
+@dataclass(frozen=True)
+class SpecialPoints:
+    """Typed container for per-dimension kink/knot locations.
+
+    Equivalent to a raw ``list[list[float]]``. Accepted by
+    :class:`ChebyshevApproximation` and :class:`ChebyshevSpline`.
+    """
+
+    knots_per_dim: list[list[float]]
+
+
+__all__ = [
+    "ChebyshevApproximation",
+    "ChebyshevSlider",
+    "ChebyshevSpline",
+    "ChebyshevTT",
+    "Domain",
+    "Ns",
+    "SpecialPoints",
+    "__version__",
+]

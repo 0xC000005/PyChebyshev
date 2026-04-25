@@ -294,6 +294,14 @@ class ChebyshevApproximation:
         ``__new__(cls)`` without positional arguments; real construction
         still goes through ``__init__``.
         """
+        # Unwrap typed helpers (v0.16). Lazy import avoids circular dependency.
+        from pychebyshev import Domain, Ns, SpecialPoints as _SP
+        if isinstance(domain, Domain):
+            domain = list(domain.bounds)
+        if isinstance(n_nodes, Ns):
+            n_nodes = list(n_nodes.counts)
+        if isinstance(special_points, _SP):
+            special_points = [list(k) for k in special_points.knots_per_dim]
         if special_points is not None:
             # Outer validation runs whether or not any dim is non-empty, so
             # typos like special_points=[[]] on a 2D problem or
@@ -342,6 +350,14 @@ class ChebyshevApproximation:
         *,
         defer_build: bool = False,
     ):
+        # Unwrap typed helpers (v0.16). Lazy import avoids circular dependency.
+        from pychebyshev import Domain, Ns, SpecialPoints as _SP
+        if isinstance(domain, Domain):
+            domain = list(domain.bounds)
+        if isinstance(n_nodes, Ns):
+            n_nodes = list(n_nodes.counts)
+        if isinstance(special_points, _SP):
+            special_points = [list(k) for k in special_points.knots_per_dim]
         self.function = function
         self.num_dimensions = num_dimensions
         self.domain = domain

@@ -546,3 +546,91 @@ class TestSetOriginalFunctionValues:
         )
         for piece in deferred._pieces:
             assert piece.additional_data == sentinel
+
+
+# ============================================================================
+# A10: typed helpers Domain, Ns, SpecialPoints
+# ============================================================================
+
+class TestTypedHelpers:
+    def test_domain_dataclass_is_frozen(self):
+        from pychebyshev import Domain
+        d = Domain([(0.0, 1.0), (-1.0, 1.0)])
+        with pytest.raises(Exception):  # FrozenInstanceError
+            d.bounds = []
+
+    def test_ns_dataclass_is_frozen(self):
+        from pychebyshev import Ns
+        n = Ns([10, 12])
+        with pytest.raises(Exception):
+            n.counts = []
+
+    def test_approximation_accepts_typed_domain(self):
+        from pychebyshev import Domain
+
+        def f(x, _):
+            return x[0] ** 2
+
+        cheb = ChebyshevApproximation(f, 1, Domain([(-1.0, 1.0)]), [4])
+        cheb.build(verbose=False)
+        assert cheb.eval([0.5], [0]) == pytest.approx(0.25, abs=1e-3)
+
+    def test_approximation_accepts_typed_ns(self):
+        from pychebyshev import Ns
+
+        def f(x, _):
+            return x[0] + x[1]
+
+        cheb = ChebyshevApproximation(f, 2, [[-1, 1], [-1, 1]], Ns([4, 5]))
+        cheb.build(verbose=False)
+        assert cheb.n_nodes == [4, 5]
+
+    def test_approximation_mixed_typed_and_raw(self):
+        from pychebyshev import Domain, Ns
+
+        def f(x, _):
+            return math.sin(x[0])
+
+        cheb = ChebyshevApproximation(f, 1, Domain([(-1.0, 1.0)]), Ns([6]))
+        cheb.build(verbose=False)
+        assert cheb.eval([0.0], [0]) == pytest.approx(0.0, abs=1e-6)
+
+    def test_approximation_accepts_typed_special_points(self):
+        from pychebyshev import SpecialPoints
+
+        def f(x, _):
+            return abs(x[0])
+
+        # SpecialPoints with a kink → __new__ dispatches to Spline
+        obj = ChebyshevApproximation(
+            f, 1, [[-1, 1]], n_nodes=[[8, 8]],
+            special_points=SpecialPoints([[0.0]]),
+        )
+        assert isinstance(obj, ChebyshevSpline)
+
+    def test_typed_and_raw_produce_identical_interpolants(self):
+        from pychebyshev import Domain, Ns
+
+        def f(x, _):
+            return x[0] * x[1]
+
+        a = ChebyshevApproximation(f, 2, [[-1, 1], [-1, 1]], [5, 5])
+        a.build(verbose=False)
+        b = ChebyshevApproximation(
+            f, 2, Domain([(-1.0, 1.0), (-1.0, 1.0)]), Ns([5, 5]),
+        )
+        b.build(verbose=False)
+        np.testing.assert_array_equal(a.tensor_values, b.tensor_values)
+
+    def test_slider_accepts_typed_domain(self):
+        from pychebyshev import Domain
+
+        def f(x, _):
+            return math.sin(x[0]) + math.sin(x[1])
+
+        slider = ChebyshevSlider(
+            f, 2, Domain([(-1.0, 1.0), (-1.0, 1.0)]), [8, 8],
+            partition=[[0], [1]], pivot_point=[0.0, 0.0],
+        )
+        slider.build(verbose=False)
+        assert slider.num_dimensions == 2

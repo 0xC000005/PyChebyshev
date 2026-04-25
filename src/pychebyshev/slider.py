@@ -87,6 +87,12 @@ class ChebyshevSlider:
         max_derivative_order: int = 2,
         additional_data: object = None,
     ):
+        # Unwrap typed helpers (v0.16). Lazy import avoids circular dependency.
+        from pychebyshev import Domain, Ns
+        if isinstance(domain, Domain):
+            domain = list(domain.bounds)
+        if isinstance(n_nodes, Ns):
+            n_nodes = list(n_nodes.counts)
         self.function = function
         self.num_dimensions = num_dimensions
         self.domain = domain
