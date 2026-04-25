@@ -944,6 +944,12 @@ class ChebyshevApproximation:
         """Return the descriptor label (default ``""``)."""
         return self.descriptor
 
+    def get_max_derivative_order(self) -> int:
+        """Return the maximum derivative order this interpolant was constructed
+        with. Derivative orders up to and including this value are queryable
+        via ``eval(point, derivative_order=...)``."""
+        return self.max_derivative_order
+
     def get_derivative_id(self, derivative_order: List[int]) -> int:
         """Register a derivative-orders tuple and return a stable session-local int.
 

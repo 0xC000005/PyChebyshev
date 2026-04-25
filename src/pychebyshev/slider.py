@@ -446,6 +446,12 @@ class ChebyshevSlider:
         """Return the descriptor label (default ``""``)."""
         return self.descriptor
 
+    def get_max_derivative_order(self) -> int:
+        """Return the maximum derivative order this interpolant was constructed
+        with. Derivative orders up to and including this value are queryable
+        via ``eval(point, derivative_order=...)``."""
+        return self.max_derivative_order
+
     def save(self, path: str | os.PathLike) -> None:
         """Save the built slider to a file.
 

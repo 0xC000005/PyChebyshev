@@ -1038,6 +1038,8 @@ class ChebyshevTT:
         tolerance: float = 1e-6,
         max_sweeps: int = 10,
         additional_data: object = None,
+        *,
+        max_derivative_order: int = 2,
     ):
         # Validate inputs
         if len(domain) != num_dimensions:
@@ -1056,6 +1058,7 @@ class ChebyshevTT:
         self.max_rank = max_rank
         self.tolerance = tolerance
         self.max_sweeps = max_sweeps
+        self.max_derivative_order = max_derivative_order
 
         # Build-time state
         self._coeff_cores: List[np.ndarray] | None = None
@@ -1808,6 +1811,8 @@ class ChebyshevTT:
             self.additional_data = None
         if not hasattr(self, "descriptor"):
             self.descriptor = ""
+        if not hasattr(self, "max_derivative_order"):
+            self.max_derivative_order = 2
 
     def is_construction_finished(self) -> bool:
         """Return True iff this TT interpolant is built and usable."""
@@ -1843,6 +1848,12 @@ class ChebyshevTT:
     def get_descriptor(self) -> str:
         """Return the descriptor label (default ``""``)."""
         return self.descriptor
+
+    def get_max_derivative_order(self) -> int:
+        """Return the maximum derivative order this interpolant was constructed
+        with. Derivative orders up to and including this value are queryable
+        via ``eval(point, derivative_orders=...)``."""
+        return self.max_derivative_order
 
     def save(self, path: str | os.PathLike) -> None:
         """Save the built TT interpolant to a file.
