@@ -78,7 +78,7 @@ Adds guidance on when to choose **Cross vs SVD vs ALS** as the build method.
 **Closes MoCaX gaps:** rank-adaptive ALS, completion sweep, TT inner
 product, TT orthogonalization.
 
-## v0.14 — Portable Binary Serialization :material-clock-outline:
+## v0.14 — Portable Binary Serialization :material-check:
 
 A language-agnostic `.pcb` binary format alongside the existing pickle-based
 save/load. Consumers in C, Rust, or Julia can read PyChebyshev interpolants
