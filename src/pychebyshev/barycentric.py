@@ -312,22 +312,16 @@ class ChebyshevApproximation:
                 _validate_special_points_shape(
                     special_points, n_nodes, num_dimensions, domain
                 )
-                spline_kwargs = dict(
+                return ChebyshevSpline(
+                    function,
+                    num_dimensions,
+                    domain,
                     n_nodes=n_nodes,
                     knots=special_points,
                     max_derivative_order=max_derivative_order,
                     error_threshold=error_threshold,
                     max_n=max_n,
-                )
-                if additional_data is not None:
-                    # T4 will add additional_data to ChebyshevSpline.__init__;
-                    # only pass it when set to avoid breaking existing tests.
-                    spline_kwargs["additional_data"] = additional_data
-                return ChebyshevSpline(
-                    function,
-                    num_dimensions,
-                    domain,
-                    **spline_kwargs,
+                    additional_data=additional_data,
                 )
         return super().__new__(cls)
 

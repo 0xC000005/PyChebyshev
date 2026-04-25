@@ -251,6 +251,12 @@ def write_spline(f: BinaryIO, spline) -> None:
     if any(p is None for p in spline._pieces):
         raise RuntimeError("Cannot save an unbuilt ChebyshevSpline")
 
+    if getattr(spline, "additional_data", None) is not None:
+        raise NotImplementedError(
+            "binary format cannot store additional_data; "
+            "pass format='pickle' or set additional_data=None before saving"
+        )
+
     from pychebyshev.spline import _is_nested_n_nodes
     if _is_nested_n_nodes(spline.n_nodes):
         raise NotImplementedError(

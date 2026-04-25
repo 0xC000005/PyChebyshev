@@ -251,3 +251,62 @@ class TestAdditionalDataApprox:
         cheb.save(str(path), format="binary")
         restored = ChebyshevApproximation.load(str(path))
         assert restored.additional_data is None
+
+
+class TestAdditionalDataSpline:
+    """additional_data on ChebyshevSpline propagates to pieces.
+
+    Fixture shape: n_nodes=[[7, 7], [7]], knots=[[0.0], []]
+    Dim 0 has 1 knot at 0.0 → 2 pieces, each with 7 nodes.
+    Dim 1 has 0 knots → 1 piece with 7 nodes.
+    Total pieces: 2 x 1 = 2.
+    """
+
+    def test_default_is_none(self):
+        spl = ChebyshevSpline(_f2d, 2, [(-1, 1), (-1, 1)], [[7, 7], [7]],
+                              [[0.0], []])
+        assert spl.additional_data is None
+
+    def test_propagated_to_each_piece(self):
+        payload = {"strike": 100.0}
+        spl = ChebyshevSpline(_f2d, 2, [(-1, 1), (-1, 1)], [[7, 7], [7]],
+                              [[0.0], []], additional_data=payload)
+        spl.build(verbose=False)
+        # Internal pieces stored on self._pieces (list of ChebyshevApproximation)
+        for piece in np.asarray(spl._pieces).flat:
+            assert piece.additional_data is payload
+
+    def test_threaded_into_function_during_build(self):
+        captured = []
+
+        def f_records(point, data):
+            captured.append(data)
+            return point[0] + point[1]
+
+        payload = {"strike": 100.0}
+        spl = ChebyshevSpline(f_records, 2, [(-1, 1), (-1, 1)],
+                              [[5, 5], [5]], [[0.0], []],
+                              additional_data=payload)
+        spl.build(verbose=False)
+        assert len(captured) > 0
+        assert all(d is payload for d in captured)
+
+    def test_pickle_round_trip_preserves(self, tmp_path):
+        payload = {"strike": 100.0}
+        spl = ChebyshevSpline(_f2d, 2, [(-1, 1), (-1, 1)], [[7, 7], [7]],
+                              [[0.0], []], additional_data=payload)
+        spl.build(verbose=False)
+        path = tmp_path / "spl.pkl"
+        spl.save(str(path))
+        restored = ChebyshevSpline.load(str(path))
+        assert restored.additional_data == payload
+
+    def test_binary_save_with_additional_data_raises(self, tmp_path):
+        payload = {"strike": 100.0}
+        # Use flat n_nodes so the nested-n_nodes guard is not triggered first.
+        spl = ChebyshevSpline(_f2d, 2, [(-1, 1), (-1, 1)], [7, 7],
+                              [[0.0], []], additional_data=payload)
+        spl.build(verbose=False)
+        path = tmp_path / "spl.pcb"
+        with pytest.raises(NotImplementedError, match="cannot store additional_data"):
+            spl.save(str(path), format="binary")

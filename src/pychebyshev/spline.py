@@ -112,6 +112,7 @@ class ChebyshevSpline:
         max_derivative_order: int = 2,
         error_threshold: float | None = None,
         max_n: int = 64,
+        additional_data: object = None,
     ):
         self.function = function
         self.num_dimensions = num_dimensions
@@ -157,6 +158,7 @@ class ChebyshevSpline:
             knots = [[] for _ in range(num_dimensions)]
         self.knots = knots
         self.max_derivative_order = max_derivative_order
+        self.additional_data = additional_data
         self.descriptor: str = ""
 
         # Validate knots: each must be strictly inside domain and sorted
@@ -282,6 +284,7 @@ class ChebyshevSpline:
                 max_derivative_order=self.max_derivative_order,
                 error_threshold=self.error_threshold,
                 max_n=self.max_n,
+                additional_data=self.additional_data,
             )
             piece.build(verbose=False)
             self._pieces[flat_idx] = piece
@@ -603,6 +606,8 @@ class ChebyshevSpline:
             self._cached_error_estimate = None
         if not hasattr(self, "_n_nodes_nested"):
             self._n_nodes_nested = _is_nested_n_nodes(self.n_nodes)
+        if not hasattr(self, "additional_data"):
+            self.additional_data = None
 
     def is_construction_finished(self) -> bool:
         """Return True iff this spline is built and usable."""
@@ -974,6 +979,7 @@ class ChebyshevSpline:
         obj._build_time = 0.0
         obj._cached_error_estimate = None
         obj.descriptor = ""
+        obj.additional_data = None
 
         return obj
 
@@ -999,6 +1005,7 @@ class ChebyshevSpline:
         obj._build_time = 0.0
         obj._cached_error_estimate = None
         obj.descriptor = ""
+        obj.additional_data = None
         return obj
 
     # ------------------------------------------------------------------
@@ -1082,6 +1089,7 @@ class ChebyshevSpline:
         obj._built = True
         obj._build_time = 0.0
         obj.descriptor = ""
+        obj.additional_data = None
         obj._cached_error_estimate = None
         return obj
 
@@ -1180,6 +1188,7 @@ class ChebyshevSpline:
         obj._built = True
         obj._build_time = 0.0
         obj.descriptor = ""
+        obj.additional_data = None
         obj._cached_error_estimate = None
         return obj
 
@@ -1361,6 +1370,7 @@ class ChebyshevSpline:
         obj._built = True
         obj._build_time = 0.0
         obj.descriptor = ""
+        obj.additional_data = None
         obj._cached_error_estimate = None
         return obj
 
