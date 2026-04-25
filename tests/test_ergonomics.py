@@ -578,3 +578,60 @@ class TestFactoryPathResets:
         assert sl.get_descriptor() == ""
         assert sl.additional_data is None
         assert sl.get_derivative_id([1, 0]) == 0  # fresh registry, lower dim
+
+
+class TestBackwardCompatPickle:
+    """v0.15 attributes are backfilled on __setstate__ for pre-v0.15 pickles."""
+
+    def test_approx_setstate_backfills_v0_15_fields(self):
+        """A pre-v0.15 ChebyshevApproximation pickle (missing v0.15 fields) loads cleanly."""
+        cheb = _build_approx_3d()
+        # Simulate a pre-v0.15 pickle: pop the v0.15 fields from the state dict
+        state = cheb.__getstate__() if hasattr(cheb, "__getstate__") else cheb.__dict__.copy()
+        for field in ("descriptor", "additional_data",
+                      "_derivative_id_registry", "_derivative_id_to_orders"):
+            state.pop(field, None)
+        # Restore via __setstate__ on a fresh instance
+        restored = ChebyshevApproximation.__new__(ChebyshevApproximation)
+        restored.__setstate__(state)
+        assert restored.get_descriptor() == ""
+        assert restored.additional_data is None
+        # Registry starts fresh
+        assert restored.get_derivative_id([1, 0, 0]) == 0
+
+    def test_spline_setstate_backfills_v0_15_fields(self):
+        """A pre-v0.15 ChebyshevSpline pickle (missing v0.15 fields) loads cleanly."""
+        spl = _build_spline_2d()
+        state = spl.__getstate__() if hasattr(spl, "__getstate__") else spl.__dict__.copy()
+        for field in ("descriptor", "additional_data",
+                      "_derivative_id_registry", "_derivative_id_to_orders"):
+            state.pop(field, None)
+        restored = ChebyshevSpline.__new__(ChebyshevSpline)
+        restored.__setstate__(state)
+        assert restored.get_descriptor() == ""
+        assert restored.additional_data is None
+        assert restored.get_derivative_id([1, 0]) == 0
+
+    def test_slider_setstate_backfills_v0_15_fields(self):
+        """A pre-v0.15 ChebyshevSlider pickle loads cleanly (already covered by impl, regression guard)."""
+        sld = _build_slider_3d()
+        state = sld.__getstate__() if hasattr(sld, "__getstate__") else sld.__dict__.copy()
+        for field in ("descriptor", "additional_data",
+                      "_derivative_id_registry", "_derivative_id_to_orders"):
+            state.pop(field, None)
+        restored = ChebyshevSlider.__new__(ChebyshevSlider)
+        restored.__setstate__(state)
+        assert restored.get_descriptor() == ""
+        assert restored.additional_data is None
+        assert restored.get_derivative_id([1, 0, 0]) == 0
+
+    def test_tt_setstate_backfills_v0_15_fields(self):
+        """A pre-v0.15 ChebyshevTT pickle loads cleanly (already covered by impl, regression guard)."""
+        tt = _build_tt_3d()
+        state = tt.__getstate__() if hasattr(tt, "__getstate__") else tt.__dict__.copy()
+        for field in ("descriptor", "additional_data"):
+            state.pop(field, None)
+        restored = ChebyshevTT.__new__(ChebyshevTT)
+        restored.__setstate__(state)
+        assert restored.get_descriptor() == ""
+        assert restored.additional_data is None

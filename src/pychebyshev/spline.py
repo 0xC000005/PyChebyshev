@@ -704,6 +704,8 @@ class ChebyshevSpline:
             self._cached_error_estimate = None
         if not hasattr(self, "_n_nodes_nested"):
             self._n_nodes_nested = _is_nested_n_nodes(self.n_nodes)
+        if not hasattr(self, "descriptor"):
+            self.descriptor = ""
         if not hasattr(self, "additional_data"):
             self.additional_data = None
         if not hasattr(self, "_derivative_id_registry"):

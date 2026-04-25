@@ -1164,6 +1164,10 @@ class ChebyshevApproximation:
         if not hasattr(self, "_original_n_nodes"):
             # v0.10 and earlier: n_nodes was always fully resolved
             self._original_n_nodes = list(self.n_nodes)
+        if not hasattr(self, "descriptor"):
+            self.descriptor = ""
+        if not hasattr(self, "additional_data"):
+            self.additional_data = None
         if not hasattr(self, "_derivative_id_registry"):
             self._derivative_id_registry = {}
         if not hasattr(self, "_derivative_id_to_orders"):
