@@ -1852,7 +1852,7 @@ class ChebyshevTT:
     def get_max_derivative_order(self) -> int:
         """Return the maximum derivative order this interpolant was constructed
         with. Derivative orders up to and including this value are queryable
-        via ``eval(point, derivative_orders=...)``."""
+        via ``eval_multi(point, derivative_orders=...)``."""
         return self.max_derivative_order
 
     def save(self, path: str | os.PathLike) -> None:
