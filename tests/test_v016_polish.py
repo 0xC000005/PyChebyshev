@@ -170,11 +170,11 @@ class TestGetNumEvaluationPoints:
         assert cheb_sin_3d.get_num_evaluation_points() == 10 * 8 * 4
 
     def test_spline_sum_across_pieces(self, spline_abs_1d):
-        # 1-D spline with one knot at 0.0, two pieces, 8 nodes each
-        # by spline_abs_1d fixture
-        n = spline_abs_1d.get_num_evaluation_points()
-        # exact value depends on fixture; verify it equals total_build_evals
-        assert n == spline_abs_1d.total_build_evals
+        """Spline returns sum of per-piece grid sizes (matching grid, not work)."""
+        expected = sum(
+            int(np.prod(piece.n_nodes)) for piece in spline_abs_1d._pieces
+        )
+        assert spline_abs_1d.get_num_evaluation_points() == expected
 
     def test_slider_matches_total_build_evals(self):
         def f(x, _):
@@ -187,5 +187,7 @@ class TestGetNumEvaluationPoints:
         slider.build(verbose=False)
         assert slider.get_num_evaluation_points() == slider.total_build_evals
 
-    def test_tt_matches_total_build_evals(self, tt_sin_3d):
-        assert tt_sin_3d.get_num_evaluation_points() == tt_sin_3d.total_build_evals
+    def test_tt_returns_full_grid_size(self, tt_sin_3d):
+        """TT returns prod(n_nodes), the full Cartesian grid (not the sparse cross sample count)."""
+        expected = int(np.prod(tt_sin_3d.n_nodes))
+        assert tt_sin_3d.get_num_evaluation_points() == expected

@@ -770,15 +770,22 @@ class ChebyshevSpline:
         return self.error_threshold
 
     def get_num_evaluation_points(self) -> int:
-        """Return the number of points where ``f`` was evaluated, summed
-        across all pieces.
+        """Return the number of points in the evaluation grid, summed across
+        pieces.
+
+        Equals ``sum(prod(piece.n_nodes))``. Under auto-N construction this
+        differs from :attr:`total_build_evals`, which counts cumulative
+        function-evaluation work across the doubling iterations rather than
+        the final grid size.
 
         Returns
         -------
         int
-            Total number of grid points evaluated during construction.
+            Total number of grid points across all pieces.
         """
-        return int(self.total_build_evals)
+        return int(
+            sum(int(np.prod(piece.n_nodes)) for piece in self._pieces)
+        )
 
     def get_special_points(self) -> list[list[float]] | None:
         """Return the per-dimension knot/kink locations this spline was built

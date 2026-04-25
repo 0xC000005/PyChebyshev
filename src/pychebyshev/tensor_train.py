@@ -1856,15 +1856,20 @@ class ChebyshevTT:
         return self.max_derivative_order
 
     def get_num_evaluation_points(self) -> int:
-        """Return the number of TT-Cross / TT-SVD / ALS function evaluations
-        consumed during build.
+        """Return the number of points in the underlying Cartesian evaluation
+        grid (``prod(n_nodes)``).
+
+        TT-Cross samples a sparse subset of this grid via maxvol pivoting; the
+        actual number of function calls consumed during construction is
+        :attr:`total_build_evals`. This method returns the *full* grid size,
+        matching :meth:`get_evaluation_points` and MoCaX semantics.
 
         Returns
         -------
         int
-            Total number of function evaluations consumed during construction.
+            Size of the full Cartesian Chebyshev grid.
         """
-        return int(self.total_build_evals)
+        return int(np.prod(self.n_nodes))
 
     @staticmethod
     def is_dimensionality_allowed(num_dimensions: int) -> bool:
