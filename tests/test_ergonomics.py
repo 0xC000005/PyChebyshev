@@ -439,3 +439,34 @@ class TestDerivativeIdApprox:
         a = restored.eval([0.1, 0.2, 0.3], derivative_id=d_id)
         b = restored.eval([0.1, 0.2, 0.3], derivative_order=[1, 0, 0])
         assert a == b
+
+
+class TestDerivativeIdSpline:
+    """derivative_id registry on ChebyshevSpline."""
+
+    def test_basic_registry(self):
+        spl = _build_spline_2d()
+        a = spl.get_derivative_id([0, 0])
+        b = spl.get_derivative_id([1, 0])
+        assert (a, b) == (0, 1)
+        assert spl.get_derivative_id([0, 0]) == 0  # stable
+
+    def test_eval_via_id_matches_eval_via_orders(self):
+        spl = _build_spline_2d()
+        orders = [1, 0]
+        d_id = spl.get_derivative_id(orders)
+        point = [0.3, -0.2]
+        a = spl.eval(point, derivative_order=orders)
+        b = spl.eval(point, derivative_id=d_id)
+        assert a == b
+
+    def test_eval_unknown_id_raises(self):
+        spl = _build_spline_2d()
+        with pytest.raises(KeyError, match="unknown derivative_id"):
+            spl.eval([0.1, 0.2], derivative_id=999)
+
+    def test_eval_both_kwargs_raises(self):
+        spl = _build_spline_2d()
+        d_id = spl.get_derivative_id([0, 0])
+        with pytest.raises(ValueError, match="not both"):
+            spl.eval([0.1, 0.2], derivative_order=[0, 0], derivative_id=d_id)
