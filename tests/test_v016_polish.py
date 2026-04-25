@@ -503,3 +503,46 @@ class TestSetOriginalFunctionValues:
         )
         cheb.set_original_function_values(np.zeros(4))
         assert cheb.function is None
+
+    def test_special_points_dispatches_to_deferred_spline(self):
+        """defer_build=True + special_points kink → __new__ dispatches to a deferred Spline."""
+        obj = ChebyshevApproximation(
+            None, 1, [[-1, 1]], n_nodes=[[5, 5]],
+            special_points=[[0.0]], defer_build=True,
+        )
+        assert isinstance(obj, ChebyshevSpline)
+        assert obj.is_construction_finished() is False
+        # Fill per-piece values
+        per_piece = [
+            np.zeros(5),  # left piece
+            np.ones(5),   # right piece
+        ]
+        obj.set_original_function_values(per_piece)
+        assert obj.is_construction_finished() is True
+        # Eval works: left half returns 0, right half returns 1
+        assert obj.eval([-0.5], [0]) == pytest.approx(0.0)
+        assert obj.eval([0.5], [0]) == pytest.approx(1.0)
+
+    def test_spline_set_values_atomic_on_validation_failure(self):
+        """Spline set_original_function_values must not partially mutate on per-piece failure."""
+        deferred = ChebyshevSpline(
+            None, 1, [[-1, 1]], knots=[[0.0]], n_nodes=[8],
+            defer_build=True,
+        )
+        # Bad: piece 1 has wrong shape
+        with pytest.raises(ValueError, match="shape"):
+            deferred.set_original_function_values([np.zeros(8), np.zeros(3)])
+        # Spline must still be in deferred state — retry with correct shapes succeeds
+        assert deferred.is_construction_finished() is False
+        deferred.set_original_function_values([np.zeros(8), np.ones(8)])
+        assert deferred.is_construction_finished() is True
+
+    def test_spline_defer_threads_additional_data_to_pieces(self):
+        """defer_build path must thread additional_data to pieces, matching build()."""
+        sentinel = {"x": 7}
+        deferred = ChebyshevSpline(
+            None, 1, [[-1, 1]], knots=[[0.0]], n_nodes=[4],
+            additional_data=sentinel, defer_build=True,
+        )
+        for piece in deferred._pieces:
+            assert piece.additional_data == sentinel

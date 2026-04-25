@@ -250,6 +250,7 @@ class ChebyshevSpline:
                     sub_domain,
                     piece_n_nodes,
                     max_derivative_order=self.max_derivative_order,
+                    additional_data=self.additional_data,
                     defer_build=True,
                 )
                 self._pieces[flat_idx] = piece
@@ -280,10 +281,33 @@ class ChebyshevSpline:
                 f"expected {len(self._pieces)} piece tensors, "
                 f"got {len(per_piece_values)}"
             )
-        for piece, vals in zip(self._pieces, per_piece_values):
+        # PRE-VALIDATE all per-piece arrays before mutating any piece.
+        # This ensures atomicity: either all pieces get filled, or none do.
+        validated = []
+        for i, (piece, vals) in enumerate(zip(self._pieces, per_piece_values)):
             if piece is None:
-                raise RuntimeError("encountered a None piece — invalid state")
-            piece.set_original_function_values(vals)
+                raise RuntimeError(f"piece {i} is None — invalid state")
+            if piece.tensor_values is not None:
+                raise RuntimeError(
+                    f"piece {i} is already constructed; "
+                    "set_original_function_values() is for defer_build=True splines"
+                )
+            arr = np.asarray(vals, dtype=np.float64)
+            expected_shape = tuple(piece.n_nodes)
+            if arr.shape != expected_shape:
+                raise ValueError(
+                    f"piece {i}: values shape {arr.shape} does not match "
+                    f"expected {expected_shape}"
+                )
+            if not np.isfinite(arr).all():
+                raise ValueError(
+                    f"piece {i}: values contains NaN or Inf (must be finite)"
+                )
+            validated.append(arr)
+        # Now safe to mutate — all validation passed.
+        for piece, arr in zip(self._pieces, validated):
+            piece.tensor_values = arr
+            piece.function = None
         self._built = True
         self.function = None
 
