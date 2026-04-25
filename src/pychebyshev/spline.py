@@ -113,6 +113,8 @@ class ChebyshevSpline:
         error_threshold: float | None = None,
         max_n: int = 64,
         additional_data: object = None,
+        *,
+        defer_build: bool = False,
     ):
         self.function = function
         self.num_dimensions = num_dimensions
@@ -216,6 +218,74 @@ class ChebyshevSpline:
         self._built = False
         self._build_time = 0.0
         self._cached_error_estimate: float | None = None
+
+        # Deferred-build path: create empty per-piece Approximations with grid
+        # metadata only, no function evaluation.
+        if defer_build:
+            if function is not None:
+                raise ValueError(
+                    "defer_build=True requires function=None (the deferred-construction "
+                    "workflow expects values to be supplied via "
+                    "set_original_function_values() later)"
+                )
+            # Build each piece as a deferred ChebyshevApproximation
+            import itertools as _itertools
+            for flat_idx, multi_idx in enumerate(
+                _itertools.product(*[range(s) for s in self._shape])
+            ):
+                sub_domain = [
+                    list(self._intervals[d][multi_idx[d]])
+                    for d in range(self.num_dimensions)
+                ]
+                if self._n_nodes_nested:
+                    piece_n_nodes = [
+                        self.n_nodes[d][multi_idx[d]]
+                        for d in range(self.num_dimensions)
+                    ]
+                else:
+                    piece_n_nodes = list(self.n_nodes)
+                piece = ChebyshevApproximation(
+                    None,
+                    self.num_dimensions,
+                    sub_domain,
+                    piece_n_nodes,
+                    max_derivative_order=self.max_derivative_order,
+                    defer_build=True,
+                )
+                self._pieces[flat_idx] = piece
+
+    def set_original_function_values(self, per_piece_values) -> None:
+        """Populate each piece's tensor in place.
+
+        Pairs with ``defer_build=True`` ctor: once you have per-piece function
+        values (e.g., computed externally), call this to complete construction.
+        After this call the spline is fully evaluable.
+
+        Parameters
+        ----------
+        per_piece_values : list of array_like
+            One array per piece in C-order (matching the ``_pieces`` list).
+            Each array must have the correct shape for its piece.
+
+        Raises
+        ------
+        RuntimeError
+            If any piece is already constructed, or if the spline is in an
+            invalid state.
+        ValueError
+            On length mismatch or per-piece shape mismatch.
+        """
+        if len(per_piece_values) != len(self._pieces):
+            raise ValueError(
+                f"expected {len(self._pieces)} piece tensors, "
+                f"got {len(per_piece_values)}"
+            )
+        for piece, vals in zip(self._pieces, per_piece_values):
+            if piece is None:
+                raise RuntimeError("encountered a None piece — invalid state")
+            piece.set_original_function_values(vals)
+        self._built = True
+        self.function = None
 
     def build(self, verbose: bool = True) -> None:
         """Build all pieces by evaluating the function on each sub-domain.

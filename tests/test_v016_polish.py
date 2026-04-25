@@ -397,3 +397,109 @@ class TestPeekFormatVersion:
         # full load fails
         with pytest.raises((ValueError, IOError, EOFError)):
             ChebyshevApproximation.load(str(path))
+
+
+# ============================================================================
+# A7: set_original_function_values() + defer_build flag
+# ============================================================================
+
+class TestSetOriginalFunctionValues:
+    def test_defer_build_creates_empty_object(self):
+        cheb = ChebyshevApproximation(
+            None, 2, [[-1, 1], [-1, 1]], [4, 5], defer_build=True,
+        )
+        assert cheb.tensor_values is None
+        assert cheb.is_construction_finished() is False
+
+    def test_set_values_then_evaluable(self):
+        def f(x, _):
+            return math.sin(x[0]) + math.cos(x[1])
+
+        # Reference: standard build
+        ref = ChebyshevApproximation(f, 2, [[-1, 1], [-1, 1]], [6, 7])
+        ref.build(verbose=False)
+        ref_vals = ref.tensor_values
+
+        # Test: defer_build + set_original_function_values
+        deferred = ChebyshevApproximation(
+            None, 2, [[-1, 1], [-1, 1]], [6, 7], defer_build=True,
+        )
+        deferred.set_original_function_values(ref_vals)
+        assert deferred.is_construction_finished() is True
+        assert deferred.eval([0.3, -0.2], [0, 0]) == pytest.approx(ref.eval([0.3, -0.2], [0, 0]))
+
+    def test_bit_identical_to_from_values(self):
+        def f(x, _):
+            return x[0] * x[1]
+
+        ref = ChebyshevApproximation(f, 2, [[-1, 1], [-1, 1]], [4, 4])
+        ref.build(verbose=False)
+
+        via_factory = ChebyshevApproximation.from_values(
+            ref.tensor_values, 2, [[-1, 1], [-1, 1]], [4, 4],
+        )
+        via_in_place = ChebyshevApproximation(
+            None, 2, [[-1, 1], [-1, 1]], [4, 4], defer_build=True,
+        )
+        via_in_place.set_original_function_values(ref.tensor_values)
+
+        np.testing.assert_array_equal(
+            via_factory.tensor_values, via_in_place.tensor_values
+        )
+
+    def test_double_call_rejected(self):
+        cheb = ChebyshevApproximation(
+            None, 1, [[-1, 1]], [4], defer_build=True,
+        )
+        vals = np.zeros(4)
+        cheb.set_original_function_values(vals)
+        with pytest.raises(RuntimeError, match="already"):
+            cheb.set_original_function_values(vals)
+
+    def test_call_on_built_object_rejected(self, cheb_sin_3d):
+        with pytest.raises(RuntimeError, match="already"):
+            cheb_sin_3d.set_original_function_values(cheb_sin_3d.tensor_values)
+
+    def test_shape_mismatch_rejected(self):
+        cheb = ChebyshevApproximation(
+            None, 2, [[-1, 1], [-1, 1]], [4, 5], defer_build=True,
+        )
+        with pytest.raises(ValueError, match="shape"):
+            cheb.set_original_function_values(np.zeros((3, 5)))
+
+    def test_nan_inf_rejected(self):
+        cheb = ChebyshevApproximation(
+            None, 1, [[-1, 1]], [4], defer_build=True,
+        )
+        bad = np.array([0.0, float("nan"), 0.0, 0.0])
+        with pytest.raises(ValueError, match="NaN|Inf|finite"):
+            cheb.set_original_function_values(bad)
+
+    def test_descriptor_preserved_through_defer_set(self):
+        cheb = ChebyshevApproximation(
+            None, 1, [[-1, 1]], [4], defer_build=True,
+        )
+        cheb.set_descriptor("deferred")
+        cheb.set_original_function_values(np.zeros(4))
+        assert cheb.get_descriptor() == "deferred"
+
+    def test_spline_defer_and_set(self):
+        def f(x, _):
+            return abs(x[0])
+
+        ref = ChebyshevSpline(f, 1, [[-1, 1]], knots=[[0.0]], n_nodes=[8])
+        ref.build(verbose=False)
+
+        deferred = ChebyshevSpline(
+            None, 1, [[-1, 1]], knots=[[0.0]], n_nodes=[8], defer_build=True,
+        )
+        per_piece = [piece.tensor_values for piece in ref._pieces]
+        deferred.set_original_function_values(per_piece)
+        assert deferred.eval([-0.5], [0]) == pytest.approx(ref.eval([-0.5], [0]))
+
+    def test_function_attribute_is_none_after_defer_set(self):
+        cheb = ChebyshevApproximation(
+            None, 1, [[-1, 1]], [4], defer_build=True,
+        )
+        cheb.set_original_function_values(np.zeros(4))
+        assert cheb.function is None
