@@ -1806,6 +1806,8 @@ class ChebyshevTT:
             self._cached_error_estimate = None
         if not hasattr(self, "additional_data"):
             self.additional_data = None
+        if not hasattr(self, "descriptor"):
+            self.descriptor = ""
 
     def is_construction_finished(self) -> bool:
         """Return True iff this TT interpolant is built and usable."""
