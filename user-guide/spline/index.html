@@ -440,6 +440,34 @@
   
   
     <li class="md-nav__item">
+      <a href="../binary-format/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Binary Format
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
       <a href="../greeks/" class="md-nav__link">
         
   
@@ -3063,7 +3091,7 @@ contribute to every point).</p>
 
 
 <h2 id="pychebyshev.spline.ChebyshevSpline.save" class="doc doc-heading">
-            <code class="highlight language-python"><span class="n">save</span><span class="p">(</span><span class="n">path</span><span class="p">)</span></code>
+            <code class="highlight language-python"><span class="n">save</span><span class="p">(</span><span class="n">path</span><span class="p">,</span> <span class="nb">format</span><span class="o">=</span><span class="s1">&#39;pickle&#39;</span><span class="p">)</span></code>
 
 <a href="#pychebyshev.spline.ChebyshevSpline.save" class="headerlink" title="Permanent link">&para;</a></h2>
 
@@ -3071,9 +3099,6 @@ contribute to every point).</p>
     <div class="doc doc-contents ">
 
         <p>Save the built spline to a file.</p>
-<p>The original function is <strong>not</strong> saved -- only the numerical data
-needed for evaluation.  The saved file can be loaded with
-:meth:<code>load</code> without access to the original function.</p>
 
 
 <p><span class="doc-section-title">Parameters:</span></p>
@@ -3103,6 +3128,25 @@ needed for evaluation.  The saved file can be loaded with
                 <em>required</em>
             </td>
           </tr>
+          <tr class="doc-section-item">
+            <td>
+                <code>format</code>
+            </td>
+            <td>
+                  <code>(&#39;pickle&#39;, &#39;binary&#39;)</code>
+            </td>
+            <td>
+              <div class="doc-md-description">
+                <p><code>'pickle'</code> (default) writes the standard pickle stream.
+<code>'binary'</code> writes the portable <code>.pcb</code> format. The binary
+format requires flat (shared-across-pieces) <code>n_nodes</code>;
+nested-<code>n_nodes</code> splines must use pickle.</p>
+              </div>
+            </td>
+            <td>
+                  <code>&#39;pickle&#39;</code>
+            </td>
+          </tr>
       </tbody>
     </table>
 
@@ -3123,6 +3167,26 @@ needed for evaluation.  The saved file can be loaded with
             <td>
               <div class="doc-md-description">
                 <p>If the spline has not been built yet.</p>
+              </div>
+            </td>
+          </tr>
+          <tr class="doc-section-item">
+            <td>
+                  <code><span title="ValueError">ValueError</span></code>
+            </td>
+            <td>
+              <div class="doc-md-description">
+                <p>If <code>format</code> is not <code>'pickle'</code> or <code>'binary'</code>.</p>
+              </div>
+            </td>
+          </tr>
+          <tr class="doc-section-item">
+            <td>
+                  <code><span title="NotImplementedError">NotImplementedError</span></code>
+            </td>
+            <td>
+              <div class="doc-md-description">
+                <p>If <code>format='binary'</code> is requested for a nested-<code>n_nodes</code> spline.</p>
               </div>
             </td>
           </tr>
@@ -3149,10 +3213,9 @@ needed for evaluation.  The saved file can be loaded with
 
     <div class="doc doc-contents ">
 
-        <p>Load a previously saved spline from a file.</p>
-<p>The loaded object can evaluate immediately; no rebuild is needed.
-The <code>function</code> attribute will be <code>None</code>.  Assign a new function
-before calling <code>build()</code> again if a rebuild is desired.</p>
+        <p>Load a previously-saved spline.</p>
+<p>File format is auto-detected via magic bytes (<code>b"PCB\x00"</code> →
+binary; otherwise pickle).</p>
 
 
 <p><span class="doc-section-title">Parameters:</span></p>
@@ -3175,7 +3238,7 @@ before calling <code>build()</code> again if a rebuild is desired.</p>
             </td>
             <td>
               <div class="doc-md-description">
-                <p>Path to the saved file.</p>
+                <p>Source file path.</p>
               </div>
             </td>
             <td>
@@ -3201,7 +3264,7 @@ before calling <code>build()</code> again if a rebuild is desired.</p>
             </td>
             <td>
               <div class="doc-md-description">
-                <p>The restored spline.</p>
+                <p>The loaded spline. <code>function</code> is always <code>None</code>.</p>
               </div>
             </td>
           </tr>
@@ -3209,40 +3272,12 @@ before calling <code>build()</code> again if a rebuild is desired.</p>
     </table>
 
 
-<p><span class="doc-section-title">Warns:</span></p>
-    <table>
-      <thead>
-        <tr>
-          <th>Type</th>
-          <th>Description</th>
-        </tr>
-      </thead>
-      <tbody>
-          <tr class="doc-section-item">
-            <td>
-                  <code><span title="UserWarning">UserWarning</span></code>
-            </td>
-            <td>
-              <div class="doc-md-description">
-                <p>If the file was saved with a different PyChebyshev version.</p>
-              </div>
-            </td>
-          </tr>
-          <tr class="doc-section-item">
-            <td>
-                  <code>.. warning::</code>
-            </td>
-            <td>
-              <div class="doc-md-description">
-                <p>This method uses :mod:<code>pickle</code> internally.  Pickle can execute
-arbitrary code during deserialization.  <strong>Only load files you
-trust.</strong></p>
-              </div>
-            </td>
-          </tr>
-      </tbody>
-    </table>
-
+<details class="note" open>
+  <summary>Notes</summary>
+  <p>Pickle deserialization runs arbitrary code from the file. Only
+load files you trust. The binary format is safe to load from
+untrusted sources but does not preserve the function object.</p>
+</details>
 
     </div>
 
