@@ -112,14 +112,109 @@ All additive, no breaking changes.
 **Closes MoCaX gaps:** `additional_data`, `get_derivative_id`, descriptor,
 introspection.
 
+## v0.16 — Polish Bundle :material-clock-outline:
+
+Final cosmetic mirror of the MoCaX 4.3.1 surface. Strictly additive, no
+breaking changes.
+
+- `clone()` — deep copy on all four classes
+- `get_special_points()`, `get_max_derivative_order()`,
+  `get_error_threshold()` — instance getters
+- `get_evaluation_points()` / `get_num_evaluation_points()` — flat
+  `(N, num_dim)` grid post-construction (MoCaX-style)
+- `set_original_function_values(values)` — in-place deferred
+  construction (alt to the `from_values()` factory)
+- `peek_format_version(filename)` static — read `.pcb` version without
+  deserializing
+- `is_dimensionality_allowed(num_dim)` static — pre-flight capability check
+- Optional typed helpers `Domain`, `Ns`, `SpecialPoints` (constructors
+  accept both raw lists and these dataclasses)
+
+**Closes MoCaX gaps:** the last cosmetic surface methods.
+
+## v0.17 — Integrate Everywhere :material-clock-outline:
+
+Extend the v0.9 calculus toolkit so every class supports integration.
+
+- `ChebyshevSlider.integrate(dims=None, bounds=None)` — full and partial
+  integration via the sliding-decomposition closed form
+- `ChebyshevTT.integrate(dims=None, bounds=None)` — full and partial
+  integration via Fejér-1 weight contraction into TT cores
+
+After v0.17, `integrate()` is available on all four classes. Roots and
+min/max on Slider/TT remain deferred to v0.21.
+
+**Beyond MoCaX:** MoCaX has no `integrate()` API on any class.
+
+## v0.18 — TT Feature Parity :material-clock-outline:
+
+Bring `ChebyshevTT` up to parity with `ChebyshevApproximation` for the
+non-calculus surface.
+
+- TT `extrude()` — add a dim by appending a constant core
+- TT `slice()` — fix a dim by contracting a core via barycentric weights
+- TT `from_values()` classmethod — build from a precomputed full tensor
+  (skip TT-Cross)
+- TT `nodes()` static — generate the Chebyshev grid without function eval
+- TT algebra `+`, `-`, `*` (scalar) — core stacking + rounding
+- `to_dense()` / `from_dense()` — convert between TT and Approximation
+
+**Beyond MoCaX:** richer TT primitives than MoCaXExtend exposes.
+
+## v0.19 — Build & Diagnostics :material-clock-outline:
+
+Ergonomics for users with slow `f` or large grids.
+
+- Parallel function evaluation at build time (`n_workers=` ctor kwarg via
+  `concurrent.futures.ProcessPoolExecutor`)
+- `tqdm`-based progress bars during construction (opt-in, `verbose=2`)
+- `plot_convergence(target_error)` helper — builds at increasing N,
+  plots error decay
+- Visualization helpers: `plot_1d`, `plot_2d_surface`, `plot_2d_contour`
+
+New optional dependency group `pychebyshev[viz]` for matplotlib + tqdm.
+
+**Beyond MoCaX:** MoCaX has neither parallel build nor visualization
+helpers.
+
+## v0.20 — Adaptive Refinement + Interop :material-clock-outline:
+
+Smart node placement plus delivery of the v0.14 `.pcb` portability promise.
+
+- Auto-knot detection for `ChebyshevSpline` — scan for kinks via
+  curvature/derivative discontinuity, place knots automatically
+- Sobol indices computed from spectral coefficients (cheap once the
+  interpolant exists)
+- Auto dimension reordering by importance (helps TT rank growth)
+- Reference `.pcb` reader implementations in **Rust** and **Julia** as
+  separate sub-repos (`0xC000005/pcb-readers`)
+
+**Beyond MoCaX:** MoCaX is closed-source; `.pcb` ecosystem is
+PyChebyshev-unique.
+
+## v0.21 — Advanced Calculus :material-clock-outline:
+
+Research-grade extensions to close the remaining calculus surface.
+
+- N-D rootfinding via Möller–Stetter colleague matrices
+  (Trefethen 2017 ch. 24) on `ChebyshevApproximation` and
+  `ChebyshevSpline`
+- `roots()`, `minimize()`, `maximize()` on `ChebyshevSlider` and
+  `ChebyshevTT` (1-D-at-a-time + Brent's method bracket where no closed
+  form exists)
+- Higher-order partial derivatives on demand (currently capped at
+  construction-time `max_derivative_order`)
+
+**Beyond MoCaX:** spectral N-D rootfinding has no MoCaX analog.
+
 ## v1.0.0 — Parity Announcement :material-clock-outline:
 
-Feature-complete against MoCaX Intelligence 4.3.1. No new code — this release
-is:
+Feature-complete against MoCaX Intelligence 4.3.1, plus the beyond-MoCaX
+extensions from v0.16–v0.21. No new code — this release is:
 
 - Status bump `Beta` → `Production/Stable`
 - API stability commitment going forward
-- Summary CHANGELOG entry covering the parity items
+- Summary CHANGELOG entry covering the parity arc + extensions
 - Refreshed README with the final performance comparison
 
 ---
