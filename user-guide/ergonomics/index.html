@@ -11,10 +11,10 @@
       
       
       
-        <link rel="prev" href="../usage/">
+        <link rel="prev" href="../special-points/">
       
       
-        <link rel="next" href="../binary-format/">
+        <link rel="next" href="../../api/reference/">
       
       
         
@@ -25,7 +25,7 @@
     
     
       
-        <title>Saving & Loading - PyChebyshev</title>
+        <title>Ergonomics - PyChebyshev</title>
       
     
     
@@ -80,7 +80,7 @@
     <div data-md-component="skip">
       
         
-        <a href="#saving-loading-interpolants" class="md-skip">
+        <a href="#ergonomics" class="md-skip">
           Skip to content
         </a>
       
@@ -116,7 +116,7 @@
         <div class="md-header__topic" data-md-component="header-topic">
           <span class="md-ellipsis">
             
-              Saving & Loading
+              Ergonomics
             
           </span>
         </div>
@@ -409,37 +409,10 @@
                 
   
   
-    
   
   
-  
-    <li class="md-nav__item md-nav__item--active">
-      
-      <input class="md-nav__toggle md-toggle" type="checkbox" id="__toc">
-      
-      
-        
-      
-      
-        <label class="md-nav__link md-nav__link--active" for="__toc">
-          
-  
-  
-  <span class="md-ellipsis">
-    
-  
-    Saving & Loading
-  
-
-    
-  </span>
-  
-  
-
-          <span class="md-nav__icon md-icon"></span>
-        </label>
-      
-      <a href="./" class="md-nav__link md-nav__link--active">
+    <li class="md-nav__item">
+      <a href="../serialization/" class="md-nav__link">
         
   
   
@@ -455,81 +428,6 @@
   
 
       </a>
-      
-        
-
-<nav class="md-nav md-nav--secondary" aria-label="Table of contents">
-  
-  
-  
-    
-  
-  
-    <label class="md-nav__title" for="__toc">
-      <span class="md-nav__icon md-icon"></span>
-      Table of contents
-    </label>
-    <ul class="md-nav__list" data-md-component="toc" data-md-scrollfix>
-      
-        <li class="md-nav__item">
-  <a href="#why-save" class="md-nav__link">
-    <span class="md-ellipsis">
-      
-        Why Save?
-      
-    </span>
-  </a>
-  
-</li>
-      
-        <li class="md-nav__item">
-  <a href="#saving-a-built-interpolant" class="md-nav__link">
-    <span class="md-ellipsis">
-      
-        Saving a Built Interpolant
-      
-    </span>
-  </a>
-  
-</li>
-      
-        <li class="md-nav__item">
-  <a href="#loading-an-interpolant" class="md-nav__link">
-    <span class="md-ellipsis">
-      
-        Loading an Interpolant
-      
-    </span>
-  </a>
-  
-</li>
-      
-        <li class="md-nav__item">
-  <a href="#inspecting-objects" class="md-nav__link">
-    <span class="md-ellipsis">
-      
-        Inspecting Objects
-      
-    </span>
-  </a>
-  
-</li>
-      
-        <li class="md-nav__item">
-  <a href="#limitations" class="md-nav__link">
-    <span class="md-ellipsis">
-      
-        Limitations
-      
-    </span>
-  </a>
-  
-</li>
-      
-    </ul>
-  
-</nav>
-      
     </li>
   
 
@@ -903,10 +801,37 @@
                 
   
   
+    
   
   
-    <li class="md-nav__item">
-      <a href="../ergonomics/" class="md-nav__link">
+  
+    <li class="md-nav__item md-nav__item--active">
+      
+      <input class="md-nav__toggle md-toggle" type="checkbox" id="__toc">
+      
+      
+        
+      
+      
+        <label class="md-nav__link md-nav__link--active" for="__toc">
+          
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Ergonomics
+  
+
+    
+  </span>
+  
+  
+
+          <span class="md-nav__icon md-icon"></span>
+        </label>
+      
+      <a href="./" class="md-nav__link md-nav__link--active">
         
   
   
@@ -922,6 +847,109 @@
   
 
       </a>
+      
+        
+
+<nav class="md-nav md-nav--secondary" aria-label="Table of contents">
+  
+  
+  
+    
+  
+  
+    <label class="md-nav__title" for="__toc">
+      <span class="md-nav__icon md-icon"></span>
+      Table of contents
+    </label>
+    <ul class="md-nav__list" data-md-component="toc" data-md-scrollfix>
+      
+        <li class="md-nav__item">
+  <a href="#additional_data-constructor-kwarg" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        additional_data= constructor kwarg
+      
+    </span>
+  </a>
+  
+    <nav class="md-nav" aria-label="additional_data= constructor kwarg">
+      <ul class="md-nav__list">
+        
+          <li class="md-nav__item">
+  <a href="#persistence" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Persistence
+      
+    </span>
+  </a>
+  
+</li>
+        
+      </ul>
+    </nav>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#set_descriptor-get_descriptor" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        set_descriptor / get_descriptor
+      
+    </span>
+  </a>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#get_derivative_id-registry" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        get_derivative_id registry
+      
+    </span>
+  </a>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#introspection-trio" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Introspection trio
+      
+    </span>
+  </a>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#factory-derived-interpolants" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Factory-derived interpolants
+      
+    </span>
+  </a>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#mocax-correspondence" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        MoCaX correspondence
+      
+    </span>
+  </a>
+  
+</li>
+      
+    </ul>
+  
+</nav>
+      
     </li>
   
 
@@ -1042,10 +1070,38 @@
     <ul class="md-nav__list" data-md-component="toc" data-md-scrollfix>
       
         <li class="md-nav__item">
-  <a href="#why-save" class="md-nav__link">
+  <a href="#additional_data-constructor-kwarg" class="md-nav__link">
     <span class="md-ellipsis">
       
-        Why Save?
+        additional_data= constructor kwarg
+      
+    </span>
+  </a>
+  
+    <nav class="md-nav" aria-label="additional_data= constructor kwarg">
+      <ul class="md-nav__list">
+        
+          <li class="md-nav__item">
+  <a href="#persistence" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Persistence
+      
+    </span>
+  </a>
+  
+</li>
+        
+      </ul>
+    </nav>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#set_descriptor-get_descriptor" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        set_descriptor / get_descriptor
       
     </span>
   </a>
@@ -1053,10 +1109,10 @@
 </li>
       
         <li class="md-nav__item">
-  <a href="#saving-a-built-interpolant" class="md-nav__link">
+  <a href="#get_derivative_id-registry" class="md-nav__link">
     <span class="md-ellipsis">
       
-        Saving a Built Interpolant
+        get_derivative_id registry
       
     </span>
   </a>
@@ -1064,10 +1120,10 @@
 </li>
       
         <li class="md-nav__item">
-  <a href="#loading-an-interpolant" class="md-nav__link">
+  <a href="#introspection-trio" class="md-nav__link">
     <span class="md-ellipsis">
       
-        Loading an Interpolant
+        Introspection trio
       
     </span>
   </a>
@@ -1075,10 +1131,10 @@
 </li>
       
         <li class="md-nav__item">
-  <a href="#inspecting-objects" class="md-nav__link">
+  <a href="#factory-derived-interpolants" class="md-nav__link">
     <span class="md-ellipsis">
       
-        Inspecting Objects
+        Factory-derived interpolants
       
     </span>
   </a>
@@ -1086,10 +1142,10 @@
 </li>
       
         <li class="md-nav__item">
-  <a href="#limitations" class="md-nav__link">
+  <a href="#mocax-correspondence" class="md-nav__link">
     <span class="md-ellipsis">
       
-        Limitations
+        MoCaX correspondence
       
     </span>
   </a>
@@ -1116,127 +1172,138 @@
   
 
 
-<h1 id="saving-loading-interpolants">Saving &amp; Loading Interpolants<a class="headerlink" href="#saving-loading-interpolants" title="Permanent link">&para;</a></h1>
-<h2 id="why-save">Why Save?<a class="headerlink" href="#why-save" title="Permanent link">&para;</a></h2>
-<p>Building a Chebyshev interpolant is the expensive step — it evaluates your function
-at every node in the tensor grid (e.g. <span class="arithmatex">\(11^5 = 161{,}051\)</span> evaluations for a 5-D
-problem). Once built, evaluation takes microseconds.</p>
-<p>Saving a built interpolant lets you:</p>
-<ul>
-<li><strong>Build once, evaluate forever</strong> — skip the build step in production</li>
-<li><strong>Share models</strong> — distribute pre-built interpolants to team members or across machines</li>
-<li><strong>Persist across sessions</strong> — save your work and reload it later</li>
-</ul>
-<h2 id="saving-a-built-interpolant">Saving a Built Interpolant<a class="headerlink" href="#saving-a-built-interpolant" title="Permanent link">&para;</a></h2>
-<p>All three public classes -- <a href="../usage/"><code>ChebyshevApproximation</code></a>,
-<a href="../sliding/"><code>ChebyshevSlider</code></a>, and <a href="../tensor-train/"><code>ChebyshevTT</code></a> -- provide
-<code>save()</code> and <code>load()</code> methods:</p>
-<div class="highlight"><pre><span></span><code><a id="__codelineno-0-1" name="__codelineno-0-1" href="#__codelineno-0-1"></a><span class="kn">import</span><span class="w"> </span><span class="nn">math</span>
-<a id="__codelineno-0-2" name="__codelineno-0-2" href="#__codelineno-0-2"></a><span class="kn">from</span><span class="w"> </span><span class="nn">pychebyshev</span><span class="w"> </span><span class="kn">import</span> <span class="n">ChebyshevApproximation</span>
-<a id="__codelineno-0-3" name="__codelineno-0-3" href="#__codelineno-0-3"></a>
-<a id="__codelineno-0-4" name="__codelineno-0-4" href="#__codelineno-0-4"></a><span class="k">def</span><span class="w"> </span><span class="nf">my_func</span><span class="p">(</span><span class="n">x</span><span class="p">,</span> <span class="n">_</span><span class="p">):</span>
-<a id="__codelineno-0-5" name="__codelineno-0-5" href="#__codelineno-0-5"></a>    <span class="k">return</span> <span class="n">math</span><span class="o">.</span><span class="n">sin</span><span class="p">(</span><span class="n">x</span><span class="p">[</span><span class="mi">0</span><span class="p">])</span> <span class="o">*</span> <span class="n">math</span><span class="o">.</span><span class="n">exp</span><span class="p">(</span><span class="o">-</span><span class="n">x</span><span class="p">[</span><span class="mi">1</span><span class="p">])</span>
+<h1 id="ergonomics">Ergonomics<a class="headerlink" href="#ergonomics" title="Permanent link">&para;</a></h1>
+<p>PyChebyshev v0.15 added four small, additive features for managing
+interpolant metadata and derivative-orders ergonomically. All are MoCaX-parity
+conveniences; none change numerical behavior.</p>
+<h2 id="additional_data-constructor-kwarg"><code>additional_data=</code> constructor kwarg<a class="headerlink" href="#additional_data-constructor-kwarg" title="Permanent link">&para;</a></h2>
+<p>Thread context into the user function during build without writing a closure:</p>
+<div class="highlight"><pre><span></span><code><a id="__codelineno-0-1" name="__codelineno-0-1" href="#__codelineno-0-1"></a><span class="k">def</span><span class="w"> </span><span class="nf">black_scholes</span><span class="p">(</span><span class="n">point</span><span class="p">,</span> <span class="n">data</span><span class="p">):</span>
+<a id="__codelineno-0-2" name="__codelineno-0-2" href="#__codelineno-0-2"></a>    <span class="n">S</span><span class="p">,</span> <span class="n">K</span><span class="p">,</span> <span class="n">T</span> <span class="o">=</span> <span class="n">point</span>
+<a id="__codelineno-0-3" name="__codelineno-0-3" href="#__codelineno-0-3"></a>    <span class="n">r</span> <span class="o">=</span> <span class="n">data</span><span class="p">[</span><span class="s2">&quot;rate&quot;</span><span class="p">]</span>
+<a id="__codelineno-0-4" name="__codelineno-0-4" href="#__codelineno-0-4"></a>    <span class="n">sigma</span> <span class="o">=</span> <span class="n">data</span><span class="p">[</span><span class="s2">&quot;sigma&quot;</span><span class="p">]</span>
+<a id="__codelineno-0-5" name="__codelineno-0-5" href="#__codelineno-0-5"></a>    <span class="c1"># ... pricing logic that uses r, sigma ...</span>
 <a id="__codelineno-0-6" name="__codelineno-0-6" href="#__codelineno-0-6"></a>
 <a id="__codelineno-0-7" name="__codelineno-0-7" href="#__codelineno-0-7"></a><span class="n">cheb</span> <span class="o">=</span> <span class="n">ChebyshevApproximation</span><span class="p">(</span>
-<a id="__codelineno-0-8" name="__codelineno-0-8" href="#__codelineno-0-8"></a>    <span class="n">my_func</span><span class="p">,</span> <span class="mi">2</span><span class="p">,</span> <span class="p">[[</span><span class="o">-</span><span class="mi">1</span><span class="p">,</span> <span class="mi">1</span><span class="p">],</span> <span class="p">[</span><span class="mi">0</span><span class="p">,</span> <span class="mi">2</span><span class="p">]],</span> <span class="p">[</span><span class="mi">15</span><span class="p">,</span> <span class="mi">15</span><span class="p">]</span>
-<a id="__codelineno-0-9" name="__codelineno-0-9" href="#__codelineno-0-9"></a><span class="p">)</span>
-<a id="__codelineno-0-10" name="__codelineno-0-10" href="#__codelineno-0-10"></a><span class="n">cheb</span><span class="o">.</span><span class="n">build</span><span class="p">()</span>
-<a id="__codelineno-0-11" name="__codelineno-0-11" href="#__codelineno-0-11"></a>
-<a id="__codelineno-0-12" name="__codelineno-0-12" href="#__codelineno-0-12"></a><span class="c1"># Save to disk</span>
-<a id="__codelineno-0-13" name="__codelineno-0-13" href="#__codelineno-0-13"></a><span class="n">cheb</span><span class="o">.</span><span class="n">save</span><span class="p">(</span><span class="s2">&quot;interpolant.pkl&quot;</span><span class="p">)</span>
+<a id="__codelineno-0-8" name="__codelineno-0-8" href="#__codelineno-0-8"></a>    <span class="n">black_scholes</span><span class="p">,</span> <span class="mi">3</span><span class="p">,</span> <span class="n">domain</span><span class="p">,</span> <span class="p">[</span><span class="mi">11</span><span class="p">,</span> <span class="mi">11</span><span class="p">,</span> <span class="mi">11</span><span class="p">],</span>
+<a id="__codelineno-0-9" name="__codelineno-0-9" href="#__codelineno-0-9"></a>    <span class="n">additional_data</span><span class="o">=</span><span class="p">{</span><span class="s2">&quot;rate&quot;</span><span class="p">:</span> <span class="mf">0.05</span><span class="p">,</span> <span class="s2">&quot;sigma&quot;</span><span class="p">:</span> <span class="mf">0.2</span><span class="p">},</span>
+<a id="__codelineno-0-10" name="__codelineno-0-10" href="#__codelineno-0-10"></a><span class="p">)</span>
+<a id="__codelineno-0-11" name="__codelineno-0-11" href="#__codelineno-0-11"></a><span class="n">cheb</span><span class="o">.</span><span class="n">build</span><span class="p">()</span>
 </code></pre></div>
-<p>For a <code>ChebyshevSlider</code>:</p>
-<div class="highlight"><pre><span></span><code><a id="__codelineno-1-1" name="__codelineno-1-1" href="#__codelineno-1-1"></a><span class="kn">from</span><span class="w"> </span><span class="nn">pychebyshev</span><span class="w"> </span><span class="kn">import</span> <span class="n">ChebyshevSlider</span>
-<a id="__codelineno-1-2" name="__codelineno-1-2" href="#__codelineno-1-2"></a>
-<a id="__codelineno-1-3" name="__codelineno-1-3" href="#__codelineno-1-3"></a><span class="n">slider</span> <span class="o">=</span> <span class="n">ChebyshevSlider</span><span class="p">(</span>
-<a id="__codelineno-1-4" name="__codelineno-1-4" href="#__codelineno-1-4"></a>    <span class="n">my_func</span><span class="p">,</span> <span class="mi">2</span><span class="p">,</span> <span class="p">[[</span><span class="o">-</span><span class="mi">1</span><span class="p">,</span> <span class="mi">1</span><span class="p">],</span> <span class="p">[</span><span class="mi">0</span><span class="p">,</span> <span class="mi">2</span><span class="p">]],</span> <span class="p">[</span><span class="mi">15</span><span class="p">,</span> <span class="mi">15</span><span class="p">],</span>
-<a id="__codelineno-1-5" name="__codelineno-1-5" href="#__codelineno-1-5"></a>    <span class="n">partition</span><span class="o">=</span><span class="p">[[</span><span class="mi">0</span><span class="p">],</span> <span class="p">[</span><span class="mi">1</span><span class="p">]],</span>
-<a id="__codelineno-1-6" name="__codelineno-1-6" href="#__codelineno-1-6"></a>    <span class="n">pivot_point</span><span class="o">=</span><span class="p">[</span><span class="mf">0.0</span><span class="p">,</span> <span class="mf">1.0</span><span class="p">],</span>
-<a id="__codelineno-1-7" name="__codelineno-1-7" href="#__codelineno-1-7"></a><span class="p">)</span>
-<a id="__codelineno-1-8" name="__codelineno-1-8" href="#__codelineno-1-8"></a><span class="n">slider</span><span class="o">.</span><span class="n">build</span><span class="p">()</span>
-<a id="__codelineno-1-9" name="__codelineno-1-9" href="#__codelineno-1-9"></a>
-<a id="__codelineno-1-10" name="__codelineno-1-10" href="#__codelineno-1-10"></a><span class="n">slider</span><span class="o">.</span><span class="n">save</span><span class="p">(</span><span class="s2">&quot;slider.pkl&quot;</span><span class="p">)</span>
+<p>The value is stored on <code>self.additional_data</code> (public attribute, mutable).
+The function receives it as the second positional arg at every callsite during
+<code>build()</code>. After build, mutating <code>additional_data</code> has no effect on the
+already-baked tensor values.</p>
+<h3 id="persistence">Persistence<a class="headerlink" href="#persistence" title="Permanent link">&para;</a></h3>
+<table>
+<thead>
+<tr>
+<th>Path</th>
+<th>Behavior</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>Pickle save/load</td>
+<td>Preserved (free).</td>
+</tr>
+<tr>
+<td>Binary <code>.pcb</code> save</td>
+<td>Raises <code>NotImplementedError</code> if <code>additional_data is not None</code>. Pass <code>format='pickle'</code> for full persistence.</td>
+</tr>
+<tr>
+<td>Binary <code>.pcb</code> load</td>
+<td><code>self.additional_data = None</code>.</td>
+</tr>
+</tbody>
+</table>
+<h2 id="set_descriptor-get_descriptor"><code>set_descriptor</code> / <code>get_descriptor</code><a class="headerlink" href="#set_descriptor-get_descriptor" title="Permanent link">&para;</a></h2>
+<p>Label your interpolants:</p>
+<div class="highlight"><pre><span></span><code><a id="__codelineno-1-1" name="__codelineno-1-1" href="#__codelineno-1-1"></a><span class="n">cheb</span><span class="o">.</span><span class="n">set_descriptor</span><span class="p">(</span><span class="s2">&quot;vega-rates-curve-A&quot;</span><span class="p">)</span>
+<a id="__codelineno-1-2" name="__codelineno-1-2" href="#__codelineno-1-2"></a><span class="nb">print</span><span class="p">(</span><span class="n">cheb</span><span class="o">.</span><span class="n">get_descriptor</span><span class="p">())</span>  <span class="c1"># &quot;vega-rates-curve-A&quot;</span>
 </code></pre></div>
-<p>For a <a href="../tensor-train/"><code>ChebyshevTT</code></a>:</p>
-<div class="highlight"><pre><span></span><code><a id="__codelineno-2-1" name="__codelineno-2-1" href="#__codelineno-2-1"></a><span class="kn">from</span><span class="w"> </span><span class="nn">pychebyshev</span><span class="w"> </span><span class="kn">import</span> <span class="n">ChebyshevTT</span>
-<a id="__codelineno-2-2" name="__codelineno-2-2" href="#__codelineno-2-2"></a>
-<a id="__codelineno-2-3" name="__codelineno-2-3" href="#__codelineno-2-3"></a><span class="n">tt</span> <span class="o">=</span> <span class="n">ChebyshevTT</span><span class="p">(</span><span class="n">my_func</span><span class="p">,</span> <span class="mi">5</span><span class="p">,</span> <span class="n">domain</span><span class="p">,</span> <span class="p">[</span><span class="mi">11</span><span class="p">]</span><span class="o">*</span><span class="mi">5</span><span class="p">,</span> <span class="n">max_rank</span><span class="o">=</span><span class="mi">10</span><span class="p">)</span>
-<a id="__codelineno-2-4" name="__codelineno-2-4" href="#__codelineno-2-4"></a><span class="n">tt</span><span class="o">.</span><span class="n">build</span><span class="p">()</span>
-<a id="__codelineno-2-5" name="__codelineno-2-5" href="#__codelineno-2-5"></a><span class="n">tt</span><span class="o">.</span><span class="n">save</span><span class="p">(</span><span class="s2">&quot;tt_model.pkl&quot;</span><span class="p">)</span>
+<p>Default is <code>""</code>. Mutable any time. Pickle preserves; binary <code>.pcb</code> resets to
+<code>""</code> on load.</p>
+<h2 id="get_derivative_id-registry"><code>get_derivative_id</code> registry<a class="headerlink" href="#get_derivative_id-registry" title="Permanent link">&para;</a></h2>
+<p>Stable session-local integer IDs for repeated partials:</p>
+<div class="highlight"><pre><span></span><code><a id="__codelineno-2-1" name="__codelineno-2-1" href="#__codelineno-2-1"></a><span class="n">vega_id</span> <span class="o">=</span> <span class="n">cheb</span><span class="o">.</span><span class="n">get_derivative_id</span><span class="p">([</span><span class="mi">0</span><span class="p">,</span> <span class="mi">0</span><span class="p">,</span> <span class="mi">1</span><span class="p">])</span>    <span class="c1"># 0</span>
+<a id="__codelineno-2-2" name="__codelineno-2-2" href="#__codelineno-2-2"></a><span class="n">gamma_id</span> <span class="o">=</span> <span class="n">cheb</span><span class="o">.</span><span class="n">get_derivative_id</span><span class="p">([</span><span class="mi">2</span><span class="p">,</span> <span class="mi">0</span><span class="p">,</span> <span class="mi">0</span><span class="p">])</span>   <span class="c1"># 1</span>
+<a id="__codelineno-2-3" name="__codelineno-2-3" href="#__codelineno-2-3"></a><span class="n">cheb</span><span class="o">.</span><span class="n">get_derivative_id</span><span class="p">([</span><span class="mi">0</span><span class="p">,</span> <span class="mi">0</span><span class="p">,</span> <span class="mi">1</span><span class="p">])</span>              <span class="c1"># 0 again — same orders → same id</span>
+<a id="__codelineno-2-4" name="__codelineno-2-4" href="#__codelineno-2-4"></a>
+<a id="__codelineno-2-5" name="__codelineno-2-5" href="#__codelineno-2-5"></a><span class="n">price</span> <span class="o">=</span> <span class="n">cheb</span><span class="o">.</span><span class="n">eval</span><span class="p">(</span><span class="n">point</span><span class="p">,</span> <span class="n">derivative_order</span><span class="o">=</span><span class="p">[</span><span class="mi">0</span><span class="p">,</span> <span class="mi">0</span><span class="p">,</span> <span class="mi">0</span><span class="p">])</span>
+<a id="__codelineno-2-6" name="__codelineno-2-6" href="#__codelineno-2-6"></a><span class="n">vega</span>  <span class="o">=</span> <span class="n">cheb</span><span class="o">.</span><span class="n">eval</span><span class="p">(</span><span class="n">point</span><span class="p">,</span> <span class="n">derivative_id</span><span class="o">=</span><span class="n">vega_id</span><span class="p">)</span>
 </code></pre></div>
-<h2 id="loading-an-interpolant">Loading an Interpolant<a class="headerlink" href="#loading-an-interpolant" title="Permanent link">&para;</a></h2>
-<p>Use the <code>load()</code> class method — no rebuild needed:</p>
-<div class="highlight"><pre><span></span><code><a id="__codelineno-3-1" name="__codelineno-3-1" href="#__codelineno-3-1"></a><span class="kn">from</span><span class="w"> </span><span class="nn">pychebyshev</span><span class="w"> </span><span class="kn">import</span> <span class="n">ChebyshevApproximation</span><span class="p">,</span> <span class="n">ChebyshevSlider</span><span class="p">,</span> <span class="n">ChebyshevTT</span>
-<a id="__codelineno-3-2" name="__codelineno-3-2" href="#__codelineno-3-2"></a>
-<a id="__codelineno-3-3" name="__codelineno-3-3" href="#__codelineno-3-3"></a><span class="c1"># Load and evaluate immediately</span>
-<a id="__codelineno-3-4" name="__codelineno-3-4" href="#__codelineno-3-4"></a><span class="n">cheb</span> <span class="o">=</span> <span class="n">ChebyshevApproximation</span><span class="o">.</span><span class="n">load</span><span class="p">(</span><span class="s2">&quot;interpolant.pkl&quot;</span><span class="p">)</span>
-<a id="__codelineno-3-5" name="__codelineno-3-5" href="#__codelineno-3-5"></a><span class="n">value</span> <span class="o">=</span> <span class="n">cheb</span><span class="o">.</span><span class="n">vectorized_eval</span><span class="p">([</span><span class="mf">0.5</span><span class="p">,</span> <span class="mf">1.0</span><span class="p">],</span> <span class="p">[</span><span class="mi">0</span><span class="p">,</span> <span class="mi">0</span><span class="p">])</span>
-<a id="__codelineno-3-6" name="__codelineno-3-6" href="#__codelineno-3-6"></a>
-<a id="__codelineno-3-7" name="__codelineno-3-7" href="#__codelineno-3-7"></a><span class="c1"># Works the same for sliders</span>
-<a id="__codelineno-3-8" name="__codelineno-3-8" href="#__codelineno-3-8"></a><span class="n">slider</span> <span class="o">=</span> <span class="n">ChebyshevSlider</span><span class="o">.</span><span class="n">load</span><span class="p">(</span><span class="s2">&quot;slider.pkl&quot;</span><span class="p">)</span>
-<a id="__codelineno-3-9" name="__codelineno-3-9" href="#__codelineno-3-9"></a><span class="n">value</span> <span class="o">=</span> <span class="n">slider</span><span class="o">.</span><span class="n">eval</span><span class="p">([</span><span class="mf">0.5</span><span class="p">,</span> <span class="mf">1.0</span><span class="p">],</span> <span class="p">[</span><span class="mi">0</span><span class="p">,</span> <span class="mi">0</span><span class="p">])</span>
-<a id="__codelineno-3-10" name="__codelineno-3-10" href="#__codelineno-3-10"></a>
-<a id="__codelineno-3-11" name="__codelineno-3-11" href="#__codelineno-3-11"></a><span class="c1"># And for Tensor Train</span>
-<a id="__codelineno-3-12" name="__codelineno-3-12" href="#__codelineno-3-12"></a><span class="n">tt</span> <span class="o">=</span> <span class="n">ChebyshevTT</span><span class="o">.</span><span class="n">load</span><span class="p">(</span><span class="s2">&quot;tt_model.pkl&quot;</span><span class="p">)</span>
-<a id="__codelineno-3-13" name="__codelineno-3-13" href="#__codelineno-3-13"></a><span class="n">value</span> <span class="o">=</span> <span class="n">tt</span><span class="o">.</span><span class="n">eval</span><span class="p">([</span><span class="mf">0.5</span><span class="p">,</span> <span class="mf">1.0</span><span class="p">,</span> <span class="mf">0.3</span><span class="p">,</span> <span class="mf">0.2</span><span class="p">,</span> <span class="mf">0.05</span><span class="p">])</span>
+<p>Available on <code>ChebyshevApproximation</code>, <code>ChebyshevSpline</code>, and <code>ChebyshevSlider</code>
+(not on <code>ChebyshevTT</code> — TT uses finite differences and has no
+<code>derivative_order</code> arg in its <code>eval</code>).</p>
+<p><code>eval(..., derivative_order=..., derivative_id=...)</code> requires exactly one of
+the two; both → <code>ValueError</code>, neither → <code>ValueError</code>, unknown id → <code>KeyError</code>.</p>
+<p>IDs are session-local. Pickle preserves the registry; binary <code>.pcb</code> does not.</p>
+<h2 id="introspection-trio">Introspection trio<a class="headerlink" href="#introspection-trio" title="Permanent link">&para;</a></h2>
+<div class="highlight"><pre><span></span><code><a id="__codelineno-3-1" name="__codelineno-3-1" href="#__codelineno-3-1"></a><span class="n">cheb</span><span class="o">.</span><span class="n">is_construction_finished</span><span class="p">()</span>    <span class="c1"># bool — True after build / from_values / load / algebra</span>
+<a id="__codelineno-3-2" name="__codelineno-3-2" href="#__codelineno-3-2"></a><span class="n">cheb</span><span class="o">.</span><span class="n">get_constructor_type</span><span class="p">()</span>        <span class="c1"># &quot;ChebyshevApproximation&quot; (class name string)</span>
+<a id="__codelineno-3-3" name="__codelineno-3-3" href="#__codelineno-3-3"></a><span class="n">cheb</span><span class="o">.</span><span class="n">get_used_ns</span><span class="p">()</span>                 <span class="c1"># [11, 11, 11]  (post-build resolved n_nodes)</span>
 </code></pre></div>
-<p>The loaded <code>ChebyshevApproximation</code> supports all evaluation methods
-(<code>vectorized_eval</code>, <code>vectorized_eval_multi</code>, <code>vectorized_eval_batch</code>).
-The loaded <code>ChebyshevSlider</code> supports <code>eval</code> and <code>eval_multi</code>.
-The loaded <code>ChebyshevTT</code> supports <code>eval</code>, <code>eval_batch</code>, and <code>eval_multi</code>.</p>
-<h2 id="inspecting-objects">Inspecting Objects<a class="headerlink" href="#inspecting-objects" title="Permanent link">&para;</a></h2>
-<p>Use <code>repr()</code> for a compact summary and <code>print()</code> for a detailed view:</p>
-<div class="highlight"><pre><span></span><code><a id="__codelineno-4-1" name="__codelineno-4-1" href="#__codelineno-4-1"></a><span class="n">cheb</span> <span class="o">=</span> <span class="n">ChebyshevApproximation</span><span class="o">.</span><span class="n">load</span><span class="p">(</span><span class="s2">&quot;interpolant.pkl&quot;</span><span class="p">)</span>
-<a id="__codelineno-4-2" name="__codelineno-4-2" href="#__codelineno-4-2"></a>
-<a id="__codelineno-4-3" name="__codelineno-4-3" href="#__codelineno-4-3"></a><span class="nb">repr</span><span class="p">(</span><span class="n">cheb</span><span class="p">)</span>
-<a id="__codelineno-4-4" name="__codelineno-4-4" href="#__codelineno-4-4"></a><span class="c1"># ChebyshevApproximation(dims=2, nodes=[15, 15], built=True)</span>
-<a id="__codelineno-4-5" name="__codelineno-4-5" href="#__codelineno-4-5"></a>
-<a id="__codelineno-4-6" name="__codelineno-4-6" href="#__codelineno-4-6"></a><span class="nb">print</span><span class="p">(</span><span class="n">cheb</span><span class="p">)</span>
-<a id="__codelineno-4-7" name="__codelineno-4-7" href="#__codelineno-4-7"></a><span class="c1"># ChebyshevApproximation (2D, built)</span>
-<a id="__codelineno-4-8" name="__codelineno-4-8" href="#__codelineno-4-8"></a><span class="c1">#   Nodes:       [15, 15] (225 total)</span>
-<a id="__codelineno-4-9" name="__codelineno-4-9" href="#__codelineno-4-9"></a><span class="c1">#   Domain:      [-1, 1] x [0, 2]</span>
-<a id="__codelineno-4-10" name="__codelineno-4-10" href="#__codelineno-4-10"></a><span class="c1">#   Build:       0.002s, 225 evaluations</span>
-<a id="__codelineno-4-11" name="__codelineno-4-11" href="#__codelineno-4-11"></a><span class="c1">#   Derivatives: up to order 2</span>
-</code></pre></div>
-<p>For a slider:</p>
-<div class="highlight"><pre><span></span><code><a id="__codelineno-5-1" name="__codelineno-5-1" href="#__codelineno-5-1"></a><span class="nb">print</span><span class="p">(</span><span class="n">slider</span><span class="p">)</span>
-<a id="__codelineno-5-2" name="__codelineno-5-2" href="#__codelineno-5-2"></a><span class="c1"># ChebyshevSlider (5D, 2 slides, built)</span>
-<a id="__codelineno-5-3" name="__codelineno-5-3" href="#__codelineno-5-3"></a><span class="c1">#   Partition: [[0, 1, 2], [3, 4]]</span>
-<a id="__codelineno-5-4" name="__codelineno-5-4" href="#__codelineno-5-4"></a><span class="c1">#   Pivot:     [100.0, 1.0, 0.25, 0.05, 0.2]</span>
-<a id="__codelineno-5-5" name="__codelineno-5-5" href="#__codelineno-5-5"></a><span class="c1">#   Nodes:     [11, 11, 11, 11, 11] (1,452 vs 161,051 full tensor)</span>
-<a id="__codelineno-5-6" name="__codelineno-5-6" href="#__codelineno-5-6"></a><span class="c1">#   Domain:    [80.0, 120.0] x [0.5, 2.0] x [0.01, 0.5] x [0.01, 0.1] x [0.05, 0.5]</span>
-<a id="__codelineno-5-7" name="__codelineno-5-7" href="#__codelineno-5-7"></a><span class="c1">#   Slides:</span>
-<a id="__codelineno-5-8" name="__codelineno-5-8" href="#__codelineno-5-8"></a><span class="c1">#     [0] dims [0, 1, 2]: 1,331 evals, built in 0.189s</span>
-<a id="__codelineno-5-9" name="__codelineno-5-9" href="#__codelineno-5-9"></a><span class="c1">#     [1] dims [3, 4]:     121 evals, built in 0.021s</span>
-</code></pre></div>
-<p>This is useful for verifying that a loaded interpolant matches your expectations
-before using it.</p>
-<h2 id="limitations">Limitations<a class="headerlink" href="#limitations" title="Permanent link">&para;</a></h2>
+<p>Available on all four classes.</p>
 <ul>
-<li>
-<p><strong>The original function is not saved.</strong> Only the numerical data needed for
-  evaluation (nodes, weights, tensor values, differentiation matrices) is persisted.
-  After loading, <code>obj.function</code> is <code>None</code>.</p>
-</li>
-<li>
-<p><strong>Calling <code>build()</code> on a loaded object requires reassigning a function first:</strong></p>
-<div class="highlight"><pre><span></span><code><a id="__codelineno-6-1" name="__codelineno-6-1" href="#__codelineno-6-1"></a><span class="n">cheb</span> <span class="o">=</span> <span class="n">ChebyshevApproximation</span><span class="o">.</span><span class="n">load</span><span class="p">(</span><span class="s2">&quot;interpolant.pkl&quot;</span><span class="p">)</span>
-<a id="__codelineno-6-2" name="__codelineno-6-2" href="#__codelineno-6-2"></a><span class="n">cheb</span><span class="o">.</span><span class="n">function</span> <span class="o">=</span> <span class="n">my_func</span>  <span class="c1"># reassign before rebuilding</span>
-<a id="__codelineno-6-3" name="__codelineno-6-3" href="#__codelineno-6-3"></a><span class="n">cheb</span><span class="o">.</span><span class="n">build</span><span class="p">()</span>
-</code></pre></div>
-</li>
-<li>
-<p><strong>Version compatibility.</strong> If you load a file saved with a different version of
-  PyChebyshev, a warning is emitted. Evaluation results should be identical unless
-  internal data layout changed between versions.</p>
-</li>
+<li><code>is_construction_finished()</code> is False after bare <code>__init__</code> only; True after
+  any successful <code>build()</code>, <code>from_values()</code>, <code>load()</code>, algebra, <code>extrude()</code>,
+  <code>slice()</code>, or <code>integrate()</code> along a dim.</li>
+<li><code>get_constructor_type()</code> returns the class name.</li>
+<li><code>get_used_ns()</code> returns the per-dim node count list. For
+  <code>ChebyshevSpline</code>, the nested vs flat shape per dim is preserved.</li>
 </ul>
-<div class="admonition warning">
-<p class="admonition-title">Security</p>
-<p><code>load()</code> uses Python's <code>pickle</code> module internally. Pickle can execute arbitrary
-code during deserialization. <strong>Only load files you trust.</strong> Do not load
-interpolants from untrusted or unverified sources.</p>
-</div>
+<h2 id="factory-derived-interpolants">Factory-derived interpolants<a class="headerlink" href="#factory-derived-interpolants" title="Permanent link">&para;</a></h2>
+<p>Operations that produce a new interpolant from existing ones — <code>extrude()</code>,
+<code>slice()</code>, partial <code>integrate()</code>, algebra (<code>+</code>, <code>-</code>, <code>*</code>, <code>/</code>), and binary
+<code>.pcb</code> <code>load()</code> — return a <em>fresh</em> object: empty <code>descriptor</code>, <code>additional_data
+= None</code>, and an empty derivative-id registry. The source's metadata is not
+inherited. Re-attach metadata on the result if needed.</p>
+<div class="highlight"><pre><span></span><code><a id="__codelineno-4-1" name="__codelineno-4-1" href="#__codelineno-4-1"></a><span class="n">extruded</span> <span class="o">=</span> <span class="n">cheb</span><span class="o">.</span><span class="n">extrude</span><span class="p">((</span><span class="mi">3</span><span class="p">,</span> <span class="p">(</span><span class="o">-</span><span class="mf">1.0</span><span class="p">,</span> <span class="mf">1.0</span><span class="p">),</span> <span class="mi">5</span><span class="p">))</span>
+<a id="__codelineno-4-2" name="__codelineno-4-2" href="#__codelineno-4-2"></a><span class="k">assert</span> <span class="n">extruded</span><span class="o">.</span><span class="n">get_descriptor</span><span class="p">()</span> <span class="o">==</span> <span class="s2">&quot;&quot;</span>           <span class="c1"># not inherited</span>
+<a id="__codelineno-4-3" name="__codelineno-4-3" href="#__codelineno-4-3"></a><span class="n">extruded</span><span class="o">.</span><span class="n">set_descriptor</span><span class="p">(</span><span class="s2">&quot;derivative-of-source&quot;</span><span class="p">)</span>  <span class="c1"># re-attach if useful</span>
+</code></pre></div>
+<p>Pickle <code>load()</code> is the exception — it preserves the saved object's metadata
+(descriptor, additional_data, registry) faithfully.</p>
+<h2 id="mocax-correspondence">MoCaX correspondence<a class="headerlink" href="#mocax-correspondence" title="Permanent link">&para;</a></h2>
+<table>
+<thead>
+<tr>
+<th>MoCaX C++</th>
+<th>PyChebyshev v0.15</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td><code>setAdditionalData(payload)</code></td>
+<td><code>additional_data=</code> ctor kwarg</td>
+</tr>
+<tr>
+<td><code>getDescriptor()</code> / <code>setDescriptor(s)</code></td>
+<td><code>get_descriptor()</code> / <code>set_descriptor(s)</code></td>
+</tr>
+<tr>
+<td><code>getDerivativeId(orders)</code></td>
+<td><code>get_derivative_id(orders)</code></td>
+</tr>
+<tr>
+<td><code>eval(point, derivativeId)</code></td>
+<td><code>eval(point, derivative_id=...)</code></td>
+</tr>
+<tr>
+<td><code>getConstructorType()</code></td>
+<td><code>get_constructor_type()</code></td>
+</tr>
+<tr>
+<td><code>getUsedNs()</code></td>
+<td><code>get_used_ns()</code></td>
+</tr>
+<tr>
+<td><code>isConstructionFinished()</code></td>
+<td><code>is_construction_finished()</code></td>
+</tr>
+</tbody>
+</table>
 
 
 

@@ -988,6 +988,34 @@
 
               
             
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../ergonomics/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Ergonomics
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
           </ul>
         </nav>
       
@@ -1453,6 +1481,18 @@ minimal: ~240 lines, stdlib + <code>libm</code> only.</p>
 <tr>
 <td><code>max_derivative_order</code></td>
 <td>resets to default <code>2</code> on load — re-set manually after <code>load()</code> if you need higher orders</td>
+</tr>
+<tr>
+<td><code>additional_data</code></td>
+<td>binary save raises <code>NotImplementedError</code> if non-<code>None</code>; pass <code>format='pickle'</code> instead</td>
+</tr>
+<tr>
+<td><code>descriptor</code></td>
+<td>silently dropped on binary save; restored as <code>""</code> on load — pickle preserves</td>
+</tr>
+<tr>
+<td>Derivative-id registry</td>
+<td>not stored; reset to empty on binary load — pickle preserves</td>
 </tr>
 </tbody>
 </table>

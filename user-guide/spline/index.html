@@ -888,6 +888,17 @@
 </li>
       
         <li class="md-nav__item">
+  <a href="#pychebyshev.spline.ChebyshevSpline.get_derivative_id" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        get_derivative_id
+      
+    </span>
+  </a>
+  
+</li>
+      
+        <li class="md-nav__item">
   <a href="#pychebyshev.spline.ChebyshevSpline.eval" class="md-nav__link">
     <span class="md-ellipsis">
       
@@ -947,6 +958,61 @@
     <span class="md-ellipsis">
       
         __setstate__
+      
+    </span>
+  </a>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#pychebyshev.spline.ChebyshevSpline.is_construction_finished" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        is_construction_finished
+      
+    </span>
+  </a>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#pychebyshev.spline.ChebyshevSpline.get_constructor_type" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        get_constructor_type
+      
+    </span>
+  </a>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#pychebyshev.spline.ChebyshevSpline.get_used_ns" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        get_used_ns
+      
+    </span>
+  </a>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#pychebyshev.spline.ChebyshevSpline.set_descriptor" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        set_descriptor
+      
+    </span>
+  </a>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#pychebyshev.spline.ChebyshevSpline.get_descriptor" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        get_descriptor
       
     </span>
   </a>
@@ -1311,6 +1377,34 @@
     
   
     Special Points
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../ergonomics/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Ergonomics
   
 
     
@@ -1743,6 +1837,17 @@
 </li>
       
         <li class="md-nav__item">
+  <a href="#pychebyshev.spline.ChebyshevSpline.get_derivative_id" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        get_derivative_id
+      
+    </span>
+  </a>
+  
+</li>
+      
+        <li class="md-nav__item">
   <a href="#pychebyshev.spline.ChebyshevSpline.eval" class="md-nav__link">
     <span class="md-ellipsis">
       
@@ -1802,6 +1907,61 @@
     <span class="md-ellipsis">
       
         __setstate__
+      
+    </span>
+  </a>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#pychebyshev.spline.ChebyshevSpline.is_construction_finished" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        is_construction_finished
+      
+    </span>
+  </a>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#pychebyshev.spline.ChebyshevSpline.get_constructor_type" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        get_constructor_type
+      
+    </span>
+  </a>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#pychebyshev.spline.ChebyshevSpline.get_used_ns" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        get_used_ns
+      
+    </span>
+  </a>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#pychebyshev.spline.ChebyshevSpline.set_descriptor" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        set_descriptor
+      
+    </span>
+  </a>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#pychebyshev.spline.ChebyshevSpline.get_descriptor" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        get_descriptor
       
     </span>
   </a>
@@ -2621,8 +2781,83 @@ on the Cartesian product of per-dimension sub-intervals.</p>
 <div class="doc doc-object doc-function">
 
 
+<h2 id="pychebyshev.spline.ChebyshevSpline.get_derivative_id" class="doc doc-heading">
+            <code class="highlight language-python"><span class="n">get_derivative_id</span><span class="p">(</span><span class="n">derivative_order</span><span class="p">)</span></code>
+
+<a href="#pychebyshev.spline.ChebyshevSpline.get_derivative_id" class="headerlink" title="Permanent link">&para;</a></h2>
+
+
+    <div class="doc doc-contents ">
+
+        <p>Register a derivative-orders tuple and return a stable session-local int.</p>
+<p>Calling with the same <code>derivative_order</code> returns the same int. IDs
+are sequential, starting at 0, and are persisted across pickle save/load
+but reset on binary <code>.pcb</code> save/load.</p>
+
+
+<p><span class="doc-section-title">Parameters:</span></p>
+    <table>
+      <thead>
+        <tr>
+          <th>Name</th>
+          <th>Type</th>
+          <th>Description</th>
+          <th>Default</th>
+        </tr>
+      </thead>
+      <tbody>
+          <tr class="doc-section-item">
+            <td>
+                <code>derivative_order</code>
+            </td>
+            <td>
+                  <code>list of int</code>
+            </td>
+            <td>
+              <div class="doc-md-description">
+                <p>Derivative order per dimension.</p>
+              </div>
+            </td>
+            <td>
+                <em>required</em>
+            </td>
+          </tr>
+      </tbody>
+    </table>
+
+
+    <p><span class="doc-section-title">Returns:</span></p>
+    <table>
+      <thead>
+        <tr>
+          <th>Type</th>
+          <th>Description</th>
+        </tr>
+      </thead>
+      <tbody>
+          <tr class="doc-section-item">
+            <td>
+                  <code><span title="int">int</span></code>
+            </td>
+            <td>
+              <div class="doc-md-description">
+                <p>Stable session-local identifier for this derivative order.</p>
+              </div>
+            </td>
+          </tr>
+      </tbody>
+    </table>
+
+
+    </div>
+
+</div>
+
+<div class="doc doc-object doc-function">
+
+
 <h2 id="pychebyshev.spline.ChebyshevSpline.eval" class="doc doc-heading">
-            <code class="highlight language-python"><span class="nb">eval</span><span class="p">(</span><span class="n">point</span><span class="p">,</span> <span class="n">derivative_order</span><span class="p">)</span></code>
+            <code class="highlight language-python"><span class="nb">eval</span><span class="p">(</span><span class="n">point</span><span class="p">,</span> <span class="n">derivative_order</span><span class="o">=</span><span class="kc">None</span><span class="p">,</span> <span class="o">*</span><span class="p">,</span> <span class="n">derivative_id</span><span class="o">=</span><span class="kc">None</span><span class="p">)</span></code>
 
 <a href="#pychebyshev.spline.ChebyshevSpline.eval" class="headerlink" title="Permanent link">&para;</a></h2>
 
@@ -2667,15 +2902,33 @@ and delegates to its
                 <code>derivative_order</code>
             </td>
             <td>
-                  <code>list of int</code>
+                  <code>list of int or None</code>
             </td>
             <td>
               <div class="doc-md-description">
-                <p>Derivative order for each dimension (0 = function value).</p>
+                <p>Derivative order for each dimension (0 = function value).
+Provide either this or <code>derivative_id</code>, not both.</p>
               </div>
             </td>
             <td>
-                <em>required</em>
+                  <code>None</code>
+            </td>
+          </tr>
+          <tr class="doc-section-item">
+            <td>
+                <code>derivative_id</code>
+            </td>
+            <td>
+                  <code><span title="int">int</span> or None</code>
+            </td>
+            <td>
+              <div class="doc-md-description">
+                <p>Session-local identifier registered via :meth:<code>get_derivative_id</code>.
+Provide either this or <code>derivative_order</code>, not both.</p>
+              </div>
+            </td>
+            <td>
+                  <code>None</code>
             </td>
           </tr>
       </tbody>
@@ -2731,6 +2984,16 @@ and delegates to its
             <td>
               <div class="doc-md-description">
                 <p>If the point is at a knot and a non-zero derivative is requested.</p>
+              </div>
+            </td>
+          </tr>
+          <tr class="doc-section-item">
+            <td>
+                  <code><span title="KeyError">KeyError</span></code>
+            </td>
+            <td>
+              <div class="doc-md-description">
+                <p>If <code>derivative_id</code> is not registered.</p>
               </div>
             </td>
           </tr>
@@ -2871,7 +3134,7 @@ derivative orders.</p>
 
 
 <h2 id="pychebyshev.spline.ChebyshevSpline.eval_batch" class="doc doc-heading">
-            <code class="highlight language-python"><span class="n">eval_batch</span><span class="p">(</span><span class="n">points</span><span class="p">,</span> <span class="n">derivative_order</span><span class="p">)</span></code>
+            <code class="highlight language-python"><span class="n">eval_batch</span><span class="p">(</span><span class="n">points</span><span class="p">,</span> <span class="n">derivative_order</span><span class="o">=</span><span class="kc">None</span><span class="p">,</span> <span class="o">*</span><span class="p">,</span> <span class="n">derivative_id</span><span class="o">=</span><span class="kc">None</span><span class="p">)</span></code>
 
 <a href="#pychebyshev.spline.ChebyshevSpline.eval_batch" class="headerlink" title="Permanent link">&para;</a></h2>
 
@@ -2916,15 +3179,33 @@ evaluates each piece's batch via
                 <code>derivative_order</code>
             </td>
             <td>
-                  <code>list of int</code>
+                  <code>list of int or None</code>
             </td>
             <td>
               <div class="doc-md-description">
-                <p>Derivative order for each dimension.</p>
+                <p>Derivative order for each dimension.
+Provide either this or <code>derivative_id</code>, not both.</p>
               </div>
             </td>
             <td>
-                <em>required</em>
+                  <code>None</code>
+            </td>
+          </tr>
+          <tr class="doc-section-item">
+            <td>
+                <code>derivative_id</code>
+            </td>
+            <td>
+                  <code><span title="int">int</span> or None</code>
+            </td>
+            <td>
+              <div class="doc-md-description">
+                <p>Session-local identifier registered via :meth:<code>get_derivative_id</code>.
+Provide either this or <code>derivative_order</code>, not both.</p>
+              </div>
+            </td>
+            <td>
+                  <code>None</code>
             </td>
           </tr>
       </tbody>
@@ -2970,6 +3251,16 @@ evaluates each piece's batch via
             <td>
               <div class="doc-md-description">
                 <p>If <code>build()</code> has not been called.</p>
+              </div>
+            </td>
+          </tr>
+          <tr class="doc-section-item">
+            <td>
+                  <code><span title="KeyError">KeyError</span></code>
+            </td>
+            <td>
+              <div class="doc-md-description">
+                <p>If <code>derivative_id</code> is not registered.</p>
               </div>
             </td>
           </tr>
@@ -3081,6 +3372,150 @@ contribute to every point).</p>
     <div class="doc doc-contents ">
 
         <p>Restore state from a pickled dict.</p>
+
+
+    </div>
+
+</div>
+
+<div class="doc doc-object doc-function">
+
+
+<h2 id="pychebyshev.spline.ChebyshevSpline.is_construction_finished" class="doc doc-heading">
+            <code class="highlight language-python"><span class="n">is_construction_finished</span><span class="p">()</span></code>
+
+<a href="#pychebyshev.spline.ChebyshevSpline.is_construction_finished" class="headerlink" title="Permanent link">&para;</a></h2>
+
+
+    <div class="doc doc-contents ">
+
+        <p>Return True iff this spline is built and usable.</p>
+
+
+    </div>
+
+</div>
+
+<div class="doc doc-object doc-function">
+
+
+<h2 id="pychebyshev.spline.ChebyshevSpline.get_constructor_type" class="doc doc-heading">
+            <code class="highlight language-python"><span class="n">get_constructor_type</span><span class="p">()</span></code>
+
+<a href="#pychebyshev.spline.ChebyshevSpline.get_constructor_type" class="headerlink" title="Permanent link">&para;</a></h2>
+
+
+    <div class="doc doc-contents ">
+
+        <p>Return the class name.</p>
+
+
+    </div>
+
+</div>
+
+<div class="doc doc-object doc-function">
+
+
+<h2 id="pychebyshev.spline.ChebyshevSpline.get_used_ns" class="doc doc-heading">
+            <code class="highlight language-python"><span class="n">get_used_ns</span><span class="p">()</span></code>
+
+<a href="#pychebyshev.spline.ChebyshevSpline.get_used_ns" class="headerlink" title="Permanent link">&para;</a></h2>
+
+
+    <div class="doc doc-contents ">
+
+        <p>Return per-dim n_nodes preserving nested vs flat shape.</p>
+
+
+    </div>
+
+</div>
+
+<div class="doc doc-object doc-function">
+
+
+<h2 id="pychebyshev.spline.ChebyshevSpline.set_descriptor" class="doc doc-heading">
+            <code class="highlight language-python"><span class="n">set_descriptor</span><span class="p">(</span><span class="n">descriptor</span><span class="p">)</span></code>
+
+<a href="#pychebyshev.spline.ChebyshevSpline.set_descriptor" class="headerlink" title="Permanent link">&para;</a></h2>
+
+
+    <div class="doc doc-contents ">
+
+        <p>Set a free-form text label on this spline.</p>
+
+
+<p><span class="doc-section-title">Parameters:</span></p>
+    <table>
+      <thead>
+        <tr>
+          <th>Name</th>
+          <th>Type</th>
+          <th>Description</th>
+          <th>Default</th>
+        </tr>
+      </thead>
+      <tbody>
+          <tr class="doc-section-item">
+            <td>
+                <code>descriptor</code>
+            </td>
+            <td>
+                  <code><span title="str">str</span></code>
+            </td>
+            <td>
+              <div class="doc-md-description">
+                <p>Label to attach to this spline.</p>
+              </div>
+            </td>
+            <td>
+                <em>required</em>
+            </td>
+          </tr>
+      </tbody>
+    </table>
+
+
+<p><span class="doc-section-title">Raises:</span></p>
+    <table>
+      <thead>
+        <tr>
+          <th>Type</th>
+          <th>Description</th>
+        </tr>
+      </thead>
+      <tbody>
+          <tr class="doc-section-item">
+            <td>
+                  <code><span title="TypeError">TypeError</span></code>
+            </td>
+            <td>
+              <div class="doc-md-description">
+                <p>If <code>descriptor</code> is not a string.</p>
+              </div>
+            </td>
+          </tr>
+      </tbody>
+    </table>
+
+
+    </div>
+
+</div>
+
+<div class="doc doc-object doc-function">
+
+
+<h2 id="pychebyshev.spline.ChebyshevSpline.get_descriptor" class="doc doc-heading">
+            <code class="highlight language-python"><span class="n">get_descriptor</span><span class="p">()</span></code>
+
+<a href="#pychebyshev.spline.ChebyshevSpline.get_descriptor" class="headerlink" title="Permanent link">&para;</a></h2>
+
+
+    <div class="doc doc-contents ">
+
+        <p>Return the descriptor label (default <code>""</code>).</p>
 
 
     </div>
