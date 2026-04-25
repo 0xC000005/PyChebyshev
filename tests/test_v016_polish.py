@@ -350,3 +350,50 @@ class TestClone:
         assert clone.function is None
         # Original retains its function
         assert cheb_sin_3d.function is not None
+
+
+# ============================================================================
+# A8: peek_format_version()
+# ============================================================================
+
+class TestPeekFormatVersion:
+    def test_peek_returns_v1_for_current_format(self, cheb_sin_3d, tmp_path):
+        path = tmp_path / "model.pcb"
+        cheb_sin_3d.save(str(path), format="binary")
+        assert ChebyshevApproximation.peek_format_version(str(path)) == 1
+
+    def test_peek_returns_v1_for_spline_pcb(self, spline_abs_1d, tmp_path):
+        path = tmp_path / "spline.pcb"
+        spline_abs_1d.save(str(path), format="binary")
+        assert ChebyshevApproximation.peek_format_version(str(path)) == 1
+
+    def test_peek_invalid_magic_raises(self, tmp_path):
+        path = tmp_path / "fake.pcb"
+        path.write_bytes(b"NOTPCB\x00\x00\x01\x00\x00\x00")
+        with pytest.raises(ValueError, match="not a .pcb file|magic"):
+            ChebyshevApproximation.peek_format_version(str(path))
+
+    def test_peek_truncated_file_raises(self, tmp_path):
+        path = tmp_path / "trunc.pcb"
+        path.write_bytes(b"PCB\x00\x01")  # only 5 bytes, header is 12
+        with pytest.raises((ValueError, IOError)):
+            ChebyshevApproximation.peek_format_version(str(path))
+
+    def test_peek_nonexistent_file_raises(self, tmp_path):
+        path = tmp_path / "missing.pcb"
+        with pytest.raises((FileNotFoundError, IOError)):
+            ChebyshevApproximation.peek_format_version(str(path))
+
+    def test_peek_does_not_load_full_file(self, cheb_sin_3d, tmp_path):
+        """Sanity: peek must not call full deserialize. Truncate after the
+        header — peek returns the version, but full load fails."""
+        path = tmp_path / "head_only.pcb"
+        cheb_sin_3d.save(str(path), format="binary")
+        with open(path, "rb") as f:
+            full = f.read()
+        path.write_bytes(full[:12])
+        # peek succeeds
+        assert ChebyshevApproximation.peek_format_version(str(path)) == 1
+        # full load fails
+        with pytest.raises((ValueError, IOError, EOFError)):
+            ChebyshevApproximation.load(str(path))

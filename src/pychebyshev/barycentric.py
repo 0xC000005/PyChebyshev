@@ -1343,6 +1343,36 @@ class ChebyshevApproximation:
             )
         return obj
 
+    @staticmethod
+    def peek_format_version(filename: str) -> int:
+        """Read a .pcb file's header and return its major format version
+        integer. Does not deserialize the body.
+
+        See ``docs/user-guide/binary-format.md`` for the format spec.
+
+        Parameters
+        ----------
+        filename : str
+            Path to a .pcb file.
+
+        Returns
+        -------
+        int
+            The major format version (currently 1).
+
+        Raises
+        ------
+        ValueError
+            If the file's first 4 bytes do not match the .pcb magic, or if
+            the file is shorter than the 12-byte header.
+        FileNotFoundError
+            If the file does not exist.
+        IOError
+            If the file cannot be opened.
+        """
+        from pychebyshev._binary import peek_format_version
+        return peek_format_version(filename)
+
     # ------------------------------------------------------------------
     # Pre-computed values: nodes first, values later
     # ------------------------------------------------------------------
