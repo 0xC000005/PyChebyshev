@@ -1164,6 +1164,18 @@ class ChebyshevApproximation:
         """
         return int(np.prod(self.n_nodes))
 
+    def get_evaluation_points(self) -> np.ndarray:
+        """Return the grid of points where ``f`` was (or will be) evaluated.
+
+        Returns
+        -------
+        np.ndarray
+            Shape ``(N, num_dimensions)`` where ``N = prod(n_nodes)``. Points
+            are listed in C-order: dim-0 outermost, dim-(d-1) innermost.
+        """
+        grids = np.meshgrid(*self.nodes, indexing="ij")
+        return np.stack([g.ravel() for g in grids], axis=-1).astype(np.float64)
+
     # ------------------------------------------------------------------
     # Serialization
     # ------------------------------------------------------------------

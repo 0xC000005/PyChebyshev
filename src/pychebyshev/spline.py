@@ -787,6 +787,21 @@ class ChebyshevSpline:
             sum(int(np.prod(piece.n_nodes)) for piece in self._pieces)
         )
 
+    def get_evaluation_points(self) -> np.ndarray:
+        """Return the concatenated grid of evaluation points across all pieces.
+
+        Pieces are visited in C-order. Within each piece, points are listed
+        in C-order as for :meth:`ChebyshevApproximation.get_evaluation_points`.
+
+        Returns
+        -------
+        np.ndarray
+            Shape ``(N, num_dimensions)`` where ``N`` equals
+            :meth:`get_num_evaluation_points`.
+        """
+        parts = [piece.get_evaluation_points() for piece in self._pieces]
+        return np.concatenate(parts, axis=0)
+
     def get_special_points(self) -> list[list[float]] | None:
         """Return the per-dimension knot/kink locations this spline was built
         around.

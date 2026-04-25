@@ -1871,6 +1871,25 @@ class ChebyshevTT:
         """
         return int(np.prod(self.n_nodes))
 
+    def get_evaluation_points(self) -> np.ndarray:
+        """Return the full Cartesian grid of node positions across all
+        dimensions. Note: TT-Cross only queries a sparse subset; this method
+        returns the underlying full grid the cross algorithm samples from
+        (matching :meth:`get_num_evaluation_points`).
+
+        Returns
+        -------
+        np.ndarray
+            Shape ``(N, num_dimensions)`` where ``N = prod(n_nodes)``.
+        """
+        per_dim = []
+        for d in range(self.num_dimensions):
+            nodes_std = chebpts1(self.n_nodes[d])  # [-1, 1], ascending
+            a, b = self.domain[d]
+            per_dim.append(np.sort(0.5 * (a + b) + 0.5 * (b - a) * nodes_std))
+        grids = np.meshgrid(*per_dim, indexing="ij")
+        return np.stack([g.ravel() for g in grids], axis=-1).astype(np.float64)
+
     @staticmethod
     def is_dimensionality_allowed(num_dimensions: int) -> bool:
         """Return whether this interpolant class supports the given number of

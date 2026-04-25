@@ -463,6 +463,26 @@ class ChebyshevSlider:
         """
         return int(self.total_build_evals)
 
+    def get_evaluation_points(self) -> np.ndarray:
+        """Return all evaluation points consumed by the slider build:
+        each slide's grid lifted back to the global d-D coordinate space
+        (off-group dims set to the pivot value).
+
+        Returns
+        -------
+        np.ndarray
+            Shape ``(N, num_dimensions)`` where ``N`` equals
+            :meth:`get_num_evaluation_points` (``total_build_evals``).
+        """
+        pivot = np.array(self.pivot_point, dtype=np.float64)
+        rows = []
+        for slide, group in zip(self.slides, self.partition):
+            grid = slide.get_evaluation_points()  # (n_local, len(group))
+            full = np.tile(pivot, (len(grid), 1))
+            full[:, group] = grid
+            rows.append(full)
+        return np.concatenate(rows, axis=0)
+
     @staticmethod
     def is_dimensionality_allowed(num_dimensions: int) -> bool:
         """Return whether this interpolant class supports the given number of

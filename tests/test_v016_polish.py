@@ -191,3 +191,72 @@ class TestGetNumEvaluationPoints:
         """TT returns prod(n_nodes), the full Cartesian grid (not the sparse cross sample count)."""
         expected = int(np.prod(tt_sin_3d.n_nodes))
         assert tt_sin_3d.get_num_evaluation_points() == expected
+
+
+# ============================================================================
+# A5: get_evaluation_points()
+# ============================================================================
+
+class TestGetEvaluationPoints:
+    def test_approximation_shape(self, cheb_sin_3d):
+        pts = cheb_sin_3d.get_evaluation_points()
+        assert pts.shape == (10 * 8 * 4, 3)
+        assert pts.dtype == np.float64
+
+    def test_approximation_within_domain(self, cheb_sin_3d):
+        pts = cheb_sin_3d.get_evaluation_points()
+        # Domain is [[-1,1], [-1,1], [1,3]]
+        assert pts[:, 0].min() >= -1.0 and pts[:, 0].max() <= 1.0
+        assert pts[:, 1].min() >= -1.0 and pts[:, 1].max() <= 1.0
+        assert pts[:, 2].min() >= 1.0 and pts[:, 2].max() <= 3.0
+
+    def test_approximation_count_matches_num_eval_points(self, cheb_sin_3d):
+        pts = cheb_sin_3d.get_evaluation_points()
+        assert len(pts) == cheb_sin_3d.get_num_evaluation_points()
+
+    def test_approximation_unique_nodes_per_dim(self):
+        def f(x, _):
+            return x[0] + x[1]
+
+        cheb = ChebyshevApproximation(f, 2, [[-1, 1], [0, 1]], [4, 4])
+        cheb.build(verbose=False)
+        pts = cheb.get_evaluation_points()
+        assert pts.shape == (16, 2)
+        assert len(np.unique(pts[:, 0])) == 4
+        assert len(np.unique(pts[:, 1])) == 4
+
+    def test_spline_concatenates_pieces(self, spline_abs_1d):
+        pts = spline_abs_1d.get_evaluation_points()
+        assert pts.shape[1] == 1
+        assert len(pts) == spline_abs_1d.get_num_evaluation_points()
+
+    def test_slider_returns_2d_array(self):
+        def f(x, _):
+            return math.sin(x[0]) + math.sin(x[1])
+
+        slider = ChebyshevSlider(
+            f, 2, [[-1, 1], [-1, 1]], [8, 8], partition=[[0], [1]],
+            pivot_point=[0.0, 0.0],
+        )
+        slider.build(verbose=False)
+        pts = slider.get_evaluation_points()
+        assert pts.ndim == 2
+        assert pts.shape[1] == 2
+        assert len(pts) == slider.get_num_evaluation_points()
+
+    def test_tt_returns_2d_array(self, tt_sin_3d):
+        pts = tt_sin_3d.get_evaluation_points()
+        assert pts.ndim == 2
+        assert pts.shape[1] == 3
+        assert len(pts) == tt_sin_3d.get_num_evaluation_points()
+
+    def test_consistency_with_get_num_eval_points(self):
+        """The fundamental contract: len(get_evaluation_points) == get_num_evaluation_points."""
+        def f(x, _):
+            return x[0] * x[1]
+
+        cheb = ChebyshevApproximation(f, 2, [[-1, 1], [-1, 1]], [5, 7])
+        cheb.build(verbose=False)
+        pts = cheb.get_evaluation_points()
+        assert len(pts) == cheb.get_num_evaluation_points()
+        assert len(pts) == 5 * 7
