@@ -1454,6 +1454,7 @@ class ChebyshevApproximation:
         obj.tensor_values = tensor
         obj.build_time = 0.0
         obj.n_evaluations = 0
+        obj.descriptor = ""
         obj._cached_error_estimate = None
         obj._eval_cache = {}
         for d in range(new_ndim - 1, 0, -1):
@@ -1540,6 +1541,7 @@ class ChebyshevApproximation:
         obj.tensor_values = tensor
         obj.build_time = 0.0
         obj.n_evaluations = 0
+        obj.descriptor = ""
         obj._cached_error_estimate = None
         obj._eval_cache = {}
         for d in range(new_ndim - 1, 0, -1):
@@ -1655,6 +1657,7 @@ class ChebyshevApproximation:
         obj.tensor_values = tensor
         obj.build_time = 0.0
         obj.n_evaluations = 0
+        obj.descriptor = ""
         obj._cached_error_estimate = None
         obj._eval_cache = {}
         for d in range(new_ndim - 1, 0, -1):

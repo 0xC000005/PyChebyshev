@@ -441,6 +441,7 @@ class ChebyshevSlider:
         obj.pivot_value = pivot_value
         obj._dim_to_slide = source._dim_to_slide
         obj._built = True
+        obj.descriptor = ""
         obj._cached_error_estimate = None
         return obj
 
@@ -561,6 +562,7 @@ class ChebyshevSlider:
         obj.pivot_value = self.pivot_value
         obj._dim_to_slide = dim_to_slide
         obj._built = True
+        obj.descriptor = ""
         obj._cached_error_estimate = None
         return obj
 
@@ -693,6 +695,7 @@ class ChebyshevSlider:
         obj.pivot_value = pivot_value
         obj._dim_to_slide = dim_to_slide
         obj._built = True
+        obj.descriptor = ""
         obj._cached_error_estimate = None
         return obj
 

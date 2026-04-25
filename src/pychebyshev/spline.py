@@ -1066,6 +1066,7 @@ class ChebyshevSpline:
         obj._pieces = pieces
         obj._built = True
         obj._build_time = 0.0
+        obj.descriptor = ""
         obj._cached_error_estimate = None
         return obj
 
@@ -1163,6 +1164,7 @@ class ChebyshevSpline:
         obj._pieces = list(pieces_arr.ravel())
         obj._built = True
         obj._build_time = 0.0
+        obj.descriptor = ""
         obj._cached_error_estimate = None
         return obj
 
@@ -1343,6 +1345,7 @@ class ChebyshevSpline:
         obj._pieces = list(pieces_arr.ravel())
         obj._built = True
         obj._build_time = 0.0
+        obj.descriptor = ""
         obj._cached_error_estimate = None
         return obj
 

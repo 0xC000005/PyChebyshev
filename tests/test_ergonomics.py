@@ -1,12 +1,13 @@
-"""Tests for v0.15 ergonomics bundle: additional_data, descriptor, derivative_id, introspection."""
+"""Tests for v0.15 ergonomics bundle.
+
+Currently covers: descriptor.
+Will be extended for: additional_data, derivative_id, introspection trio.
+"""
 
 from __future__ import annotations
 
 import math
-import pickle
-from pathlib import Path
 
-import numpy as np
 import pytest
 
 from pychebyshev import (
