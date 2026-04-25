@@ -1037,6 +1037,7 @@ class ChebyshevTT:
         max_rank: int = 10,
         tolerance: float = 1e-6,
         max_sweeps: int = 10,
+        additional_data: object = None,
     ):
         # Validate inputs
         if len(domain) != num_dimensions:
@@ -1060,6 +1061,7 @@ class ChebyshevTT:
         self._coeff_cores: List[np.ndarray] | None = None
         self._built: bool = False
         self.descriptor: str = ""
+        self.additional_data = additional_data
         self._tt_ranks: List[int] | None = None
         self._build_time: float = 0.0
         self._total_build_evals: int = 0
@@ -1140,11 +1142,18 @@ class ChebyshevTT:
             grids.append(np.sort(nodes_scaled))
 
         # Step 2: Build value cores
+        # Wrap function so that additional_data is threaded through.
+        _data = self.additional_data
+        _raw_func = self.function
+
+        def _func_with_data(point, _ignored_data):
+            return _raw_func(point, _data)
+
         if method == "cross":
             if verbose:
                 print("  Running TT-Cross...")
             value_cores, n_evals = _tt_cross(
-                self.function,
+                _func_with_data,
                 grids,
                 max_rank=self.max_rank,
                 tol=self.tolerance,
@@ -1154,7 +1163,7 @@ class ChebyshevTT:
             )
         elif method == "svd":
             value_cores, n_evals = _tt_svd(
-                self.function,
+                _func_with_data,
                 grids,
                 max_rank=self.max_rank,
                 tol=self.tolerance,
@@ -1164,7 +1173,7 @@ class ChebyshevTT:
             if verbose:
                 print("  Running TT-ALS...")
             value_cores, n_evals = _tt_als(
-                self.function,
+                _func_with_data,
                 grids,
                 max_rank=self.max_rank,
                 tol=self.tolerance,
@@ -1340,7 +1349,7 @@ class ChebyshevTT:
             if key not in cache:
                 pt = [float(grids[k][key[k]]) for k in range(self.num_dimensions)]
                 # Match the (point, data) convention used by _tt_cross/_tt_svd/_tt_als.
-                cache[key] = self.function(pt, None)
+                cache[key] = self.function(pt, self.additional_data)
             return cache[key]
 
         # Run fixed-rank ALS on the value cores.
@@ -1795,6 +1804,8 @@ class ChebyshevTT:
         # Ensure fields added in later versions exist (backward compat)
         if not hasattr(self, "_cached_error_estimate"):
             self._cached_error_estimate = None
+        if not hasattr(self, "additional_data"):
+            self.additional_data = None
 
     def is_construction_finished(self) -> bool:
         """Return True iff this TT interpolant is built and usable."""

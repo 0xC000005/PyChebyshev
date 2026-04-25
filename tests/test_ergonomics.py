@@ -310,3 +310,75 @@ class TestAdditionalDataSpline:
         path = tmp_path / "spl.pcb"
         with pytest.raises(NotImplementedError, match="cannot store additional_data"):
             spl.save(str(path), format="binary")
+
+
+class TestAdditionalDataSliderTT:
+    """additional_data on ChebyshevSlider and ChebyshevTT."""
+
+    def test_slider_default_is_none(self):
+        sld = ChebyshevSlider(
+            _f3d, 3, [(-1, 1)] * 3, [7, 7, 7],
+            partition=[[0], [1, 2]], pivot_point=[0.0, 0.0, 0.0],
+        )
+        assert sld.additional_data is None
+
+    def test_slider_threaded_into_pivot_and_slides(self):
+        captured = []
+
+        def f_records(point, data):
+            captured.append(data)
+            return point[0] + point[1] + point[2]
+
+        payload = {"strike": 100.0}
+        sld = ChebyshevSlider(
+            f_records, 3, [(-1, 1)] * 3, [5, 5, 5],
+            partition=[[0], [1, 2]], pivot_point=[0.0, 0.0, 0.0],
+            additional_data=payload,
+        )
+        sld.build(verbose=False)
+        assert len(captured) > 0
+        assert all(d is payload for d in captured)
+
+    def test_slider_pickle_round_trip(self, tmp_path):
+        payload = {"strike": 100.0}
+        sld = ChebyshevSlider(
+            _f3d, 3, [(-1, 1)] * 3, [7, 7, 7],
+            partition=[[0], [1, 2]], pivot_point=[0.0, 0.0, 0.0],
+            additional_data=payload,
+        )
+        sld.build(verbose=False)
+        path = tmp_path / "sld.pkl"
+        sld.save(str(path))
+        restored = ChebyshevSlider.load(str(path))
+        assert restored.additional_data == payload
+
+    def test_tt_default_is_none(self):
+        tt = ChebyshevTT(_f3d, 3, [(-1, 1)] * 3, [7, 7, 7],
+                         tolerance=1e-6, max_rank=8)
+        assert tt.additional_data is None
+
+    def test_tt_threaded_into_function(self):
+        captured = []
+
+        def f_records(point, data):
+            captured.append(data)
+            return point[0] + point[1] + point[2]
+
+        payload = {"strike": 100.0}
+        tt = ChebyshevTT(f_records, 3, [(-1, 1)] * 3, [7, 7, 7],
+                         tolerance=1e-6, max_rank=8,
+                         additional_data=payload)
+        tt.build(verbose=False)
+        assert len(captured) > 0
+        assert all(d is payload for d in captured)
+
+    def test_tt_pickle_round_trip(self, tmp_path):
+        payload = {"strike": 100.0}
+        tt = ChebyshevTT(_f3d, 3, [(-1, 1)] * 3, [7, 7, 7],
+                         tolerance=1e-6, max_rank=8,
+                         additional_data=payload)
+        tt.build(verbose=False)
+        path = tmp_path / "tt.pkl"
+        tt.save(str(path))
+        restored = ChebyshevTT.load(str(path))
+        assert restored.additional_data == payload

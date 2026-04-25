@@ -85,6 +85,7 @@ class ChebyshevSlider:
         partition: List[List[int]],
         pivot_point: List[float],
         max_derivative_order: int = 2,
+        additional_data: object = None,
     ):
         self.function = function
         self.num_dimensions = num_dimensions
@@ -94,6 +95,7 @@ class ChebyshevSlider:
         self.pivot_point = list(pivot_point)
         self.max_derivative_order = max_derivative_order
         self.descriptor: str = ""
+        self.additional_data = additional_data
 
         # Validate partition
         all_dims = sorted(d for group in partition for d in group)
@@ -129,7 +131,7 @@ class ChebyshevSlider:
         self._cached_error_estimate = None
 
         # Evaluate pivot value
-        self.pivot_value = self.function(self.pivot_point, None)
+        self.pivot_value = self.function(self.pivot_point, self.additional_data)
 
         total_evals = sum(
             int(np.prod([self.n_nodes[d] for d in group]))
@@ -168,6 +170,7 @@ class ChebyshevSlider:
                 slide_domain,
                 slide_n_nodes,
                 max_derivative_order=self.max_derivative_order,
+                additional_data=self.additional_data,
             )
             slide.build(verbose=False)
             self.slides.append(slide)
@@ -454,6 +457,7 @@ class ChebyshevSlider:
         obj._dim_to_slide = source._dim_to_slide
         obj._built = True
         obj.descriptor = ""
+        obj.additional_data = None
         obj._cached_error_estimate = None
         return obj
 
@@ -575,6 +579,7 @@ class ChebyshevSlider:
         obj._dim_to_slide = dim_to_slide
         obj._built = True
         obj.descriptor = ""
+        obj.additional_data = None
         obj._cached_error_estimate = None
         return obj
 
@@ -708,6 +713,7 @@ class ChebyshevSlider:
         obj._dim_to_slide = dim_to_slide
         obj._built = True
         obj.descriptor = ""
+        obj.additional_data = None
         obj._cached_error_estimate = None
         return obj
 
