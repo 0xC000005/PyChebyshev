@@ -757,6 +757,11 @@ class ChebyshevSpline:
         via ``eval(point, derivative_order=...)``."""
         return self.max_derivative_order
 
+    def get_error_threshold(self) -> float | None:
+        """Return the error threshold this interpolant was constructed with,
+        or ``None`` if no threshold was specified (fixed-N construction)."""
+        return self.error_threshold
+
     def save(
         self,
         path: str | os.PathLike,
