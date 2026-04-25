@@ -192,3 +192,62 @@ class TestGetUsedNs:
     def test_tt_flat(self):
         tt = _build_tt_3d()
         assert tt.get_used_ns() == [7, 7, 7]
+
+
+class TestAdditionalDataApprox:
+    """additional_data on ChebyshevApproximation."""
+
+    def test_default_is_none(self):
+        cheb = ChebyshevApproximation(_f3d, 3, [(-1, 1)] * 3, [9, 9, 9])
+        assert cheb.additional_data is None
+
+    def test_attribute_stores_value(self):
+        payload = {"strike": 100.0}
+        cheb = ChebyshevApproximation(
+            _f3d, 3, [(-1, 1)] * 3, [9, 9, 9], additional_data=payload
+        )
+        assert cheb.additional_data is payload
+
+    def test_threaded_into_function_during_build(self):
+        captured = []
+
+        def f_records(point, data):
+            captured.append(data)
+            return point[0] + point[1] + point[2]
+
+        payload = {"strike": 100.0}
+        cheb = ChebyshevApproximation(
+            f_records, 3, [(-1, 1)] * 3, [5, 5, 5], additional_data=payload
+        )
+        cheb.build(verbose=False)
+        assert all(d is payload for d in captured)
+        assert len(captured) == 5 * 5 * 5
+
+    def test_pickle_round_trip_preserves(self, tmp_path):
+        payload = {"strike": 100.0, "rate": 0.05}
+        cheb = ChebyshevApproximation(
+            _f3d, 3, [(-1, 1)] * 3, [9, 9, 9], additional_data=payload
+        )
+        cheb.build(verbose=False)
+        path = tmp_path / "cheb.pkl"
+        cheb.save(str(path))
+        restored = ChebyshevApproximation.load(str(path))
+        assert restored.additional_data == payload
+
+    def test_binary_save_with_additional_data_raises(self, tmp_path):
+        payload = {"strike": 100.0}
+        cheb = ChebyshevApproximation(
+            _f3d, 3, [(-1, 1)] * 3, [9, 9, 9], additional_data=payload
+        )
+        cheb.build(verbose=False)
+        path = tmp_path / "cheb.pcb"
+        with pytest.raises(NotImplementedError, match="cannot store additional_data"):
+            cheb.save(str(path), format="binary")
+
+    def test_binary_save_with_none_succeeds(self, tmp_path):
+        cheb = _build_approx_3d()
+        assert cheb.additional_data is None
+        path = tmp_path / "cheb.pcb"
+        cheb.save(str(path), format="binary")
+        restored = ChebyshevApproximation.load(str(path))
+        assert restored.additional_data is None

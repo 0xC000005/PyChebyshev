@@ -278,6 +278,7 @@ class ChebyshevApproximation:
         error_threshold: float | None = None,
         max_n: int = 64,
         special_points: List[List[float]] | None = None,
+        additional_data: object = None,
     ):
         """Dispatch to ChebyshevSpline when special_points declares any kink.
 
@@ -311,15 +312,22 @@ class ChebyshevApproximation:
                 _validate_special_points_shape(
                     special_points, n_nodes, num_dimensions, domain
                 )
-                return ChebyshevSpline(
-                    function,
-                    num_dimensions,
-                    domain,
+                spline_kwargs = dict(
                     n_nodes=n_nodes,
                     knots=special_points,
                     max_derivative_order=max_derivative_order,
                     error_threshold=error_threshold,
                     max_n=max_n,
+                )
+                if additional_data is not None:
+                    # T4 will add additional_data to ChebyshevSpline.__init__;
+                    # only pass it when set to avoid breaking existing tests.
+                    spline_kwargs["additional_data"] = additional_data
+                return ChebyshevSpline(
+                    function,
+                    num_dimensions,
+                    domain,
+                    **spline_kwargs,
                 )
         return super().__new__(cls)
 
@@ -333,6 +341,7 @@ class ChebyshevApproximation:
         error_threshold: float | None = None,
         max_n: int = 64,
         special_points: List[List[float]] | None = None,
+        additional_data: object = None,
     ):
         self.function = function
         self.num_dimensions = num_dimensions
@@ -348,6 +357,7 @@ class ChebyshevApproximation:
         self.max_n = max_n
         self.max_derivative_order = max_derivative_order
         self.descriptor: str = ""
+        self.additional_data = additional_data
 
         # Normalize n_nodes — None means "auto this dim"
         if n_nodes is None:
@@ -543,7 +553,7 @@ class ChebyshevApproximation:
         self.tensor_values = np.zeros(self.n_nodes)
         for idx in np.ndindex(*self.n_nodes):
             point = [self.nodes[d][idx[d]] for d in range(self.num_dimensions)]
-            self.tensor_values[idx] = self.function(point, None)
+            self.tensor_values[idx] = self.function(point, self.additional_data)
         self.n_evaluations = total
 
         # Step 2: Pre-compute barycentric weights
@@ -1347,6 +1357,7 @@ class ChebyshevApproximation:
         obj.n_evaluations = 0
         obj._cached_error_estimate = None
         obj.descriptor = ""
+        obj.additional_data = None
 
         # Pre-allocate eval cache for deprecated fast_eval()
         obj._eval_cache = {}
@@ -1381,6 +1392,7 @@ class ChebyshevApproximation:
         obj.n_evaluations = 0
         obj._cached_error_estimate = None
         obj.descriptor = ""
+        obj.additional_data = None
         # Pre-allocate eval cache for deprecated fast_eval()
         obj._eval_cache = {}
         for d in range(obj.num_dimensions - 1, 0, -1):
@@ -1467,6 +1479,7 @@ class ChebyshevApproximation:
         obj.build_time = 0.0
         obj.n_evaluations = 0
         obj.descriptor = ""
+        obj.additional_data = None
         obj._cached_error_estimate = None
         obj._eval_cache = {}
         for d in range(new_ndim - 1, 0, -1):
@@ -1554,6 +1567,7 @@ class ChebyshevApproximation:
         obj.build_time = 0.0
         obj.n_evaluations = 0
         obj.descriptor = ""
+        obj.additional_data = None
         obj._cached_error_estimate = None
         obj._eval_cache = {}
         for d in range(new_ndim - 1, 0, -1):
@@ -1670,6 +1684,7 @@ class ChebyshevApproximation:
         obj.build_time = 0.0
         obj.n_evaluations = 0
         obj.descriptor = ""
+        obj.additional_data = None
         obj._cached_error_estimate = None
         obj._eval_cache = {}
         for d in range(new_ndim - 1, 0, -1):

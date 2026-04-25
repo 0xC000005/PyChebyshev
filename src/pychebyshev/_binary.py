@@ -164,7 +164,13 @@ def write_approx(f: BinaryIO, cheb) -> None:
     """Write a built ``ChebyshevApproximation`` to a binary stream.
 
     Raises RuntimeError if the interpolant has not been built.
+    Raises NotImplementedError if ``additional_data`` is set (use pickle instead).
     """
+    if getattr(cheb, "additional_data", None) is not None:
+        raise NotImplementedError(
+            "binary format cannot store additional_data; "
+            "pass format='pickle' or set additional_data=None before saving"
+        )
     if cheb.tensor_values is None:
         raise RuntimeError("Cannot save an unbuilt ChebyshevApproximation")
 
