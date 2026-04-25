@@ -340,6 +340,10 @@ class ChebyshevSlider:
         # Ensure fields added in later versions exist (backward compat)
         if not hasattr(self, "_cached_error_estimate"):
             self._cached_error_estimate = None
+        if not hasattr(self, "descriptor"):
+            self.descriptor = ""
+        if not hasattr(self, "additional_data"):
+            self.additional_data = None
 
     def is_construction_finished(self) -> bool:
         """Return True iff this slider is built and usable."""
