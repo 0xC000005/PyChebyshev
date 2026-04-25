@@ -343,3 +343,10 @@ class TestClone:
         original_id = cheb_sin_3d.get_derivative_id([1, 0, 0])
         clone_id = clone.get_derivative_id([1, 0, 0])
         assert original_id == clone_id
+
+    def test_clone_strips_function_via_getstate(self, cheb_sin_3d):
+        """clone() goes through __getstate__/__setstate__, which sets function=None."""
+        clone = cheb_sin_3d.clone()
+        assert clone.function is None
+        # Original retains its function
+        assert cheb_sin_3d.function is not None

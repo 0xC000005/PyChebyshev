@@ -1896,6 +1896,13 @@ class ChebyshevTT:
         All mutable state (TT cores, descriptor, additional_data) is
         duplicated. Mutating the clone does not affect the original.
 
+        Note
+        ----
+        Like :meth:`save` / :meth:`load`, the source ``function`` callable is
+        not duplicated -- the clone has ``function = None``. All evaluation,
+        algebra, serialization, and v0.16 surface methods continue to work;
+        only :meth:`build` (which requires a function) does not.
+
         Returns
         -------
         ChebyshevTT
