@@ -12,7 +12,7 @@ PyChebyshev is a pip-installable Python library for multi-dimensional Chebyshev 
 # Setup
 uv sync
 
-# Run tests (~586 tests, ~110s due to 5D Black-Scholes builds)
+# Run tests (~662 tests, ~110s due to 5D Black-Scholes builds)
 uv run pytest tests/ -v
 
 # Run a single test
@@ -46,6 +46,7 @@ The installable package. Public classes: `ChebyshevApproximation`, `ChebyshevSpl
 - **`_algebra.py`** — Shared helpers for Chebyshev arithmetic operators (compatibility validation, operator dispatch).
 - **`_extrude_slice.py`** — Shared helpers for extrusion and slicing (parameter validation, tensor manipulation, barycentric contraction).
 - **`_calculus.py`** — Shared helpers for Chebyshev calculus (Fejér-1 quadrature weights via DCT-III, sub-interval quadrature weights via Chebyshev antiderivatives, companion-matrix rootfinding, 1-D optimization). References: Waldvogel (2006), Trefethen (2013).
+- **`_binary.py`** — Private. `.pcb` portable binary serialization (v0.14). Reading/writing for `ChebyshevApproximation` and `ChebyshevSpline`. Stdlib `struct` + NumPy only.
 - **`_jit.py`** — Deprecated Numba JIT kernel with pure NumPy fallback. Used only by deprecated `fast_eval()`.
 - **`_version.py`** — Single source of truth for version string.
 
@@ -79,6 +80,7 @@ Not part of the library. Compare Chebyshev barycentric against alternative metho
 - `test_from_values.py` — 65 tests: nodes() and from_values() for ChebyshevApproximation and ChebyshevSpline; bit-identical equivalence with build(); derivatives, calculus, algebra, extrude/slice, save/load; edge cases (NaN/Inf, shape mismatch, 1-node dim, build guard, 4D, boundary eval, negative/wide/tight domains, duplicate knots, algebra chains, domain validation).
 - `test_special_points.py` — 37 tests: `ChebyshevApproximation.__new__` dispatch to `ChebyshevSpline` when `special_points` declares any kink (option A, precedent `pathlib.Path`); validation of special_points shape + nested `n_nodes`; 1D/2D correctness (abs kink recovery to machine precision; plateau control); cross-feature (save/load, algebra, integrate, extrude/slice, from_values); edge cases.
 - `test_error_threshold.py` — 37 tests: v0.11 auto-N doubling loop, max_n cap, get_optimal_n1, semi-auto mixed-N paths, verbose prints, spline per-piece doubling.
+- `test_binary_format.py` — 76 tests: low-level helpers, header parsing, format detection, ChebyshevApproximation round-trip (incl. n=1 dim), ChebyshevSpline round-trip, save/load integration with `format=` kwarg + autodetect, golden vectors, corruption rejection, cross-feature (from_values, algebra, extrude, slice, 5D BS, min n_nodes).
 
 ### CI/CD (`.github/workflows/`)
 

@@ -5,6 +5,25 @@ All notable changes to PyChebyshev will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [0.14.0] - 2026-04-24
+
+### Added
+- Portable `.pcb` binary serialization format for `ChebyshevApproximation`
+  and `ChebyshevSpline`. Closes the MoCaX cross-language serialization gap
+  in PyChebyshev's specific way.
+  - New `format=` kwarg on `save()` (default `'pickle'`, opt in to `'binary'`).
+  - `load()` auto-detects via 4-byte magic header `b"PCB\x00"`. No
+    behaviour change for existing pickle files.
+  - C reference reader at `examples/binary_reader/` (not in CI).
+  - Format spec at `docs/user-guide/binary-format.md`.
+  - Stdlib `struct` + NumPy only — no new runtime dependencies.
+
+### Restrictions
+- `format='binary'` requires flat `n_nodes` for `ChebyshevSpline`. Splines
+  built with nested per-piece `n_nodes` raise `NotImplementedError` and
+  fall back to pickle.
+- `ChebyshevSlider` and `ChebyshevTT` remain pickle-only in v0.14.
+
 ## [0.13.1] - 2026-04-24
 
 ### Changed

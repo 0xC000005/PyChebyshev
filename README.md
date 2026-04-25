@@ -77,6 +77,8 @@ The convergence plots demonstrate exponential error decay as node count increase
 - **Vectorized evaluation** using BLAS matrix-vector products (~0.065ms/query)
 - **Error-driven construction** — pass `error_threshold=ε` and PyChebyshev auto-picks node counts per dimension
 - **Special points in the core API** — declare kinks directly on `ChebyshevApproximation` via `special_points=[[...]]`; auto-dispatches to a piecewise Chebyshev spline.
+- **Portable `.pcb` binary format** for cross-language model sharing (C, Rust,
+  Julia consumers can read PyChebyshev interpolants without Python).
 - **Pure Python** — NumPy + SciPy only, no compiled extensions needed
 
 ## Acknowledgments
