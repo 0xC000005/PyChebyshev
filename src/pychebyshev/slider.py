@@ -115,6 +115,8 @@ class ChebyshevSlider:
         self.pivot_value: float = 0.0
         self._built = False
         self._cached_error_estimate: float | None = None
+        self._derivative_id_registry: dict[tuple[int, ...], int] = {}
+        self._derivative_id_to_orders: list[tuple[int, ...]] = []
 
     def build(self, verbose: bool = True) -> None:
         """Build all slides by evaluating the function at slide-specific grids.
@@ -186,7 +188,59 @@ class ChebyshevSlider:
 
         self._built = True
 
-    def eval(self, point: List[float], derivative_order: List[int]) -> float:
+    def get_derivative_id(self, derivative_order: List[int]) -> int:
+        """Register a derivative-orders tuple and return a stable session-local int."""
+        if len(derivative_order) != self.num_dimensions:
+            raise ValueError(
+                f"derivative_order length {len(derivative_order)} does not "
+                f"match num_dimensions {self.num_dimensions}"
+            )
+        for d, o in enumerate(derivative_order):
+            if not isinstance(o, (int, np.integer)):
+                raise ValueError(
+                    f"derivative_order[{d}] must be int, got {type(o).__name__}"
+                )
+            if o < 0 or o > self.max_derivative_order:
+                raise ValueError(
+                    f"derivative_order[{d}]={o} out of range "
+                    f"[0, {self.max_derivative_order}]"
+                )
+        key = tuple(int(o) for o in derivative_order)
+        if key in self._derivative_id_registry:
+            return self._derivative_id_registry[key]
+        new_id = len(self._derivative_id_to_orders)
+        self._derivative_id_registry[key] = new_id
+        self._derivative_id_to_orders.append(key)
+        return new_id
+
+    def _resolve_derivative_args(
+        self,
+        derivative_order: List[int] | None,
+        derivative_id: int | None,
+    ) -> List[int]:
+        """Resolve the derivative spec from kwargs (orders xor id)."""
+        if derivative_order is not None and derivative_id is not None:
+            raise ValueError(
+                "provide exactly one of derivative_order or derivative_id, not both"
+            )
+        if derivative_order is None and derivative_id is None:
+            raise ValueError("must provide derivative_order or derivative_id")
+        if derivative_id is not None:
+            if derivative_id < 0 or derivative_id >= len(self._derivative_id_to_orders):
+                raise KeyError(
+                    f"unknown derivative_id {derivative_id}; "
+                    f"register via get_derivative_id() first"
+                )
+            return list(self._derivative_id_to_orders[derivative_id])
+        return derivative_order
+
+    def eval(
+        self,
+        point: List[float],
+        derivative_order: List[int] | None = None,
+        *,
+        derivative_id: int | None = None,
+    ) -> float:
         """Evaluate the slider approximation at a point.
 
         Uses Equation 7.5 from Ruiz & Zeron (2021):
@@ -198,8 +252,12 @@ class ChebyshevSlider:
         ----------
         point : list of float
             Evaluation point in the full n-dimensional space.
-        derivative_order : list of int
+        derivative_order : list of int, optional
             Derivative order for each dimension (0 = function value).
+            Mutually exclusive with ``derivative_id``.
+        derivative_id : int, optional
+            Session-local integer returned by ``get_derivative_id()``.
+            Mutually exclusive with ``derivative_order``.
 
         Returns
         -------
@@ -208,6 +266,10 @@ class ChebyshevSlider:
         """
         if not self._built:
             raise RuntimeError("Call build() before eval().")
+
+        derivative_order = self._resolve_derivative_args(
+            derivative_order, derivative_id
+        )
 
         is_derivative = any(d > 0 for d in derivative_order)
 
@@ -344,6 +406,10 @@ class ChebyshevSlider:
             self.descriptor = ""
         if not hasattr(self, "additional_data"):
             self.additional_data = None
+        if not hasattr(self, "_derivative_id_registry"):
+            self._derivative_id_registry = {}
+        if not hasattr(self, "_derivative_id_to_orders"):
+            self._derivative_id_to_orders = []
 
     def is_construction_finished(self) -> bool:
         """Return True iff this slider is built and usable."""
@@ -463,6 +529,8 @@ class ChebyshevSlider:
         obj.descriptor = ""
         obj.additional_data = None
         obj._cached_error_estimate = None
+        obj._derivative_id_registry = {}
+        obj._derivative_id_to_orders = []
         return obj
 
     # ------------------------------------------------------------------
@@ -585,6 +653,8 @@ class ChebyshevSlider:
         obj.descriptor = ""
         obj.additional_data = None
         obj._cached_error_estimate = None
+        obj._derivative_id_registry = {}
+        obj._derivative_id_to_orders = []
         return obj
 
     def slice(self, params):
@@ -719,6 +789,8 @@ class ChebyshevSlider:
         obj.descriptor = ""
         obj.additional_data = None
         obj._cached_error_estimate = None
+        obj._derivative_id_registry = {}
+        obj._derivative_id_to_orders = []
         return obj
 
     def _check_slider_compatible(self, other):
