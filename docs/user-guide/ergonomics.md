@@ -86,6 +86,23 @@ Available on all four classes.
 - `get_used_ns()` returns the per-dim node count list. For
   `ChebyshevSpline`, the nested vs flat shape per dim is preserved.
 
+## Factory-derived interpolants
+
+Operations that produce a new interpolant from existing ones — `extrude()`,
+`slice()`, partial `integrate()`, algebra (`+`, `-`, `*`, `/`), and binary
+`.pcb` `load()` — return a *fresh* object: empty `descriptor`, `additional_data
+= None`, and an empty derivative-id registry. The source's metadata is not
+inherited. Re-attach metadata on the result if needed.
+
+```python
+extruded = cheb.extrude((3, (-1.0, 1.0), 5))
+assert extruded.get_descriptor() == ""           # not inherited
+extruded.set_descriptor("derivative-of-source")  # re-attach if useful
+```
+
+Pickle `load()` is the exception — it preserves the saved object's metadata
+(descriptor, additional_data, registry) faithfully.
+
 ## MoCaX correspondence
 
 | MoCaX C++ | PyChebyshev v0.15 |

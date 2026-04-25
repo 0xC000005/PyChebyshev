@@ -580,6 +580,7 @@ class ChebyshevApproximation:
         self,
         point: List[float],
         derivative_order: List[int] | None = None,
+        *,
         derivative_id: int | None = None,
     ) -> float:
         """Evaluate using dimensional decomposition with barycentric interpolation.
@@ -651,6 +652,7 @@ class ChebyshevApproximation:
         self,
         point: List[float],
         derivative_order: List[int] | None = None,
+        *,
         derivative_id: int | None = None,
     ) -> float:
         """Fast evaluation using pre-allocated cache (skips validation).
@@ -746,6 +748,7 @@ class ChebyshevApproximation:
         self,
         point: List[float],
         derivative_order: List[int] | None = None,
+        *,
         derivative_id: int | None = None,
     ) -> float:
         """Fully vectorized evaluation using NumPy matrix operations.
@@ -811,6 +814,7 @@ class ChebyshevApproximation:
         self,
         points: np.ndarray,
         derivative_order: List[int] | None = None,
+        *,
         derivative_id: int | None = None,
     ) -> np.ndarray:
         """Evaluate at multiple points.

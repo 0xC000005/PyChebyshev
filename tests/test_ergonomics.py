@@ -471,6 +471,19 @@ class TestDerivativeIdSpline:
         with pytest.raises(ValueError, match="not both"):
             spl.eval([0.1, 0.2], derivative_order=[0, 0], derivative_id=d_id)
 
+    def test_pickle_preserves_registry(self, tmp_path):
+        spl = _build_spline_2d()
+        d_id = spl.get_derivative_id([1, 0])
+        path = tmp_path / "spl.pkl"
+        spl.save(str(path))
+        restored = ChebyshevSpline.load(str(path))
+        # Same orders should still map to same id
+        assert restored.get_derivative_id([1, 0]) == d_id
+        # Eval via id matches eval via orders
+        a = restored.eval([0.1, 0.2], derivative_id=d_id)
+        b = restored.eval([0.1, 0.2], derivative_order=[1, 0])
+        assert a == b
+
 
 class TestDerivativeIdSlider:
     """derivative_id registry on ChebyshevSlider."""
@@ -501,3 +514,67 @@ class TestDerivativeIdSlider:
         d_id = sld.get_derivative_id([0, 0, 0])
         with pytest.raises(ValueError, match="not both"):
             sld.eval([0.1, 0.2, 0.3], derivative_order=[0, 0, 0], derivative_id=d_id)
+
+    def test_pickle_preserves_registry(self, tmp_path):
+        sld = _build_slider_3d()
+        d_id = sld.get_derivative_id([1, 0, 0])
+        path = tmp_path / "sld.pkl"
+        sld.save(str(path))
+        restored = ChebyshevSlider.load(str(path))
+        assert restored.get_derivative_id([1, 0, 0]) == d_id
+        a = restored.eval([0.1, 0.2, 0.3], derivative_id=d_id)
+        b = restored.eval([0.1, 0.2, 0.3], derivative_order=[1, 0, 0])
+        assert a == b
+
+
+class TestFactoryPathResets:
+    """Factory-path operations (extrude, slice, algebra) reset v0.15 metadata.
+
+    Derived interpolants start fresh — they don't inherit descriptor, additional_data,
+    or the derivative_id registry from the source. This is by design: derived objects
+    are mathematically a new function (algebra) or new domain (extrude/slice), and
+    inheriting metadata could mislead users about provenance.
+    """
+
+    def test_algebra_resets_descriptor(self):
+        a = _build_approx_3d()
+        a.set_descriptor("source")
+        b = _build_approx_3d()
+        result = a + b
+        assert result.get_descriptor() == ""
+
+    def test_algebra_resets_additional_data(self):
+        a = _build_approx_3d()
+        a.additional_data = {"key": "source"}
+        b = _build_approx_3d()
+        result = a + b
+        assert result.additional_data is None
+
+    def test_algebra_resets_derivative_id_registry(self):
+        a = _build_approx_3d()
+        a.get_derivative_id([1, 0, 0])  # register an id
+        a.get_derivative_id([0, 1, 0])
+        b = _build_approx_3d()
+        result = a + b
+        # Result starts fresh — first call should return 0, not inherit
+        assert result.get_derivative_id([1, 0, 0]) == 0
+
+    def test_extrude_resets_metadata_approx(self):
+        cheb = _build_approx_3d()
+        cheb.set_descriptor("source")
+        cheb.additional_data = {"key": "source"}
+        cheb.get_derivative_id([1, 0, 0])
+        ext = cheb.extrude((3, (-1.0, 1.0), 5))
+        assert ext.get_descriptor() == ""
+        assert ext.additional_data is None
+        assert ext.get_derivative_id([1, 0, 0, 0]) == 0  # fresh registry
+
+    def test_slice_resets_metadata_approx(self):
+        cheb = _build_approx_3d()
+        cheb.set_descriptor("source")
+        cheb.additional_data = {"key": "source"}
+        cheb.get_derivative_id([1, 0, 0])
+        sl = cheb.slice((0, 0.3))
+        assert sl.get_descriptor() == ""
+        assert sl.additional_data is None
+        assert sl.get_derivative_id([1, 0]) == 0  # fresh registry, lower dim
