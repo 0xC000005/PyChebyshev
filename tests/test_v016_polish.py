@@ -76,3 +76,54 @@ class TestGetErrorThreshold:
 
     def test_spline_without_threshold(self, spline_abs_1d):
         assert spline_abs_1d.get_error_threshold() is None
+
+
+# ============================================================================
+# A2: get_special_points()
+# ============================================================================
+
+class TestGetSpecialPoints:
+    def test_approximation_no_special_points(self, cheb_sin_3d):
+        assert cheb_sin_3d.get_special_points() is None
+
+    def test_approximation_all_empty_special_points(self):
+        def f(x, _):
+            return math.sin(x[0]) + math.sin(x[1])
+
+        cheb = ChebyshevApproximation(
+            f, 2, [[-1, 1], [-1, 1]], [8, 8], special_points=[[], []],
+        )
+        cheb.build(verbose=False)
+        # All-empty: __new__ does NOT dispatch to Spline; we keep an Approximation
+        assert isinstance(cheb, ChebyshevApproximation)
+        assert cheb.get_special_points() == [[], []]
+
+    def test_spline_returns_knots_per_dim(self, spline_abs_1d):
+        # spline_abs_1d is built with knots=[[0.0]]
+        sp = spline_abs_1d.get_special_points()
+        assert sp == [[0.0]]
+
+    def test_approximation_dispatches_to_spline_when_kink_declared(self):
+        def f(x, _):
+            return abs(x[0])
+
+        # __new__ dispatch route: special_points with any non-empty list →
+        # returns a ChebyshevSpline.
+        # n_nodes must be nested when special_points is non-empty (per v0.12 API).
+        obj = ChebyshevApproximation(
+            f, 1, [[-1, 1]], [[8, 8]], special_points=[[0.0]],
+        )
+        assert isinstance(obj, ChebyshevSpline)
+        assert obj.get_special_points() == [[0.0]]
+
+    def test_round_trip_pickle(self, spline_abs_1d, tmp_path):
+        path = tmp_path / "spl.pkl"
+        spline_abs_1d.save(str(path))
+        loaded = ChebyshevSpline.load(str(path))
+        assert loaded.get_special_points() == spline_abs_1d.get_special_points()
+
+    def test_round_trip_pcb(self, spline_abs_1d, tmp_path):
+        path = tmp_path / "spl.pcb"
+        spline_abs_1d.save(str(path), format="binary")
+        loaded = ChebyshevSpline.load(str(path))
+        assert loaded.get_special_points() == spline_abs_1d.get_special_points()

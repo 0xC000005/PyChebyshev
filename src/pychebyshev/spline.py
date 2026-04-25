@@ -762,6 +762,15 @@ class ChebyshevSpline:
         or ``None`` if no threshold was specified (fixed-N construction)."""
         return self.error_threshold
 
+    def get_special_points(self) -> list[list[float]] | None:
+        """Return the per-dimension knot/kink locations this spline was built
+        around.
+
+        Returns the ``knots`` parameter that was passed to the constructor,
+        as a list of per-dimension knot lists.
+        """
+        return self.knots
+
     def save(
         self,
         path: str | os.PathLike,

@@ -350,6 +350,7 @@ class ChebyshevApproximation:
             )
         self.max_n = max_n
         self.max_derivative_order = max_derivative_order
+        self.special_points = special_points
         self.descriptor: str = ""
         self.additional_data = additional_data
         self._derivative_id_registry: dict[tuple[int, ...], int] = {}
@@ -950,6 +951,17 @@ class ChebyshevApproximation:
         via ``eval(point, derivative_order=...)``."""
         return self.max_derivative_order
 
+    def get_special_points(self) -> list[list[float]] | None:
+        """Return the special points (kinks/knots) declared at construction.
+
+        Returns ``None`` if no ``special_points`` was passed. If
+        ``special_points`` declared any non-empty list, ``__new__``
+        dispatched to :class:`ChebyshevSpline`; this getter on a
+        :class:`ChebyshevApproximation` therefore returns either ``None``
+        or a list-of-empty-lists.
+        """
+        return self.special_points
+
     def get_derivative_id(self, derivative_order: List[int]) -> int:
         """Register a derivative-orders tuple and return a stable session-local int.
 
@@ -1178,6 +1190,8 @@ class ChebyshevApproximation:
             self._derivative_id_registry = {}
         if not hasattr(self, "_derivative_id_to_orders"):
             self._derivative_id_to_orders = []
+        if not hasattr(self, "special_points"):
+            self.special_points = None
 
         # Reconstruct pre-allocated eval cache for fast_eval() (deprecated)
         self._eval_cache = {}
@@ -1501,6 +1515,7 @@ class ChebyshevApproximation:
         obj.build_time = 0.0
         obj.n_evaluations = 0
         obj._cached_error_estimate = None
+        obj.special_points = None
         obj.descriptor = ""
         obj.additional_data = None
         obj._derivative_id_registry = {}
@@ -1538,6 +1553,7 @@ class ChebyshevApproximation:
         obj.build_time = 0.0
         obj.n_evaluations = 0
         obj._cached_error_estimate = None
+        obj.special_points = None
         obj.descriptor = ""
         obj.additional_data = None
         obj._derivative_id_registry = {}
@@ -1627,6 +1643,7 @@ class ChebyshevApproximation:
         obj.tensor_values = tensor
         obj.build_time = 0.0
         obj.n_evaluations = 0
+        obj.special_points = None
         obj.descriptor = ""
         obj.additional_data = None
         obj._cached_error_estimate = None
@@ -1717,6 +1734,7 @@ class ChebyshevApproximation:
         obj.tensor_values = tensor
         obj.build_time = 0.0
         obj.n_evaluations = 0
+        obj.special_points = None
         obj.descriptor = ""
         obj.additional_data = None
         obj._cached_error_estimate = None
@@ -1836,6 +1854,7 @@ class ChebyshevApproximation:
         obj.tensor_values = tensor
         obj.build_time = 0.0
         obj.n_evaluations = 0
+        obj.special_points = None
         obj.descriptor = ""
         obj.additional_data = None
         obj._cached_error_estimate = None
