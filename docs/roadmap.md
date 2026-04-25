@@ -95,7 +95,7 @@ only, no new dependencies.
 
 **Closes MoCaX gaps:** cross-language binary serialization.
 
-## v0.15 — Ergonomics Bundle :material-clock-outline:
+## v0.15 — Ergonomics Bundle :material-check:
 
 Small quality-of-life additions aligned with MoCaX conventions.
 

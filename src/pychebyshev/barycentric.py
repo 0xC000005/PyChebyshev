@@ -278,6 +278,7 @@ class ChebyshevApproximation:
         error_threshold: float | None = None,
         max_n: int = 64,
         special_points: List[List[float]] | None = None,
+        additional_data: object = None,
     ):
         """Dispatch to ChebyshevSpline when special_points declares any kink.
 
@@ -320,6 +321,7 @@ class ChebyshevApproximation:
                     max_derivative_order=max_derivative_order,
                     error_threshold=error_threshold,
                     max_n=max_n,
+                    additional_data=additional_data,
                 )
         return super().__new__(cls)
 
@@ -333,6 +335,7 @@ class ChebyshevApproximation:
         error_threshold: float | None = None,
         max_n: int = 64,
         special_points: List[List[float]] | None = None,
+        additional_data: object = None,
     ):
         self.function = function
         self.num_dimensions = num_dimensions
@@ -347,6 +350,10 @@ class ChebyshevApproximation:
             )
         self.max_n = max_n
         self.max_derivative_order = max_derivative_order
+        self.descriptor: str = ""
+        self.additional_data = additional_data
+        self._derivative_id_registry: dict[tuple[int, ...], int] = {}
+        self._derivative_id_to_orders: list[tuple[int, ...]] = []
 
         # Normalize n_nodes — None means "auto this dim"
         if n_nodes is None:
@@ -542,7 +549,7 @@ class ChebyshevApproximation:
         self.tensor_values = np.zeros(self.n_nodes)
         for idx in np.ndindex(*self.n_nodes):
             point = [self.nodes[d][idx[d]] for d in range(self.num_dimensions)]
-            self.tensor_values[idx] = self.function(point, None)
+            self.tensor_values[idx] = self.function(point, self.additional_data)
         self.n_evaluations = total
 
         # Step 2: Pre-compute barycentric weights
@@ -569,16 +576,26 @@ class ChebyshevApproximation:
             print(f"  Built in {self.build_time:.3f}s "
                   f"({total_weights} weights, {total_weights * 8} bytes)")
 
-    def eval(self, point: List[float], derivative_order: List[int]) -> float:
+    def eval(
+        self,
+        point: List[float],
+        derivative_order: List[int] | None = None,
+        *,
+        derivative_id: int | None = None,
+    ) -> float:
         """Evaluate using dimensional decomposition with barycentric interpolation.
 
         Parameters
         ----------
         point : list of float
             Query point, one coordinate per dimension.
-        derivative_order : list of int
+        derivative_order : list of int, optional
             Derivative order per dimension (0 = function value, 1 = first
-            derivative, 2 = second derivative).
+            derivative, 2 = second derivative). Provide exactly one of
+            ``derivative_order`` or ``derivative_id``.
+        derivative_id : int, optional
+            Stable session-local id returned by :meth:`get_derivative_id`.
+            Provide exactly one of ``derivative_order`` or ``derivative_id``.
 
         Returns
         -------
@@ -589,7 +606,15 @@ class ChebyshevApproximation:
         ------
         RuntimeError
             If ``build()`` has not been called.
+        ValueError
+            If both or neither of ``derivative_order`` / ``derivative_id``
+            are provided.
+        KeyError
+            If ``derivative_id`` is unknown (not yet registered).
         """
+        derivative_order = self._resolve_derivative_args(
+            derivative_order, derivative_id
+        )
         if self.tensor_values is None:
             raise RuntimeError("Call build() first")
 
@@ -623,7 +648,13 @@ class ChebyshevApproximation:
                         )
                 current = new
 
-    def fast_eval(self, point: List[float], derivative_order: List[int]) -> float:
+    def fast_eval(
+        self,
+        point: List[float],
+        derivative_order: List[int] | None = None,
+        *,
+        derivative_id: int | None = None,
+    ) -> float:
         """Fast evaluation using pre-allocated cache (skips validation).
 
         .. deprecated:: 0.3.0
@@ -634,14 +665,21 @@ class ChebyshevApproximation:
         ----------
         point : list of float
             Query point.
-        derivative_order : list of int
-            Derivative order per dimension.
+        derivative_order : list of int, optional
+            Derivative order per dimension. Provide exactly one of
+            ``derivative_order`` or ``derivative_id``.
+        derivative_id : int, optional
+            Stable session-local id returned by :meth:`get_derivative_id`.
+            Provide exactly one of ``derivative_order`` or ``derivative_id``.
 
         Returns
         -------
         float
             Interpolated value or derivative.
         """
+        derivative_order = self._resolve_derivative_args(
+            derivative_order, derivative_id
+        )
         warnings.warn(
             "fast_eval() is deprecated and will be removed in a future version. "
             "Use vectorized_eval() instead — it is ~150x faster via BLAS GEMV "
@@ -706,7 +744,13 @@ class ChebyshevApproximation:
             return flat.reshape(lead_shape + (rhs.shape[-1],))
         return current @ rhs
 
-    def vectorized_eval(self, point: List[float], derivative_order: List[int]) -> float:
+    def vectorized_eval(
+        self,
+        point: List[float],
+        derivative_order: List[int] | None = None,
+        *,
+        derivative_id: int | None = None,
+    ) -> float:
         """Fully vectorized evaluation using NumPy matrix operations.
 
         Replaces the Python loop with BLAS matrix-vector products.
@@ -716,8 +760,12 @@ class ChebyshevApproximation:
         ----------
         point : list of float
             Query point, one coordinate per dimension.
-        derivative_order : list of int
-            Derivative order per dimension.
+        derivative_order : list of int, optional
+            Derivative order per dimension. Provide exactly one of
+            ``derivative_order`` or ``derivative_id``.
+        derivative_id : int, optional
+            Stable session-local id returned by :meth:`get_derivative_id`.
+            Provide exactly one of ``derivative_order`` or ``derivative_id``.
 
         Returns
         -------
@@ -728,7 +776,15 @@ class ChebyshevApproximation:
         ------
         RuntimeError
             If ``build()`` has not been called.
+        ValueError
+            If both or neither of ``derivative_order`` / ``derivative_id``
+            are provided.
+        KeyError
+            If ``derivative_id`` is unknown (not yet registered).
         """
+        derivative_order = self._resolve_derivative_args(
+            derivative_order, derivative_id
+        )
         if self.tensor_values is None:
             raise RuntimeError("Call build() first")
 
@@ -754,25 +810,38 @@ class ChebyshevApproximation:
 
         return float(current)
 
-    def vectorized_eval_batch(self, points: np.ndarray, derivative_order: List[int]) -> np.ndarray:
+    def vectorized_eval_batch(
+        self,
+        points: np.ndarray,
+        derivative_order: List[int] | None = None,
+        *,
+        derivative_id: int | None = None,
+    ) -> np.ndarray:
         """Evaluate at multiple points.
 
         Parameters
         ----------
         points : ndarray
             Points of shape (N, num_dimensions).
-        derivative_order : list of int
-            Derivative order per dimension.
+        derivative_order : list of int, optional
+            Derivative order per dimension. Provide exactly one of
+            ``derivative_order`` or ``derivative_id``.
+        derivative_id : int, optional
+            Stable session-local id returned by :meth:`get_derivative_id`.
+            Provide exactly one of ``derivative_order`` or ``derivative_id``.
 
         Returns
         -------
         ndarray
             Results of shape (N,).
         """
+        derivative_order = self._resolve_derivative_args(
+            derivative_order, derivative_id
+        )
         N = points.shape[0]
         results = np.empty(N)
         for i in range(N):
-            results[i] = self.vectorized_eval(points[i], derivative_order)
+            results[i] = self.vectorized_eval(points[i], derivative_order=derivative_order)
         return results
 
     def vectorized_eval_multi(
@@ -783,6 +852,11 @@ class ChebyshevApproximation:
         Pre-computes normalized barycentric weights once per dimension and
         reuses them across all derivative orders. Computing price + 5 Greeks
         costs ~0.29 ms instead of 6 x 0.065 ms = 0.39 ms.
+
+        .. note::
+            ``derivative_id`` is not supported here because this method takes
+            a list of orders. For derivative_id-based access, look up orders
+            via ``self._derivative_id_to_orders[id]``.
 
         Parameters
         ----------
@@ -835,8 +909,111 @@ class ChebyshevApproximation:
             results.append(float(current))
         return results
 
-    def get_derivative_id(self, derivative_order: List[int]) -> List[int]:
-        """Return derivative order as-is (for API compatibility)."""
+    def is_construction_finished(self) -> bool:
+        """Return True iff this interpolant is built and usable."""
+        return self.tensor_values is not None
+
+    def get_constructor_type(self) -> str:
+        """Return the class name (matches MoCaX getConstructorType convention)."""
+        return type(self).__name__
+
+    def get_used_ns(self) -> list:
+        """Return the resolved per-dim node count after build (or as constructed)."""
+        return list(self.n_nodes)
+
+    def set_descriptor(self, descriptor: str) -> None:
+        """Set a free-form text label on this interpolant.
+
+        Parameters
+        ----------
+        descriptor : str
+            Label to attach to this interpolant.
+
+        Raises
+        ------
+        TypeError
+            If ``descriptor`` is not a string.
+        """
+        if not isinstance(descriptor, str):
+            raise TypeError(
+                f"descriptor must be str, got {type(descriptor).__name__}"
+            )
+        self.descriptor = descriptor
+
+    def get_descriptor(self) -> str:
+        """Return the descriptor label (default ``""``)."""
+        return self.descriptor
+
+    def get_derivative_id(self, derivative_order: List[int]) -> int:
+        """Register a derivative-orders tuple and return a stable session-local int.
+
+        Calling with the same ``derivative_order`` returns the same int. IDs
+        are sequential, starting at 0, and are persisted across pickle save/load
+        but reset on binary `.pcb` save/load.
+
+        Parameters
+        ----------
+        derivative_order : list of int
+            Per-dim derivative orders. Must have length ``num_dimensions``.
+
+        Returns
+        -------
+        int
+            Stable session-local id for this orders tuple.
+
+        Raises
+        ------
+        ValueError
+            If ``derivative_order`` has the wrong length, or any entry is
+            negative, or any entry exceeds ``max_derivative_order``.
+        """
+        if len(derivative_order) != self.num_dimensions:
+            raise ValueError(
+                f"derivative_order length {len(derivative_order)} does not "
+                f"match num_dimensions {self.num_dimensions}"
+            )
+        for d, o in enumerate(derivative_order):
+            if not isinstance(o, (int, np.integer)):
+                raise ValueError(
+                    f"derivative_order[{d}] must be int, got {type(o).__name__}"
+                )
+            if o < 0 or o > self.max_derivative_order:
+                raise ValueError(
+                    f"derivative_order[{d}]={o} out of range "
+                    f"[0, {self.max_derivative_order}]"
+                )
+        key = tuple(int(o) for o in derivative_order)
+        if key in self._derivative_id_registry:
+            return self._derivative_id_registry[key]
+        new_id = len(self._derivative_id_to_orders)
+        self._derivative_id_registry[key] = new_id
+        self._derivative_id_to_orders.append(key)
+        return new_id
+
+    def _resolve_derivative_args(
+        self,
+        derivative_order: List[int] | None,
+        derivative_id: int | None,
+    ) -> List[int]:
+        """Resolve the derivative spec from kwargs (orders xor id).
+
+        Returns the resolved ``derivative_order`` list. Raises ``ValueError``
+        if both or neither kwarg is provided. Raises ``KeyError`` if
+        ``derivative_id`` is unknown.
+        """
+        if derivative_order is not None and derivative_id is not None:
+            raise ValueError(
+                "provide exactly one of derivative_order or derivative_id, not both"
+            )
+        if derivative_order is None and derivative_id is None:
+            raise ValueError("must provide derivative_order or derivative_id")
+        if derivative_id is not None:
+            if derivative_id < 0 or derivative_id >= len(self._derivative_id_to_orders):
+                raise KeyError(
+                    f"unknown derivative_id {derivative_id}; "
+                    f"register via get_derivative_id() first"
+                )
+            return list(self._derivative_id_to_orders[derivative_id])
         return derivative_order
 
     # ------------------------------------------------------------------
@@ -987,6 +1164,14 @@ class ChebyshevApproximation:
         if not hasattr(self, "_original_n_nodes"):
             # v0.10 and earlier: n_nodes was always fully resolved
             self._original_n_nodes = list(self.n_nodes)
+        if not hasattr(self, "descriptor"):
+            self.descriptor = ""
+        if not hasattr(self, "additional_data"):
+            self.additional_data = None
+        if not hasattr(self, "_derivative_id_registry"):
+            self._derivative_id_registry = {}
+        if not hasattr(self, "_derivative_id_to_orders"):
+            self._derivative_id_to_orders = []
 
         # Reconstruct pre-allocated eval cache for fast_eval() (deprecated)
         self._eval_cache = {}
@@ -1310,6 +1495,10 @@ class ChebyshevApproximation:
         obj.build_time = 0.0
         obj.n_evaluations = 0
         obj._cached_error_estimate = None
+        obj.descriptor = ""
+        obj.additional_data = None
+        obj._derivative_id_registry = {}
+        obj._derivative_id_to_orders = []
 
         # Pre-allocate eval cache for deprecated fast_eval()
         obj._eval_cache = {}
@@ -1343,6 +1532,10 @@ class ChebyshevApproximation:
         obj.build_time = 0.0
         obj.n_evaluations = 0
         obj._cached_error_estimate = None
+        obj.descriptor = ""
+        obj.additional_data = None
+        obj._derivative_id_registry = {}
+        obj._derivative_id_to_orders = []
         # Pre-allocate eval cache for deprecated fast_eval()
         obj._eval_cache = {}
         for d in range(obj.num_dimensions - 1, 0, -1):
@@ -1428,7 +1621,11 @@ class ChebyshevApproximation:
         obj.tensor_values = tensor
         obj.build_time = 0.0
         obj.n_evaluations = 0
+        obj.descriptor = ""
+        obj.additional_data = None
         obj._cached_error_estimate = None
+        obj._derivative_id_registry = {}
+        obj._derivative_id_to_orders = []
         obj._eval_cache = {}
         for d in range(new_ndim - 1, 0, -1):
             shape = tuple(n_nodes[i] for i in range(d))
@@ -1514,7 +1711,11 @@ class ChebyshevApproximation:
         obj.tensor_values = tensor
         obj.build_time = 0.0
         obj.n_evaluations = 0
+        obj.descriptor = ""
+        obj.additional_data = None
         obj._cached_error_estimate = None
+        obj._derivative_id_registry = {}
+        obj._derivative_id_to_orders = []
         obj._eval_cache = {}
         for d in range(new_ndim - 1, 0, -1):
             shape = tuple(n_nodes[i] for i in range(d))
@@ -1629,7 +1830,11 @@ class ChebyshevApproximation:
         obj.tensor_values = tensor
         obj.build_time = 0.0
         obj.n_evaluations = 0
+        obj.descriptor = ""
+        obj.additional_data = None
         obj._cached_error_estimate = None
+        obj._derivative_id_registry = {}
+        obj._derivative_id_to_orders = []
         obj._eval_cache = {}
         for d in range(new_ndim - 1, 0, -1):
             shape = tuple(n_nodes[i] for i in range(d))

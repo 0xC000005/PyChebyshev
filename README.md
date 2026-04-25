@@ -79,6 +79,9 @@ The convergence plots demonstrate exponential error decay as node count increase
 - **Special points in the core API** — declare kinks directly on `ChebyshevApproximation` via `special_points=[[...]]`; auto-dispatches to a piecewise Chebyshev spline.
 - **Portable `.pcb` binary format** for cross-language model sharing (C, Rust,
   Julia consumers can read PyChebyshev interpolants without Python).
+- **MoCaX-style ergonomics (v0.15)**: `additional_data=` ctor kwarg,
+  descriptor, derivative-id registry, and introspection (`get_used_ns`,
+  `get_constructor_type`, `is_construction_finished`).
 - **Pure Python** — NumPy + SciPy only, no compiled extensions needed
 
 ## Acknowledgments

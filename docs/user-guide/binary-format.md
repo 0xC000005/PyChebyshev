@@ -197,6 +197,9 @@ These fields are dropped on `format='binary'`:
 | `_cached_error_estimate` | recomputed lazily |
 | `build_time`, `n_evaluations`, `method` | not preserved (use pickle for full fidelity) |
 | `max_derivative_order` | resets to default `2` on load — re-set manually after `load()` if you need higher orders |
+| `additional_data` | binary save raises `NotImplementedError` if non-`None`; pass `format='pickle'` instead |
+| `descriptor` | silently dropped on binary save; restored as `""` on load — pickle preserves |
+| Derivative-id registry | not stored; reset to empty on binary load — pickle preserves |
 
 If you need any of those preserved, use pickle.
 

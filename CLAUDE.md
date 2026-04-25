@@ -12,7 +12,7 @@ PyChebyshev is a pip-installable Python library for multi-dimensional Chebyshev 
 # Setup
 uv sync
 
-# Run tests (~662 tests, ~110s due to 5D Black-Scholes builds)
+# Run tests (~733 tests, ~110s due to 5D Black-Scholes builds)
 uv run pytest tests/ -v
 
 # Run a single test
@@ -49,6 +49,10 @@ The installable package. Public classes: `ChebyshevApproximation`, `ChebyshevSpl
 - **`_binary.py`** — Private. `.pcb` portable binary serialization (v0.14). Reading/writing for `ChebyshevApproximation` and `ChebyshevSpline`. Stdlib `struct` + NumPy only.
 - **`_jit.py`** — Deprecated Numba JIT kernel with pure NumPy fallback. Used only by deprecated `fast_eval()`.
 - **`_version.py`** — Single source of truth for version string.
+- v0.15 adds `additional_data=` ctor kwarg, `set_descriptor`/`get_descriptor`,
+  `is_construction_finished`/`get_constructor_type`/`get_used_ns`, and the
+  `get_derivative_id` integer registry + `eval(..., derivative_id=...)` (the
+  last one excluding `ChebyshevTT`).
 
 ### Benchmark Scripts (project root)
 
@@ -81,6 +85,10 @@ Not part of the library. Compare Chebyshev barycentric against alternative metho
 - `test_special_points.py` — 37 tests: `ChebyshevApproximation.__new__` dispatch to `ChebyshevSpline` when `special_points` declares any kink (option A, precedent `pathlib.Path`); validation of special_points shape + nested `n_nodes`; 1D/2D correctness (abs kink recovery to machine precision; plateau control); cross-feature (save/load, algebra, integrate, extrude/slice, from_values); edge cases.
 - `test_error_threshold.py` — 37 tests: v0.11 auto-N doubling loop, max_n cap, get_optimal_n1, semi-auto mixed-N paths, verbose prints, spline per-piece doubling.
 - `test_binary_format.py` — 76 tests: low-level helpers, header parsing, format detection, ChebyshevApproximation round-trip (incl. n=1 dim), ChebyshevSpline round-trip, save/load integration with `format=` kwarg + autodetect, golden vectors, corruption rejection, cross-feature (from_values, algebra, extrude, slice, 5D BS, min n_nodes).
+- `test_ergonomics.py` — ~30 tests: descriptor, additional_data threading +
+  binary rejection, derivative_id registry on Approximation/Spline/Slider,
+  introspection trio (`is_construction_finished`, `get_constructor_type`,
+  `get_used_ns`).
 
 ### CI/CD (`.github/workflows/`)
 

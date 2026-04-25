@@ -5,6 +5,32 @@ All notable changes to PyChebyshev will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [0.15.0] - 2026-04-25
+
+### Added
+- `additional_data=` constructor kwarg on `ChebyshevApproximation`,
+  `ChebyshevSpline`, `ChebyshevSlider`, and `ChebyshevTT`. Threads
+  user-supplied context through every `f(point, data)` call during build.
+- `set_descriptor(str)` / `get_descriptor()` on all four classes for
+  free-form text labels.
+- `get_derivative_id(orders)` registry + `eval(point, derivative_id=...)`
+  on `ChebyshevApproximation`, `ChebyshevSpline`, and `ChebyshevSlider`
+  for stable session-local integer IDs over derivative-orders tuples.
+- `is_construction_finished()`, `get_constructor_type()`, `get_used_ns()`
+  on all four classes for introspection.
+
+### Changed
+- `ChebyshevApproximation.get_derivative_id` was previously a no-op stub
+  returning the input list. It now returns a stable session-local `int`
+  per registered orders tuple. **Breaking** for code relying on the prior
+  identity behavior.
+
+### Notes
+- Binary `.pcb` save raises `NotImplementedError` if `additional_data is
+  not None`. Use `format='pickle'` for full persistence.
+- Binary `.pcb` does not store `descriptor` or the `derivative_id`
+  registry; pickle does.
+
 ## [0.14.0] - 2026-04-24
 
 ### Added

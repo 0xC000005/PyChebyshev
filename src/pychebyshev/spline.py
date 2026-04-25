@@ -112,6 +112,7 @@ class ChebyshevSpline:
         max_derivative_order: int = 2,
         error_threshold: float | None = None,
         max_n: int = 64,
+        additional_data: object = None,
     ):
         self.function = function
         self.num_dimensions = num_dimensions
@@ -157,6 +158,10 @@ class ChebyshevSpline:
             knots = [[] for _ in range(num_dimensions)]
         self.knots = knots
         self.max_derivative_order = max_derivative_order
+        self.additional_data = additional_data
+        self._derivative_id_registry: dict[tuple[int, ...], int] = {}
+        self._derivative_id_to_orders: list[tuple[int, ...]] = []
+        self.descriptor: str = ""
 
         # Validate knots: each must be strictly inside domain and sorted
         for d in range(num_dimensions):
@@ -281,6 +286,7 @@ class ChebyshevSpline:
                 max_derivative_order=self.max_derivative_order,
                 error_threshold=self.error_threshold,
                 max_n=self.max_n,
+                additional_data=self.additional_data,
             )
             piece.build(verbose=False)
             self._pieces[flat_idx] = piece
@@ -330,6 +336,78 @@ class ChebyshevSpline:
         flat = int(np.ravel_multi_index(multi_idx, self._shape))
         return flat, self._pieces[flat]
 
+    def get_derivative_id(self, derivative_order: List[int]) -> int:
+        """Register a derivative-orders tuple and return a stable session-local int.
+
+        Calling with the same ``derivative_order`` returns the same int. IDs
+        are sequential, starting at 0, and are persisted across pickle save/load
+        but reset on binary `.pcb` save/load.
+
+        Parameters
+        ----------
+        derivative_order : list of int
+            Derivative order per dimension.
+
+        Returns
+        -------
+        int
+            Stable session-local identifier for this derivative order.
+        """
+        if len(derivative_order) != self.num_dimensions:
+            raise ValueError(
+                f"derivative_order length {len(derivative_order)} does not "
+                f"match num_dimensions {self.num_dimensions}"
+            )
+        for d, o in enumerate(derivative_order):
+            if not isinstance(o, (int, np.integer)):
+                raise ValueError(
+                    f"derivative_order[{d}] must be int, got {type(o).__name__}"
+                )
+            if o < 0 or o > self.max_derivative_order:
+                raise ValueError(
+                    f"derivative_order[{d}]={o} out of range "
+                    f"[0, {self.max_derivative_order}]"
+                )
+        key = tuple(int(o) for o in derivative_order)
+        if key in self._derivative_id_registry:
+            return self._derivative_id_registry[key]
+        new_id = len(self._derivative_id_to_orders)
+        self._derivative_id_registry[key] = new_id
+        self._derivative_id_to_orders.append(key)
+        return new_id
+
+    def _resolve_derivative_args(
+        self,
+        derivative_order: List[int] | None,
+        derivative_id: int | None,
+    ) -> List[int]:
+        """Resolve the derivative spec from kwargs (orders xor id).
+
+        Parameters
+        ----------
+        derivative_order : list of int or None
+        derivative_id : int or None
+
+        Returns
+        -------
+        list of int
+            Resolved derivative orders.
+        """
+        if derivative_order is not None and derivative_id is not None:
+            raise ValueError(
+                "provide exactly one of derivative_order or derivative_id, not both"
+            )
+        if derivative_order is None and derivative_id is None:
+            raise ValueError("must provide derivative_order or derivative_id")
+        if derivative_id is not None:
+            if derivative_id < 0 or derivative_id >= len(self._derivative_id_to_orders):
+                raise KeyError(
+                    f"unknown derivative_id {derivative_id}; "
+                    f"register via get_derivative_id() first"
+                )
+            return list(self._derivative_id_to_orders[derivative_id])
+        return derivative_order
+
     def _check_knot_boundary(
         self, point: List[float], derivative_order: List[int]
     ) -> None:
@@ -363,7 +441,13 @@ class ChebyshevSpline:
                             f"derivatives may differ at this point."
                         )
 
-    def eval(self, point: List[float], derivative_order: List[int]) -> float:
+    def eval(
+        self,
+        point: List[float],
+        derivative_order: List[int] | None = None,
+        *,
+        derivative_id: int | None = None,
+    ) -> float:
         """Evaluate the spline approximation at a point.
 
         Routes the query to the piece whose sub-domain contains ``point``
@@ -374,8 +458,12 @@ class ChebyshevSpline:
         ----------
         point : list of float
             Evaluation point in the full domain.
-        derivative_order : list of int
+        derivative_order : list of int or None
             Derivative order for each dimension (0 = function value).
+            Provide either this or ``derivative_id``, not both.
+        derivative_id : int or None
+            Session-local identifier registered via :meth:`get_derivative_id`.
+            Provide either this or ``derivative_order``, not both.
 
         Returns
         -------
@@ -388,9 +476,12 @@ class ChebyshevSpline:
             If ``build()`` has not been called.
         ValueError
             If the point is at a knot and a non-zero derivative is requested.
+        KeyError
+            If ``derivative_id`` is not registered.
         """
         if not self._built:
             raise RuntimeError("Call build() before eval().")
+        derivative_order = self._resolve_derivative_args(derivative_order, derivative_id)
         self._check_knot_boundary(point, derivative_order)
         _, piece = self._find_piece(point)
         return piece.vectorized_eval(point, derivative_order)
@@ -432,7 +523,11 @@ class ChebyshevSpline:
         return piece.vectorized_eval_multi(point, derivative_orders)
 
     def eval_batch(
-        self, points: np.ndarray, derivative_order: List[int]
+        self,
+        points: np.ndarray,
+        derivative_order: List[int] | None = None,
+        *,
+        derivative_id: int | None = None,
     ) -> np.ndarray:
         """Evaluate at multiple points, grouping by piece for efficiency.
 
@@ -444,8 +539,12 @@ class ChebyshevSpline:
         ----------
         points : ndarray of shape (N, num_dimensions)
             Evaluation points.
-        derivative_order : list of int
+        derivative_order : list of int or None
             Derivative order for each dimension.
+            Provide either this or ``derivative_id``, not both.
+        derivative_id : int or None
+            Session-local identifier registered via :meth:`get_derivative_id`.
+            Provide either this or ``derivative_order``, not both.
 
         Returns
         -------
@@ -456,9 +555,12 @@ class ChebyshevSpline:
         ------
         RuntimeError
             If ``build()`` has not been called.
+        KeyError
+            If ``derivative_id`` is not registered.
         """
         if not self._built:
             raise RuntimeError("Call build() before eval_batch().")
+        derivative_order = self._resolve_derivative_args(derivative_order, derivative_id)
         points = np.asarray(points, dtype=float)
         N = points.shape[0]
         results = np.empty(N)
@@ -602,6 +704,52 @@ class ChebyshevSpline:
             self._cached_error_estimate = None
         if not hasattr(self, "_n_nodes_nested"):
             self._n_nodes_nested = _is_nested_n_nodes(self.n_nodes)
+        if not hasattr(self, "descriptor"):
+            self.descriptor = ""
+        if not hasattr(self, "additional_data"):
+            self.additional_data = None
+        if not hasattr(self, "_derivative_id_registry"):
+            self._derivative_id_registry = {}
+        if not hasattr(self, "_derivative_id_to_orders"):
+            self._derivative_id_to_orders = []
+
+    def is_construction_finished(self) -> bool:
+        """Return True iff this spline is built and usable."""
+        return self._built
+
+    def get_constructor_type(self) -> str:
+        """Return the class name."""
+        return type(self).__name__
+
+    def get_used_ns(self) -> list:
+        """Return per-dim n_nodes preserving nested vs flat shape."""
+        return [
+            list(piece) if isinstance(piece, list) else piece
+            for piece in self.n_nodes
+        ]
+
+    def set_descriptor(self, descriptor: str) -> None:
+        """Set a free-form text label on this spline.
+
+        Parameters
+        ----------
+        descriptor : str
+            Label to attach to this spline.
+
+        Raises
+        ------
+        TypeError
+            If ``descriptor`` is not a string.
+        """
+        if not isinstance(descriptor, str):
+            raise TypeError(
+                f"descriptor must be str, got {type(descriptor).__name__}"
+            )
+        self.descriptor = descriptor
+
+    def get_descriptor(self) -> str:
+        """Return the descriptor label (default ``""``)."""
+        return self.descriptor
 
     def save(
         self,
@@ -934,6 +1082,10 @@ class ChebyshevSpline:
         obj._built = True
         obj._build_time = 0.0
         obj._cached_error_estimate = None
+        obj.descriptor = ""
+        obj.additional_data = None
+        obj._derivative_id_registry = {}
+        obj._derivative_id_to_orders = []
 
         return obj
 
@@ -958,6 +1110,10 @@ class ChebyshevSpline:
         obj._built = True
         obj._build_time = 0.0
         obj._cached_error_estimate = None
+        obj.descriptor = ""
+        obj.additional_data = None
+        obj._derivative_id_registry = {}
+        obj._derivative_id_to_orders = []
         return obj
 
     # ------------------------------------------------------------------
@@ -1040,6 +1196,10 @@ class ChebyshevSpline:
         obj._pieces = pieces
         obj._built = True
         obj._build_time = 0.0
+        obj.descriptor = ""
+        obj.additional_data = None
+        obj._derivative_id_registry = {}
+        obj._derivative_id_to_orders = []
         obj._cached_error_estimate = None
         return obj
 
@@ -1137,6 +1297,10 @@ class ChebyshevSpline:
         obj._pieces = list(pieces_arr.ravel())
         obj._built = True
         obj._build_time = 0.0
+        obj.descriptor = ""
+        obj.additional_data = None
+        obj._derivative_id_registry = {}
+        obj._derivative_id_to_orders = []
         obj._cached_error_estimate = None
         return obj
 
@@ -1317,6 +1481,10 @@ class ChebyshevSpline:
         obj._pieces = list(pieces_arr.ravel())
         obj._built = True
         obj._build_time = 0.0
+        obj.descriptor = ""
+        obj.additional_data = None
+        obj._derivative_id_registry = {}
+        obj._derivative_id_to_orders = []
         obj._cached_error_estimate = None
         return obj
 
