@@ -448,3 +448,66 @@ class TestApproxSaveLoadIntegration:
         loaded = ChebyshevApproximation.load(path)
         for pt in [[-0.5, 0.5], [0.0, 0.0], [0.7, -0.3]]:
             assert abs(cheb.eval(pt, [0, 0]) - loaded.eval(pt, [0, 0])) < 1e-14
+
+
+class TestSplineSaveLoadIntegration:
+    @staticmethod
+    def _make():
+        from pychebyshev import ChebyshevSpline
+        s = ChebyshevSpline(
+            function=lambda pt, _: abs(pt[0]),
+            num_dimensions=1,
+            domain=[(-1.0, 1.0)],
+            n_nodes=[3],
+            knots=[[0.0]],
+        )
+        s.build(verbose=False)
+        return s
+
+    def test_save_default_is_pickle(self, tmp_path):
+        s = self._make()
+        path = tmp_path / "default.pkl"
+        s.save(path)
+        assert path.read_bytes()[:1] == b"\x80"
+
+    def test_save_format_binary_writes_magic(self, tmp_path):
+        s = self._make()
+        path = tmp_path / "model.pcb"
+        s.save(path, format="binary")
+        assert path.read_bytes()[:4] == _binary.MAGIC
+
+    def test_save_unknown_format_raises(self, tmp_path):
+        s = self._make()
+        with pytest.raises(ValueError, match="format must be"):
+            s.save(tmp_path / "x.pcb", format="zip")
+
+    def test_load_autodetect_binary(self, tmp_path):
+        from pychebyshev import ChebyshevSpline
+        s = self._make()
+        path = tmp_path / "model.pcb"
+        s.save(path, format="binary")
+        loaded = ChebyshevSpline.load(path)
+        for x in [-0.7, -0.1, 0.3, 0.8]:
+            assert abs(s.eval([x], [0]) - loaded.eval([x], [0])) < 1e-12
+
+    def test_load_autodetect_pickle(self, tmp_path):
+        from pychebyshev import ChebyshevSpline
+        s = self._make()
+        path = tmp_path / "model.pkl"
+        s.save(path)
+        loaded = ChebyshevSpline.load(path)
+        for x in [-0.7, -0.1, 0.3, 0.8]:
+            assert abs(s.eval([x], [0]) - loaded.eval([x], [0])) < 1e-12
+
+    def test_save_binary_nested_n_nodes_raises(self, tmp_path):
+        from pychebyshev import ChebyshevSpline
+        s = ChebyshevSpline(
+            function=lambda pt, _: abs(pt[0]),
+            num_dimensions=1,
+            domain=[(-1.0, 1.0)],
+            n_nodes=[[3, 5]],   # nested
+            knots=[[0.0]],
+        )
+        s.build(verbose=False)
+        with pytest.raises(NotImplementedError, match="binary format requires flat"):
+            s.save(tmp_path / "x.pcb", format="binary")

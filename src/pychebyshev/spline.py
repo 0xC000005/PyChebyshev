@@ -603,60 +603,78 @@ class ChebyshevSpline:
         if not hasattr(self, "_n_nodes_nested"):
             self._n_nodes_nested = _is_nested_n_nodes(self.n_nodes)
 
-    def save(self, path: str | os.PathLike) -> None:
+    def save(
+        self,
+        path: str | os.PathLike,
+        format: str = "pickle",
+    ) -> None:
         """Save the built spline to a file.
-
-        The original function is **not** saved -- only the numerical data
-        needed for evaluation.  The saved file can be loaded with
-        :meth:`load` without access to the original function.
 
         Parameters
         ----------
         path : str or path-like
             Destination file path.
+        format : {'pickle', 'binary'}, optional
+            ``'pickle'`` (default) writes the standard pickle stream.
+            ``'binary'`` writes the portable ``.pcb`` format. The binary
+            format requires flat (shared-across-pieces) ``n_nodes``;
+            nested-``n_nodes`` splines must use pickle.
 
         Raises
         ------
         RuntimeError
             If the spline has not been built yet.
+        ValueError
+            If ``format`` is not ``'pickle'`` or ``'binary'``.
+        NotImplementedError
+            If ``format='binary'`` is requested for a nested-``n_nodes`` spline.
         """
         if not self._built:
             raise RuntimeError(
-                "Cannot save an unbuilt spline. Call build() first."
+                "Cannot save an unbuilt ChebyshevSpline. Call build() first."
             )
-        with open(os.fspath(path), "wb") as f:
-            pickle.dump(self, f, protocol=pickle.HIGHEST_PROTOCOL)
+
+        if format == "pickle":
+            with open(path, "wb") as f:
+                pickle.dump(self, f, protocol=pickle.HIGHEST_PROTOCOL)
+        elif format == "binary":
+            from pychebyshev import _binary
+            with open(path, "wb") as f:
+                _binary.write_spline(f, self)
+        else:
+            raise ValueError(
+                f"format must be 'pickle' or 'binary', got {format!r}"
+            )
 
     @classmethod
     def load(cls, path: str | os.PathLike) -> "ChebyshevSpline":
-        """Load a previously saved spline from a file.
+        """Load a previously-saved spline.
 
-        The loaded object can evaluate immediately; no rebuild is needed.
-        The ``function`` attribute will be ``None``.  Assign a new function
-        before calling ``build()`` again if a rebuild is desired.
+        File format is auto-detected via magic bytes (``b"PCB\\x00"`` →
+        binary; otherwise pickle).
 
         Parameters
         ----------
         path : str or path-like
-            Path to the saved file.
+            Source file path.
 
         Returns
         -------
         ChebyshevSpline
-            The restored spline.
+            The loaded spline. ``function`` is always ``None``.
 
-        Warns
+        Notes
         -----
-        UserWarning
-            If the file was saved with a different PyChebyshev version.
-
-        .. warning::
-
-            This method uses :mod:`pickle` internally.  Pickle can execute
-            arbitrary code during deserialization.  **Only load files you
-            trust.**
+        Pickle deserialization runs arbitrary code from the file. Only
+        load files you trust. The binary format is safe to load from
+        untrusted sources but does not preserve the function object.
         """
-        with open(os.fspath(path), "rb") as f:
+        from pychebyshev import _binary
+        fmt = _binary.detect_format(path)
+        if fmt == "binary":
+            with open(path, "rb") as f:
+                return _binary.read_spline(f)
+        with open(path, "rb") as f:
             obj = pickle.load(f)  # noqa: S301
         if not isinstance(obj, cls):
             raise TypeError(
