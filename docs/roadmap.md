@@ -146,7 +146,7 @@ min/max on Slider/TT remain deferred to v0.21.
 
 **Beyond MoCaX:** MoCaX has no `integrate()` API on any class.
 
-## v0.18 — TT Feature Parity :material-clock-outline:
+## v0.18 — TT Feature Parity :material-check:
 
 Bring `ChebyshevTT` up to parity with `ChebyshevApproximation` for the
 non-calculus surface.

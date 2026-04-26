@@ -5,6 +5,20 @@ All notable changes to PyChebyshev will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [0.18.0] - 2026-04-26
+
+### Added — TT Feature Parity
+
+- `ChebyshevTT.nodes(num_dim, domain, n_nodes)` static — Chebyshev grid generation matching `ChebyshevApproximation.nodes()`.
+- `ChebyshevTT.from_values(tensor_values, num_dim, domain, n_nodes, max_rank=None, tolerance=1e-6, ...)` classmethod — build TT directly from a precomputed full tensor via TT-SVD compression, skipping TT-Cross.
+- `ChebyshevTT.extrude(params)` — add a dimension where the function is constant. Inserts a rank-preserving constant core at the specified position.
+- `ChebyshevTT.slice(params)` — fix a dimension at a value via barycentric contraction (with fast path when value coincides with a node). Same absorption pattern as v0.17 TT integrate.
+- TT algebra: `__add__`, `__sub__`, `__neg__`, `__mul__` (scalar), `__rmul__`, `__truediv__` (scalar), plus `__iadd__`, `__isub__`, `__imul__`, `__itruediv__`. TT addition uses block-diagonal core stacking + TT-SVD rounding to `max(self.max_rank, other.max_rank)` to prevent rank explosion.
+- `ChebyshevTT.to_dense()` — materialize the TT chain into a full N-D tensor via einsum chain (after coefficient → value conversion).
+- New private helpers: `_extrude_tt_core`, `_slice_tt_core` in `_extrude_slice.py`; `_tt_add_cores`, `_tt_round_cores` in `_algebra.py`; `_tt_svd_from_tensor` in `tensor_train.py`.
+
+After v0.18, `ChebyshevTT` has full surface parity with `ChebyshevApproximation` for non-calculus features. All additions are strictly additive — no breaking changes.
+
 ## [0.17.0] - 2026-04-25
 
 ### Added — Integrate Everywhere

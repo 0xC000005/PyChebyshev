@@ -12,7 +12,7 @@ PyChebyshev is a pip-installable Python library for multi-dimensional Chebyshev 
 # Setup
 uv sync
 
-# Run tests (~890 tests, ~110s due to 5D Black-Scholes builds)
+# Run tests (~949 tests, ~110s due to 5D Black-Scholes builds)
 uv run pytest tests/ -v
 
 # Run a single test
@@ -62,6 +62,11 @@ The installable package. Public classes: `ChebyshevApproximation`, `ChebyshevSpl
 - v0.17 adds `integrate()` on `ChebyshevSlider` and `ChebyshevTT` (full +
   partial integration). After v0.17, every PyChebyshev class supports
   integration. Roots/min/max on Slider/TT remain deferred to v0.21.
+- v0.18 adds TT feature parity: `ChebyshevTT.nodes()` static,
+  `from_values()` classmethod, `extrude()`, `slice()`, algebra
+  (`+`, `-`, `*` scalar, in-place variants, `__neg__`), and `to_dense()`.
+  After v0.18, ChebyshevTT has full surface parity with
+  ChebyshevApproximation for non-calculus features.
 
 ### Benchmark Scripts (project root)
 
@@ -81,6 +86,7 @@ Not part of the library. Compare Chebyshev barycentric against alternative metho
 - `compare_special_points.py` — PyChebyshev special_points vs MoCaX MocaxSpecialPoints + MocaxNs comparison (requires `mocax_lib/`)
 - `compare_v016_polish.py` — PyChebyshev v0.16 polish surface vs MoCaX 4.3.1 cosmetic API (requires `mocaxpy`; gracefully skips MoCaX side if not installed)
 - `compare_calculus_completion.py` — PyChebyshev v0.17 Slider/TT integrate vs MoCaX 4.3.1 (no equivalent — beyond-MoCaX feature)
+- `compare_v018_tt_parity.py` — PyChebyshev v0.18 TT surface (extrude/slice/algebra/from_values/to_dense) vs MoCaX 4.3.1
 
 ### Tests (`tests/`)
 
@@ -108,6 +114,9 @@ Not part of the library. Compare Chebyshev barycentric against alternative metho
 - `test_calculus_completion.py` — ~37 tests: `ChebyshevSlider.integrate()` (full
   and partial), `ChebyshevTT.integrate()` (full and partial), cross-class
   consistency checks, bounds validation.
+- `test_v018_tt_parity.py` — ~52 tests: `ChebyshevTT.nodes()`, `from_values()`,
+  `extrude()`, `slice()`, algebra (`+`, `-`, `*` scalar, in-place, `__neg__`),
+  `to_dense()`; cross-feature and round-trip checks.
 
 ### CI/CD (`.github/workflows/`)
 

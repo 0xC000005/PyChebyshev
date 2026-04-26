@@ -633,6 +633,61 @@ def _tt_svd(
     return cores, total_evals
 
 
+def _tt_svd_from_tensor(
+    tensor: np.ndarray,
+    max_rank: int,
+    tol: float,
+) -> List[np.ndarray]:
+    """TT-SVD decomposition of a precomputed dense tensor.
+
+    Same sequential SVD algorithm as :func:`_tt_svd` but accepts a
+    pre-built tensor directly instead of evaluating a function on a grid.
+
+    Parameters
+    ----------
+    tensor : np.ndarray
+        Full N-D tensor of function values, shape ``(n_0, n_1, ..., n_{d-1})``.
+    max_rank : int
+        Maximum TT rank.
+    tol : float
+        Singular value truncation tolerance relative to ``sigma_max``.
+
+    Returns
+    -------
+    cores : list of ndarray
+        TT cores, each of shape ``(r_{k-1}, n_k, r_k)``. These are
+        **value** cores (function values at Chebyshev nodes along axis 1).
+    """
+    n = list(tensor.shape)
+    d = len(n)
+
+    cores = []
+    C = tensor.astype(np.float64)
+    r_prev = 1
+
+    for k in range(d - 1):
+        C = C.reshape(r_prev * n[k], -1)
+        U, S, Vt = np.linalg.svd(C, full_matrices=False)
+
+        # Determine rank: cap at max_rank, drop near-zero singular values
+        rank = min(max_rank, len(S))
+        if S[0] > 0:
+            effective = int(np.sum(S > tol * S[0]))
+            rank = max(1, min(rank, effective))
+
+        U = U[:, :rank]
+        S = S[:rank]
+        Vt = Vt[:rank, :]
+
+        cores.append(U.reshape(r_prev, n[k], rank))
+        C = np.diag(S) @ Vt
+        r_prev = rank
+
+    # Last core
+    cores.append(C.reshape(r_prev, n[d - 1], 1))
+    return cores
+
+
 # ======================================================================
 # Orthogonalization primitives
 # ======================================================================
@@ -1579,6 +1634,189 @@ class ChebyshevTT:
         result_tt.method = self.method
         return result_tt
 
+    def to_dense(self) -> np.ndarray:
+        """Materialize the TT chain into a full N-D tensor of values.
+
+        Returns
+        -------
+        np.ndarray
+            Shape ``tuple(n_nodes)``. ``dense[i_0, i_1, ..., i_{d-1}]`` equals
+            ``self.eval([nodes_0[i_0], ..., nodes_{d-1}[i_{d-1}]])`` to machine
+            precision.
+
+        Notes
+        -----
+        Use sparingly: storage is ``prod(n_nodes)`` floats. Useful for
+        inspection, conversion, or piping through
+        :meth:`ChebyshevApproximation.from_values` to convert TT → barycentric.
+        """
+        self._check_built()
+
+        # Convert all coefficient cores to value cores
+        value_cores = [_coeff_core_to_value_core(c) for c in self._coeff_cores]
+
+        # Einsum chain: G_1[1, j_0, a_0] G_2[a_0, j_1, a_1] ... G_d[a_{d-1}, j_{d-1}, 1]
+        # Result shape: (1, n_0, n_1, ..., n_{d-1}, 1)
+        result = value_cores[0]  # shape (1, n_0, r_0)
+        for k in range(1, self.num_dimensions):
+            # result has shape (1, n_0, ..., n_{k-1}, r_{k-1})
+            # multiply by value_cores[k] of shape (r_{k-1}, n_k, r_k)
+            # → (1, n_0, ..., n_{k-1}, n_k, r_k)
+            result = np.einsum("...r,rjs->...js", result, value_cores[k])
+
+        # Squeeze the rank-1 boundary dimensions and reshape to n_nodes
+        result = result.reshape(tuple(self.n_nodes))
+        return result
+
+    def extrude(self, params):
+        """Add one or more dimensions where the function is constant.
+
+        Inserts a rank-preserving TT core encoding the constant function 1
+        at the specified position(s). The extruded TT evaluates identically
+        to the original over the existing dimensions, regardless of the new
+        dimension's coordinate.
+
+        Parameters
+        ----------
+        params : tuple | list[tuple]
+            Either a single tuple ``(dim_idx, (lo, hi), n_nodes_new)`` or a
+            list of such tuples. ``dim_idx`` is the insertion index (0-based)
+            in the result's dimensions.
+
+        Returns
+        -------
+        ChebyshevTT
+            TT over ``(num_dimensions + len(params))`` dims; the function is
+            constant (equal to the original) over each newly added dim.
+
+        Notes
+        -----
+        The new core has shape ``(r_at, n_new, r_at)`` where ``r_at`` is the
+        rank at the insertion boundary. Only the ``c_0`` coefficient slot is
+        nonzero (set to 1.0), encoding the constant function 1 in DCT-II
+        Chebyshev coefficient space.
+        """
+        self._check_built()
+
+        from pychebyshev._extrude_slice import (
+            _normalize_extrusion_params,
+            _extrude_tt_core,
+        )
+
+        norm_params = _normalize_extrusion_params(params, self.num_dimensions)
+
+        new_cores = list(self._coeff_cores)
+        new_domain = list(self.domain)
+        new_n_nodes = list(self.n_nodes)
+        # Sort by dim_idx ascending so insertions don't shift later indices
+        for dim_idx, (lo, hi), n_new in sorted(norm_params, key=lambda p: p[0]):
+            new_cores = _extrude_tt_core(new_cores, dim_idx, lo, hi, n_new)
+            new_domain.insert(dim_idx, [lo, hi])
+            new_n_nodes.insert(dim_idx, n_new)
+
+        new_tt_ranks = [c.shape[0] for c in new_cores] + [new_cores[-1].shape[2]]
+
+        obj = self.__class__.__new__(self.__class__)
+        obj.function = None
+        obj.num_dimensions = len(new_n_nodes)
+        obj.domain = new_domain
+        obj.n_nodes = new_n_nodes
+        obj.max_rank = self.max_rank
+        obj.tolerance = self.tolerance
+        obj.max_sweeps = self.max_sweeps
+        obj.max_derivative_order = self.max_derivative_order
+        obj.additional_data = self.additional_data
+        obj.descriptor = self.descriptor
+        obj.method = self.method
+        obj._coeff_cores = new_cores
+        obj._tt_ranks = new_tt_ranks
+        obj._built = True
+        obj._build_time = 0.0
+        obj._total_build_evals = 0
+        obj._cached_error_estimate = None
+        return obj
+
+    def slice(self, params):
+        """Fix one or more dimensions at given values, returning a lower-dim TT.
+
+        Contracts each targeted TT core at the given value via barycentric
+        interpolation (converting from coefficient space to value space first),
+        then absorbs the resulting matrix into a neighboring core.
+
+        Parameters
+        ----------
+        params : tuple | list[tuple]
+            Either a single tuple ``(dim_idx, value)`` or a list of such
+            tuples. ``value`` must lie within the domain for that dimension.
+
+        Returns
+        -------
+        ChebyshevTT
+            TT over ``(num_dimensions - len(params))`` dims.
+
+        Raises
+        ------
+        RuntimeError
+            If the interpolant has not been built yet.
+        ValueError
+            If a slice value is outside the domain, if slicing all
+            dimensions, or if ``dim_index`` is out of range or duplicated.
+        """
+        self._check_built()
+
+        from pychebyshev._extrude_slice import (
+            _normalize_slicing_params,
+            _make_nodes_for_dim,
+            _slice_tt_core,
+        )
+
+        norm_params = _normalize_slicing_params(params, self.num_dimensions)
+
+        # Validate values within domain before modifying anything
+        for dim_idx, value in norm_params:
+            lo, hi = self.domain[dim_idx]
+            if value < lo or value > hi:
+                raise ValueError(
+                    f"Slice value {value} for dim {dim_idx} is outside "
+                    f"domain [{lo}, {hi}]"
+                )
+
+        new_cores = list(self._coeff_cores)
+        new_domain = list(self.domain)
+        new_n_nodes = list(self.n_nodes)
+        # Process slices in DESCENDING dim order so earlier indices remain valid
+        for dim_idx, value in sorted(norm_params, key=lambda p: -p[0]):
+            lo, hi = new_domain[dim_idx]
+            nodes = _make_nodes_for_dim(lo, hi, new_n_nodes[dim_idx])
+            new_cores = _slice_tt_core(new_cores, dim_idx, value, lo, hi, nodes)
+            new_domain.pop(dim_idx)
+            new_n_nodes.pop(dim_idx)
+
+        if len(new_cores) == 0:
+            raise RuntimeError("internal error: cannot slice all dimensions")
+
+        new_tt_ranks = [c.shape[0] for c in new_cores] + [new_cores[-1].shape[2]]
+
+        obj = self.__class__.__new__(self.__class__)
+        obj.function = None
+        obj.num_dimensions = len(new_n_nodes)
+        obj.domain = new_domain
+        obj.n_nodes = new_n_nodes
+        obj.max_rank = self.max_rank
+        obj.tolerance = self.tolerance
+        obj.max_sweeps = self.max_sweeps
+        obj.max_derivative_order = self.max_derivative_order
+        obj.additional_data = self.additional_data
+        obj.descriptor = self.descriptor
+        obj.method = self.method
+        obj._coeff_cores = new_cores
+        obj._tt_ranks = new_tt_ranks
+        obj._built = True
+        obj._build_time = 0.0
+        obj._total_build_evals = 0
+        obj._cached_error_estimate = None
+        return obj
+
     def eval(self, point: List[float]) -> float:
         """Evaluate at a single point via TT inner product.
 
@@ -2068,6 +2306,138 @@ class ChebyshevTT:
         import copy
         return copy.deepcopy(self)
 
+    @classmethod
+    def from_values(
+        cls,
+        tensor_values,
+        num_dimensions: int,
+        domain,
+        n_nodes,
+        max_rank: int | None = None,
+        tolerance: float = 1e-6,
+        max_derivative_order: int = 2,
+        additional_data=None,
+        descriptor: str = "",
+    ) -> "ChebyshevTT":
+        """Build a TT interpolant directly from a precomputed dense tensor.
+
+        Skips TT-Cross — runs TT-SVD compression on the supplied dense
+        tensor of function values at the Chebyshev grid.
+
+        Parameters
+        ----------
+        tensor_values : array-like
+            Shape ``tuple(n_nodes)``. Values at the Chebyshev grid returned
+            by :meth:`nodes`.
+        num_dimensions : int
+        domain : list[tuple[float, float]] | Domain
+        n_nodes : list[int] | Ns
+        max_rank : int or None
+            Maximum TT rank.  ``None`` defaults to ``max(n_nodes)``.
+        tolerance : float
+            TT-SVD singular-value truncation tolerance.
+        max_derivative_order : int
+        additional_data : object or None
+        descriptor : str
+
+        Returns
+        -------
+        ChebyshevTT
+            Function-less interpolant (``function=None``).  Equivalent to a
+            :meth:`build` (``method='svd'``) round-trip up to TT-SVD
+            precision.
+
+        Raises
+        ------
+        ValueError
+            If ``tensor_values`` has the wrong shape or contains non-finite
+            values.
+        """
+        from pychebyshev import Domain, Ns
+
+        if isinstance(domain, Domain):
+            domain = list(domain.bounds)
+        if isinstance(n_nodes, Ns):
+            n_nodes = list(n_nodes.counts)
+
+        arr = np.asarray(tensor_values, dtype=np.float64)
+        expected_shape = tuple(n_nodes)
+        if arr.shape != expected_shape:
+            raise ValueError(
+                f"tensor_values shape {arr.shape} does not match expected "
+                f"{expected_shape}"
+            )
+        if not np.isfinite(arr).all():
+            raise ValueError(
+                "tensor_values contains NaN or Inf — all values must be finite"
+            )
+
+        if max_rank is None:
+            max_rank = max(n_nodes)
+
+        # TT-SVD on the value-space tensor
+        value_cores = _tt_svd_from_tensor(arr, max_rank=max_rank, tol=tolerance)
+        # Convert each value-core to coefficient-core (DCT-II)
+        coeff_cores = [_value_core_to_coeff_core(c) for c in value_cores]
+        tt_ranks = [c.shape[0] for c in coeff_cores] + [coeff_cores[-1].shape[2]]
+
+        # Factory bypass — skip __init__ / build()
+        obj = cls.__new__(cls)
+        obj.function = None
+        obj.num_dimensions = num_dimensions
+        obj.domain = list(domain)
+        obj.n_nodes = list(n_nodes)
+        obj.max_rank = max_rank
+        obj.tolerance = tolerance
+        obj.max_sweeps = 10
+        obj.max_derivative_order = max_derivative_order
+        obj.additional_data = additional_data
+        obj.descriptor = descriptor
+        obj.method = "svd"
+        obj._coeff_cores = coeff_cores
+        obj._tt_ranks = tt_ranks
+        obj._built = True
+        obj._build_time = 0.0
+        obj._total_build_evals = 0
+        obj._cached_error_estimate = None
+        return obj
+
+    @staticmethod
+    def nodes(num_dimensions, domain, n_nodes):
+        """Return the Chebyshev grid for the given configuration without
+        evaluating any function.
+
+        Parameters
+        ----------
+        num_dimensions : int
+        domain : list[tuple[float, float]] | Domain
+        n_nodes : list[int] | Ns
+
+        Returns
+        -------
+        dict
+            ``{"nodes_per_dim": [np.ndarray of shape (n_d,) for each dim d]}``.
+            Identical layout to :meth:`ChebyshevApproximation.nodes`.
+        """
+        from pychebyshev import Domain, Ns
+        from pychebyshev._extrude_slice import _make_nodes_for_dim
+
+        if isinstance(domain, Domain):
+            domain = list(domain.bounds)
+        if isinstance(n_nodes, Ns):
+            n_nodes = list(n_nodes.counts)
+
+        if len(domain) != num_dimensions or len(n_nodes) != num_dimensions:
+            raise ValueError(
+                f"domain and n_nodes must have length {num_dimensions}"
+            )
+
+        nodes_per_dim = [
+            _make_nodes_for_dim(domain[d][0], domain[d][1], n_nodes[d])
+            for d in range(num_dimensions)
+        ]
+        return {"nodes_per_dim": nodes_per_dim}
+
     @staticmethod
     def is_dimensionality_allowed(num_dimensions: int) -> bool:
         """Return whether this interpolant class supports the given number of
@@ -2193,3 +2563,166 @@ class ChebyshevTT:
             lines.append(f"  Domain:      {domain_str}")
 
         return "\n".join(lines)
+
+    # ------------------------------------------------------------------
+    # Algebra: __add__, __sub__, __neg__
+    # ------------------------------------------------------------------
+
+    def _check_compatible_tt(self, other) -> None:
+        """Validate that two TTs can be combined algebraically."""
+        if not isinstance(other, ChebyshevTT):
+            raise TypeError(
+                f"unsupported operand type for ChebyshevTT: "
+                f"{type(other).__name__}"
+            )
+        self._check_built()
+        other._check_built()
+        if self.num_dimensions != other.num_dimensions:
+            raise ValueError(
+                f"num_dimensions mismatch: "
+                f"{self.num_dimensions} vs {other.num_dimensions}"
+            )
+        if list(self.n_nodes) != list(other.n_nodes):
+            raise ValueError(
+                f"n_nodes mismatch: {self.n_nodes} vs {other.n_nodes}"
+            )
+        if self.domain != other.domain:
+            raise ValueError(
+                f"domain mismatch: {self.domain} vs {other.domain}"
+            )
+
+    def __add__(self, other: "ChebyshevTT") -> "ChebyshevTT":
+        """Sum two TTs via block-diagonal core stacking + TT-SVD rounding.
+
+        Block-diagonal stacking gives an exact TT representation of the sum,
+        but with combined ranks ``r_a + r_b``. The result is then rounded to
+        ``max(self.max_rank, other.max_rank)`` via TT-SVD recompression
+        using ``self.tolerance`` as the relative singular-value cutoff.
+        """
+        from pychebyshev._algebra import _tt_add_cores, _tt_round_cores
+
+        self._check_compatible_tt(other)
+
+        stacked = _tt_add_cores(self._coeff_cores, other._coeff_cores)
+        target_rank = max(self.max_rank, other.max_rank)
+        rounded = _tt_round_cores(
+            stacked, max_rank=target_rank, tolerance=self.tolerance
+        )
+
+        obj = self.__class__.__new__(self.__class__)
+        obj.function = None
+        obj.num_dimensions = self.num_dimensions
+        obj.domain = list(self.domain)
+        obj.n_nodes = list(self.n_nodes)
+        obj.max_rank = target_rank
+        obj.tolerance = self.tolerance
+        obj.max_sweeps = self.max_sweeps
+        obj.max_derivative_order = self.max_derivative_order
+        obj.additional_data = self.additional_data
+        obj.descriptor = self.descriptor
+        obj.method = self.method
+        obj._coeff_cores = rounded
+        obj._tt_ranks = (
+            [c.shape[0] for c in rounded] + [rounded[-1].shape[2]]
+        )
+        obj._built = True
+        obj._build_time = 0.0
+        obj._total_build_evals = 0
+        obj._cached_error_estimate = None
+        return obj
+
+    def __neg__(self) -> "ChebyshevTT":
+        """Return the negation of this TT (scale one core by -1)."""
+        self._check_built()
+        new_cores = [c.copy() for c in self._coeff_cores]
+        new_cores[0] = -new_cores[0]
+
+        obj = self.__class__.__new__(self.__class__)
+        obj.function = None
+        obj.num_dimensions = self.num_dimensions
+        obj.domain = list(self.domain)
+        obj.n_nodes = list(self.n_nodes)
+        obj.max_rank = self.max_rank
+        obj.tolerance = self.tolerance
+        obj.max_sweeps = self.max_sweeps
+        obj.max_derivative_order = self.max_derivative_order
+        obj.additional_data = self.additional_data
+        obj.descriptor = self.descriptor
+        obj.method = self.method
+        obj._coeff_cores = new_cores
+        obj._tt_ranks = list(self._tt_ranks)
+        obj._built = True
+        obj._build_time = 0.0
+        obj._total_build_evals = 0
+        obj._cached_error_estimate = None
+        return obj
+
+    def __sub__(self, other: "ChebyshevTT") -> "ChebyshevTT":
+        """Difference of two TTs: ``self + (-other)``."""
+        return self + (-other)
+
+    def __mul__(self, scalar) -> "ChebyshevTT":
+        """Scale this TT by a scalar (leftmost core is multiplied)."""
+        from pychebyshev._algebra import _is_scalar
+
+        if not _is_scalar(scalar):
+            raise TypeError(
+                f"ChebyshevTT * {type(scalar).__name__} is not supported "
+                "(only scalar multiplication is defined for TT)"
+            )
+        self._check_built()
+        s = float(scalar)
+        new_cores = [c.copy() for c in self._coeff_cores]
+        new_cores[0] = new_cores[0] * s
+
+        obj = self.__class__.__new__(self.__class__)
+        obj.function = None
+        obj.num_dimensions = self.num_dimensions
+        obj.domain = list(self.domain)
+        obj.n_nodes = list(self.n_nodes)
+        obj.max_rank = self.max_rank
+        obj.tolerance = self.tolerance
+        obj.max_sweeps = self.max_sweeps
+        obj.max_derivative_order = self.max_derivative_order
+        obj.additional_data = self.additional_data
+        obj.descriptor = self.descriptor
+        obj.method = self.method
+        obj._coeff_cores = new_cores
+        obj._tt_ranks = list(self._tt_ranks)
+        obj._built = True
+        obj._build_time = 0.0
+        obj._total_build_evals = 0
+        obj._cached_error_estimate = None
+        return obj
+
+    def __rmul__(self, scalar) -> "ChebyshevTT":
+        """Support ``scalar * tt`` (commutative scalar multiplication)."""
+        return self.__mul__(scalar)
+
+    def __truediv__(self, scalar) -> "ChebyshevTT":
+        """Divide this TT by a scalar: equivalent to ``self * (1/scalar)``."""
+        from pychebyshev._algebra import _is_scalar
+
+        if not _is_scalar(scalar):
+            raise TypeError(
+                f"ChebyshevTT / {type(scalar).__name__} is not supported"
+            )
+        if float(scalar) == 0.0:
+            raise ZeroDivisionError("division by zero")
+        return self.__mul__(1.0 / float(scalar))
+
+    def __iadd__(self, other) -> "ChebyshevTT":
+        """In-place addition: ``tt += other`` (returns new object)."""
+        return self + other
+
+    def __isub__(self, other) -> "ChebyshevTT":
+        """In-place subtraction: ``tt -= other`` (returns new object)."""
+        return self - other
+
+    def __imul__(self, scalar) -> "ChebyshevTT":
+        """In-place scalar multiplication: ``tt *= scalar`` (returns new object)."""
+        return self * scalar
+
+    def __itruediv__(self, scalar) -> "ChebyshevTT":
+        """In-place scalar division: ``tt /= scalar`` (returns new object)."""
+        return self / scalar
