@@ -661,15 +661,25 @@ class ChebyshevApproximation:
         self._cached_error_estimate = None
 
         # Step 1: Evaluate at all node combinations
-        from pychebyshev._parallel import _evaluate_in_parallel
-        points = [
-            [self.nodes[d][idx[d]] for d in range(self.num_dimensions)]
-            for idx in np.ndindex(*self.n_nodes)
-        ]
-        flat = _evaluate_in_parallel(
-            self.function, points, self.additional_data, self.n_workers
-        )
-        self.tensor_values = flat.reshape(self.n_nodes)
+        if self.n_workers is None or self.n_workers == 1:
+            # Fast path: in-place fill (original behavior, no intermediate list)
+            self.tensor_values = np.zeros(self.n_nodes)
+            for idx in np.ndindex(*self.n_nodes):
+                point = [self.nodes[d][idx[d]] for d in range(self.num_dimensions)]
+                self.tensor_values[idx] = float(
+                    self.function(point, self.additional_data)
+                )
+        else:
+            # Parallel path: build points list, dispatch to pool, reshape
+            from pychebyshev._parallel import _evaluate_in_parallel
+            points = [
+                [self.nodes[d][idx[d]] for d in range(self.num_dimensions)]
+                for idx in np.ndindex(*self.n_nodes)
+            ]
+            flat = _evaluate_in_parallel(
+                self.function, points, self.additional_data, self.n_workers
+            )
+            self.tensor_values = flat.reshape(self.n_nodes)
         self.n_evaluations = total
 
         # Step 2: Pre-compute barycentric weights

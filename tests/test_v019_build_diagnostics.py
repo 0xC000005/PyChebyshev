@@ -93,6 +93,12 @@ class TestParallelBuildApproximation:
         # f(x, ad) = 7 * x; eval at 0.5 should be 3.5
         assert cheb.eval([0.5], [0]) == pytest.approx(3.5, abs=1e-10)
 
+    def test_n_workers_bool_rejected(self):
+        with pytest.raises(ValueError, match="n_workers"):
+            ChebyshevApproximation(
+                _t3_f_simple, 2, [[-1, 1], [-1, 1]], [4, 4], n_workers=True
+            )
+
 
 # ============================================================================
 # T4: Parallel build (Spline)
@@ -360,6 +366,36 @@ class TestPlot2DSurface:
         ax = cheb.plot_2d_surface(fixed={2: 0.5}, n_points=10)
         assert ax is not None
 
+    def test_plot_2d_surface_spline(self, matplotlib_or_skip):
+        def f(x, _):
+            return abs(x[0]) + abs(x[1])
+        spl = ChebyshevSpline(
+            f, 2, [[-1, 1], [-1, 1]],
+            knots=[[0.0], [0.0]], n_nodes=[6, 6],
+        )
+        spl.build(verbose=False)
+        ax = spl.plot_2d_surface(n_points=15)
+        assert ax is not None
+
+    def test_plot_2d_surface_slider(self, matplotlib_or_skip):
+        def f(x, _):
+            return math.sin(x[0]) + math.cos(x[1])
+        slider = ChebyshevSlider(
+            f, 2, [[-1, 1], [-1, 1]], [6, 6],
+            partition=[[0], [1]], pivot_point=[0.0, 0.0],
+        )
+        slider.build(verbose=False)
+        ax = slider.plot_2d_surface(n_points=15)
+        assert ax is not None
+
+    def test_plot_2d_surface_tt(self, matplotlib_or_skip):
+        def f(x, _):
+            return x[0] * x[1]
+        tt = ChebyshevTT(f, 2, [[-1, 1], [-1, 1]], [6, 6])
+        tt.build(verbose=False)
+        ax = tt.plot_2d_surface(n_points=15)
+        assert ax is not None
+
 
 class TestPlot2DContour:
     @pytest.fixture
@@ -381,6 +417,36 @@ class TestPlot2DContour:
         cheb = ChebyshevApproximation(_t7_f_2d, 2, [[-1, 1], [-1, 1]], [8, 8])
         cheb.build(verbose=False)
         ax = cheb.plot_2d_contour(n_points=15, n_levels=5)
+        assert ax is not None
+
+    def test_plot_2d_contour_spline(self, matplotlib_or_skip):
+        def f(x, _):
+            return abs(x[0]) + abs(x[1])
+        spl = ChebyshevSpline(
+            f, 2, [[-1, 1], [-1, 1]],
+            knots=[[0.0], [0.0]], n_nodes=[6, 6],
+        )
+        spl.build(verbose=False)
+        ax = spl.plot_2d_contour(n_points=15, n_levels=10)
+        assert ax is not None
+
+    def test_plot_2d_contour_slider(self, matplotlib_or_skip):
+        def f(x, _):
+            return math.sin(x[0]) + math.cos(x[1])
+        slider = ChebyshevSlider(
+            f, 2, [[-1, 1], [-1, 1]], [6, 6],
+            partition=[[0], [1]], pivot_point=[0.0, 0.0],
+        )
+        slider.build(verbose=False)
+        ax = slider.plot_2d_contour(n_points=15, n_levels=10)
+        assert ax is not None
+
+    def test_plot_2d_contour_tt(self, matplotlib_or_skip):
+        def f(x, _):
+            return x[0] * x[1]
+        tt = ChebyshevTT(f, 2, [[-1, 1], [-1, 1]], [6, 6])
+        tt.build(verbose=False)
+        ax = tt.plot_2d_contour(n_points=15, n_levels=10)
         assert ax is not None
 
 
