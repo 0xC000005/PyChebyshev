@@ -2563,3 +2563,100 @@ class ChebyshevTT:
             lines.append(f"  Domain:      {domain_str}")
 
         return "\n".join(lines)
+
+    # ------------------------------------------------------------------
+    # Algebra: __add__, __sub__, __neg__
+    # ------------------------------------------------------------------
+
+    def _check_compatible_tt(self, other) -> None:
+        """Validate that two TTs can be combined algebraically."""
+        if not isinstance(other, ChebyshevTT):
+            raise TypeError(
+                f"unsupported operand type for ChebyshevTT: "
+                f"{type(other).__name__}"
+            )
+        self._check_built()
+        other._check_built()
+        if self.num_dimensions != other.num_dimensions:
+            raise ValueError(
+                f"num_dimensions mismatch: "
+                f"{self.num_dimensions} vs {other.num_dimensions}"
+            )
+        if list(self.n_nodes) != list(other.n_nodes):
+            raise ValueError(
+                f"n_nodes mismatch: {self.n_nodes} vs {other.n_nodes}"
+            )
+        if self.domain != other.domain:
+            raise ValueError(
+                f"domain mismatch: {self.domain} vs {other.domain}"
+            )
+
+    def __add__(self, other: "ChebyshevTT") -> "ChebyshevTT":
+        """Sum two TTs via block-diagonal core stacking + TT-SVD rounding.
+
+        Block-diagonal stacking gives an exact TT representation of the sum,
+        but with combined ranks ``r_a + r_b``. The result is then rounded to
+        ``max(self.max_rank, other.max_rank)`` via TT-SVD recompression
+        using ``self.tolerance`` as the relative singular-value cutoff.
+        """
+        from pychebyshev._algebra import _tt_add_cores, _tt_round_cores
+
+        self._check_compatible_tt(other)
+
+        stacked = _tt_add_cores(self._coeff_cores, other._coeff_cores)
+        target_rank = max(self.max_rank, other.max_rank)
+        rounded = _tt_round_cores(
+            stacked, max_rank=target_rank, tolerance=self.tolerance
+        )
+
+        obj = self.__class__.__new__(self.__class__)
+        obj.function = None
+        obj.num_dimensions = self.num_dimensions
+        obj.domain = list(self.domain)
+        obj.n_nodes = list(self.n_nodes)
+        obj.max_rank = target_rank
+        obj.tolerance = self.tolerance
+        obj.max_sweeps = self.max_sweeps
+        obj.max_derivative_order = self.max_derivative_order
+        obj.additional_data = self.additional_data
+        obj.descriptor = self.descriptor
+        obj.method = self.method
+        obj._coeff_cores = rounded
+        obj._tt_ranks = (
+            [c.shape[0] for c in rounded] + [rounded[-1].shape[2]]
+        )
+        obj._built = True
+        obj._build_time = 0.0
+        obj._total_build_evals = 0
+        obj._cached_error_estimate = None
+        return obj
+
+    def __neg__(self) -> "ChebyshevTT":
+        """Return the negation of this TT (scale one core by -1)."""
+        self._check_built()
+        new_cores = [c.copy() for c in self._coeff_cores]
+        new_cores[0] = -new_cores[0]
+
+        obj = self.__class__.__new__(self.__class__)
+        obj.function = None
+        obj.num_dimensions = self.num_dimensions
+        obj.domain = list(self.domain)
+        obj.n_nodes = list(self.n_nodes)
+        obj.max_rank = self.max_rank
+        obj.tolerance = self.tolerance
+        obj.max_sweeps = self.max_sweeps
+        obj.max_derivative_order = self.max_derivative_order
+        obj.additional_data = self.additional_data
+        obj.descriptor = self.descriptor
+        obj.method = self.method
+        obj._coeff_cores = new_cores
+        obj._tt_ranks = list(self._tt_ranks)
+        obj._built = True
+        obj._build_time = 0.0
+        obj._total_build_evals = 0
+        obj._cached_error_estimate = None
+        return obj
+
+    def __sub__(self, other: "ChebyshevTT") -> "ChebyshevTT":
+        """Difference of two TTs: ``self + (-other)``."""
+        return self + (-other)

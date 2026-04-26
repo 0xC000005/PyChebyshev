@@ -346,3 +346,109 @@ class TestTTSlice:
         tt.set_descriptor("source")
         result = tt.slice((0, 0.0))
         assert result.get_descriptor() == "source"
+
+
+# ============================================================================
+# T6: TT addition (__add__, __sub__, __neg__)
+# ============================================================================
+
+class TestTTAddition:
+    def test_add_two_tts_returns_tt(self):
+        def f(x, _):
+            return x[0] + x[1]
+
+        def g(x, _):
+            return math.sin(x[0]) + math.cos(x[1])
+
+        tt_f = ChebyshevTT(f, 2, [[-1, 1], [-1, 1]], [10, 10])
+        tt_f.build(verbose=False)
+        tt_g = ChebyshevTT(g, 2, [[-1, 1], [-1, 1]], [10, 10])
+        tt_g.build(verbose=False)
+        result = tt_f + tt_g
+        assert isinstance(result, ChebyshevTT)
+
+    def test_add_eval_matches_sum_of_evals(self):
+        def f(x, _):
+            return x[0] + x[1]
+
+        def g(x, _):
+            return math.sin(x[0])
+
+        tt_f = ChebyshevTT(f, 2, [[-1, 1], [-1, 1]], [10, 10])
+        tt_f.build(verbose=False)
+        tt_g = ChebyshevTT(g, 2, [[-1, 1], [-1, 1]], [10, 10])
+        tt_g.build(verbose=False)
+        result = tt_f + tt_g
+        for x_test in [[0.3, 0.4], [-0.2, 0.5], [0.0, 0.0]]:
+            assert result.eval(x_test) == pytest.approx(
+                tt_f.eval(x_test) + tt_g.eval(x_test), abs=1e-6
+            )
+
+    def test_add_incompatible_domain_raises(self):
+        def f(x, _):
+            return x[0]
+
+        tt_f = ChebyshevTT(f, 1, [[-1, 1]], [4])
+        tt_f.build(verbose=False)
+        tt_g = ChebyshevTT(f, 1, [[0, 2]], [4])
+        tt_g.build(verbose=False)
+        with pytest.raises(ValueError):
+            tt_f + tt_g
+
+    def test_add_incompatible_n_nodes_raises(self):
+        def f(x, _):
+            return x[0]
+
+        tt_f = ChebyshevTT(f, 1, [[-1, 1]], [4])
+        tt_f.build(verbose=False)
+        tt_g = ChebyshevTT(f, 1, [[-1, 1]], [6])
+        tt_g.build(verbose=False)
+        with pytest.raises(ValueError):
+            tt_f + tt_g
+
+    def test_subtract_returns_tt(self):
+        def f(x, _):
+            return x[0] + x[1]
+
+        tt_a = ChebyshevTT(f, 2, [[-1, 1], [-1, 1]], [6, 6])
+        tt_a.build(verbose=False)
+        tt_b = ChebyshevTT(f, 2, [[-1, 1], [-1, 1]], [6, 6])
+        tt_b.build(verbose=False)
+        result = tt_a - tt_b
+        # tt_a - tt_b should be approx 0 everywhere
+        assert result.eval([0.3, 0.4]) == pytest.approx(0.0, abs=1e-6)
+
+    def test_negation(self):
+        def f(x, _):
+            return math.sin(x[0])
+
+        tt = ChebyshevTT(f, 1, [[-1, 1]], [10])
+        tt.build(verbose=False)
+        neg = -tt
+        assert neg.eval([0.5]) == pytest.approx(-tt.eval([0.5]), abs=1e-10)
+
+    def test_add_function_is_none_on_result(self):
+        def f(x, _):
+            return x[0]
+
+        tt_a = ChebyshevTT(f, 1, [[-1, 1]], [4])
+        tt_a.build(verbose=False)
+        tt_b = ChebyshevTT(f, 1, [[-1, 1]], [4])
+        tt_b.build(verbose=False)
+        result = tt_a + tt_b
+        assert result.function is None
+
+    def test_chained_adds_respect_max_rank(self):
+        """Sum of multiple TTs should be rounded to max_rank to prevent rank explosion."""
+        def make_tt(coef):
+            def f(x, _):
+                return coef * (x[0] + x[1])
+
+            tt = ChebyshevTT(f, 2, [[-1, 1], [-1, 1]], [6, 6], max_rank=4)
+            tt.build(verbose=False)
+            return tt
+
+        # Three TTs added together
+        result = make_tt(1.0) + make_tt(2.0) + make_tt(3.0)
+        assert all(r <= 4 for r in result.tt_ranks), \
+            f"max_rank=4 violated: ranks={result.tt_ranks}"
