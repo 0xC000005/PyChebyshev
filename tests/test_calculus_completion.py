@@ -450,6 +450,73 @@ class TestSliderPartialIntegrate:
         result = slider.integrate(dims=[0])
         assert result.get_descriptor() == "source"
 
+    def test_partial_with_multi_dim_group(self):
+        """Multi-dim slide group, partially integrated → exercises the 'partial' classification.
+
+        partition=[[0, 1]] is one 2D slide; integrating dim 0 leaves a 1D slide over dim 1.
+        """
+        def f(x, _):
+            return math.sin(x[0]) * math.cos(x[1])
+
+        slider = ChebyshevSlider(
+            f, 2, [[-1, 1], [-1, 1]], [10, 10],
+            partition=[[0, 1]], pivot_point=[0.0, 0.0],
+        )
+        slider.build(verbose=False)
+        result = slider.integrate(dims=[0])
+        assert isinstance(result, ChebyshevSlider)
+        assert result.num_dimensions == 1
+
+        # ∫_{-1}^{1} sin(x) cos(y) dx = cos(y) * [-cos(x)]_{-1}^{1} = 0
+        # So the integrated function should be ≈ 0 for all y
+        assert result.eval([0.5], [0]) == pytest.approx(0.0, abs=1e-6)
+
+    def test_partial_with_3d_group_partial_integration(self):
+        """3D slide group with one dim integrated → 2D reduced slide.
+
+        partition=[[0, 1, 2]] is a 3D slide; integrate=[1] reduces it to 2D over (0, 2).
+        """
+        def f(x, _):
+            return math.sin(x[0]) + math.cos(x[1]) + x[2] ** 2
+
+        slider = ChebyshevSlider(
+            f, 3, [[-1, 1]] * 3, [8, 8, 8],
+            partition=[[0, 1, 2]], pivot_point=[0.0, 0.0, 0.0],
+        )
+        slider.build(verbose=False)
+        result = slider.integrate(dims=[1])
+        assert isinstance(result, ChebyshevSlider)
+        assert result.num_dimensions == 2
+
+        # ∫_{-1}^{1} (sin(x) + cos(y) + z^2) dy = 2*sin(x) + 2*sin(1) + 2*z^2
+        # At x=0, z=0: 0 + 2*sin(1) + 0 ≈ 1.683
+        expected = 2.0 * math.sin(1.0)
+        assert result.eval([0.0, 0.0], [0, 0]) == pytest.approx(expected, abs=1e-3)
+
+    def test_partial_mixed_classifications(self):
+        """Two slides where one undergoes 'partial' and another 'none'.
+
+        partition=[[0, 1], [2]]; integrate=[0] →
+        - slide 0 (group [0,1]): "partial" — reduces to 1D over dim 1
+        - slide 1 (group [2]): "none" — passes through unchanged
+        """
+        def f(x, _):
+            return math.sin(x[0]) * math.cos(x[1]) + x[2]
+
+        slider = ChebyshevSlider(
+            f, 3, [[-1, 1]] * 3, [8, 8, 8],
+            partition=[[0, 1], [2]], pivot_point=[0.0, 0.0, 0.0],
+        )
+        slider.build(verbose=False)
+        result = slider.integrate(dims=[0])
+        assert isinstance(result, ChebyshevSlider)
+        assert result.num_dimensions == 2
+
+        # ∫_{-1}^{1} (sin(x) cos(y) + z) dx = 0 + 2z = 2z
+        # So result(y, z) ≈ 2z for any y
+        assert result.eval([0.0, 0.5], [0, 0]) == pytest.approx(1.0, abs=1e-6)
+        assert result.eval([0.5, 0.5], [0, 0]) == pytest.approx(1.0, abs=1e-6)
+
 
 # ============================================================================
 # T8: Cross-class consistency
@@ -522,3 +589,53 @@ class TestCrossClassIntegrateConsistency:
         # ∫_{-1}^{1} (x*y + x) dx = 0 + 0 = 0 → result is 0 for all y
         result_tt = tt.integrate(dims=[0])
         assert result_tt.eval([0.5]) == pytest.approx(0.0, abs=1e-10)
+
+
+# ============================================================================
+# T9: Slider integrate() validation
+# ============================================================================
+
+class TestSliderIntegrateValidation:
+    def test_integrate_on_unbuilt_slider_raises(self):
+        def f(x, _):
+            return x[0]
+        slider = ChebyshevSlider(
+            f, 1, [[-1, 1]], [4],
+            partition=[[0]], pivot_point=[0.0],
+        )
+        # Don't build
+        with pytest.raises(RuntimeError, match="not.*built|build"):
+            slider.integrate()
+
+    def test_integrate_dims_oob(self):
+        def f(x, _):
+            return x[0]
+        slider = ChebyshevSlider(
+            f, 1, [[-1, 1]], [4],
+            partition=[[0]], pivot_point=[0.0],
+        )
+        slider.build(verbose=False)
+        with pytest.raises(ValueError, match="out-of-range|negative"):
+            slider.integrate(dims=[5])
+
+    def test_integrate_negative_dim(self):
+        def f(x, _):
+            return x[0]
+        slider = ChebyshevSlider(
+            f, 1, [[-1, 1]], [4],
+            partition=[[0]], pivot_point=[0.0],
+        )
+        slider.build(verbose=False)
+        with pytest.raises(ValueError):
+            slider.integrate(dims=[-1])
+
+    def test_integrate_bounds_outside_domain(self):
+        def f(x, _):
+            return x[0]
+        slider = ChebyshevSlider(
+            f, 1, [[-1, 1]], [4],
+            partition=[[0]], pivot_point=[0.0],
+        )
+        slider.build(verbose=False)
+        with pytest.raises(ValueError):
+            slider.integrate(dims=[0], bounds=[(-2.0, 2.0)])
