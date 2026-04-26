@@ -334,6 +334,7 @@ class ChebyshevApproximation:
                     max_n=max_n,
                     additional_data=additional_data,
                     defer_build=defer_build,
+                    n_workers=n_workers,
                 )
         return super().__new__(cls)
 
@@ -1450,6 +1451,8 @@ class ChebyshevApproximation:
             self._derivative_id_to_orders = []
         if not hasattr(self, "special_points"):
             self.special_points = None
+        if not hasattr(self, "n_workers"):
+            self.n_workers = None
 
         # Reconstruct pre-allocated eval cache for fast_eval() (deprecated)
         self._eval_cache = {}
@@ -1806,6 +1809,7 @@ class ChebyshevApproximation:
         obj.special_points = None
         obj.descriptor = ""
         obj.additional_data = None
+        obj.n_workers = None
         obj._derivative_id_registry = {}
         obj._derivative_id_to_orders = []
 
@@ -1844,6 +1848,7 @@ class ChebyshevApproximation:
         obj.special_points = None
         obj.descriptor = ""
         obj.additional_data = None
+        obj.n_workers = None
         obj._derivative_id_registry = {}
         obj._derivative_id_to_orders = []
         # Pre-allocate eval cache for deprecated fast_eval()
@@ -1934,6 +1939,7 @@ class ChebyshevApproximation:
         obj.special_points = None
         obj.descriptor = ""
         obj.additional_data = None
+        obj.n_workers = None
         obj._cached_error_estimate = None
         obj._derivative_id_registry = {}
         obj._derivative_id_to_orders = []
@@ -2025,6 +2031,7 @@ class ChebyshevApproximation:
         obj.special_points = None
         obj.descriptor = ""
         obj.additional_data = None
+        obj.n_workers = None
         obj._cached_error_estimate = None
         obj._derivative_id_registry = {}
         obj._derivative_id_to_orders = []
@@ -2145,6 +2152,7 @@ class ChebyshevApproximation:
         obj.special_points = None
         obj.descriptor = ""
         obj.additional_data = None
+        obj.n_workers = None
         obj._cached_error_estimate = None
         obj._derivative_id_registry = {}
         obj._derivative_id_to_orders = []

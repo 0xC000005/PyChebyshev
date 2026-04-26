@@ -143,6 +143,21 @@ class TestParallelBuildSpline:
         for piece in spl._pieces:
             assert isinstance(piece.n_workers, int) and piece.n_workers >= 1
 
+    def test_special_points_dispatch_forwards_n_workers(self):
+        """ChebyshevApproximation.__new__ dispatch to Spline must forward n_workers."""
+        def f(x, _):
+            return abs(x[0])
+
+        obj = ChebyshevApproximation(
+            f, 1, [[-1, 1]],
+            n_nodes=[[6, 6]],
+            special_points=[[0.0]],
+            n_workers=2,
+        )
+        # Should be a ChebyshevSpline (dispatched), with n_workers preserved
+        assert isinstance(obj, ChebyshevSpline)
+        assert obj.n_workers == 2
+
 
 # ============================================================================
 # T5: Progress bars (verbose=2) on all 4 classes

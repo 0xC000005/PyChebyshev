@@ -820,6 +820,8 @@ class ChebyshevSpline:
             self._derivative_id_registry = {}
         if not hasattr(self, "_derivative_id_to_orders"):
             self._derivative_id_to_orders = []
+        if not hasattr(self, "n_workers"):
+            self.n_workers = None
 
     def is_construction_finished(self) -> bool:
         """Return True iff this spline is built and usable."""
@@ -1274,6 +1276,7 @@ class ChebyshevSpline:
         obj._cached_error_estimate = None
         obj.descriptor = ""
         obj.additional_data = None
+        obj.n_workers = None
         obj._derivative_id_registry = {}
         obj._derivative_id_to_orders = []
 
@@ -1302,6 +1305,7 @@ class ChebyshevSpline:
         obj._cached_error_estimate = None
         obj.descriptor = ""
         obj.additional_data = None
+        obj.n_workers = None
         obj._derivative_id_registry = {}
         obj._derivative_id_to_orders = []
         return obj
@@ -1388,6 +1392,7 @@ class ChebyshevSpline:
         obj._build_time = 0.0
         obj.descriptor = ""
         obj.additional_data = None
+        obj.n_workers = None
         obj._derivative_id_registry = {}
         obj._derivative_id_to_orders = []
         obj._cached_error_estimate = None
@@ -1489,6 +1494,7 @@ class ChebyshevSpline:
         obj._build_time = 0.0
         obj.descriptor = ""
         obj.additional_data = None
+        obj.n_workers = None
         obj._derivative_id_registry = {}
         obj._derivative_id_to_orders = []
         obj._cached_error_estimate = None
@@ -1673,6 +1679,7 @@ class ChebyshevSpline:
         obj._build_time = 0.0
         obj.descriptor = ""
         obj.additional_data = None
+        obj.n_workers = None
         obj._derivative_id_registry = {}
         obj._derivative_id_to_orders = []
         obj._cached_error_estimate = None
