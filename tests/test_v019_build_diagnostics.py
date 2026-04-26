@@ -92,3 +92,53 @@ class TestParallelBuildApproximation:
         cheb.build(verbose=False)
         # f(x, ad) = 7 * x; eval at 0.5 should be 3.5
         assert cheb.eval([0.5], [0]) == pytest.approx(3.5, abs=1e-10)
+
+
+# ============================================================================
+# T4: Parallel build (Spline)
+# ============================================================================
+
+def _t4_f_abs(x, _):
+    return abs(x[0])
+
+
+def _t4_f_x_squared(x, _):
+    return x[0] ** 2
+
+
+class TestParallelBuildSpline:
+    def test_parallel_matches_sequential(self):
+        # n_nodes=[8]: flat form — 8 nodes per dimension for all pieces in this 1D spline
+        seq = ChebyshevSpline(_t4_f_abs, 1, [[-1, 1]], knots=[[0.0]], n_nodes=[8])
+        seq.build(verbose=False)
+        par = ChebyshevSpline(
+            _t4_f_abs, 1, [[-1, 1]], knots=[[0.0]], n_nodes=[8], n_workers=2,
+        )
+        par.build(verbose=False)
+        for x in [-0.7, -0.3, 0.3, 0.7]:
+            assert seq.eval([x], [0]) == pytest.approx(par.eval([x], [0]), abs=1e-10)
+
+    def test_spline_n_workers_propagates_to_pieces(self):
+        spl = ChebyshevSpline(
+            _t4_f_x_squared, 1, [[-1, 1]], knots=[[0.0]], n_nodes=[6], n_workers=2,
+        )
+        spl.build(verbose=False)
+        for piece in spl._pieces:
+            assert piece.n_workers == 2
+
+    def test_spline_n_workers_default_none(self):
+        spl = ChebyshevSpline(_t4_f_x_squared, 1, [[-1, 1]], knots=[[0.0]], n_nodes=[4])
+        assert spl.n_workers is None
+        spl.build(verbose=False)
+        # Pieces should also have n_workers=None
+        for piece in spl._pieces:
+            assert piece.n_workers is None
+
+    def test_spline_n_workers_minus_one(self):
+        spl = ChebyshevSpline(
+            _t4_f_x_squared, 1, [[-1, 1]], knots=[[0.0]], n_nodes=[4], n_workers=-1,
+        )
+        spl.build(verbose=False)
+        # Each piece should have positive int n_workers (cpu_count)
+        for piece in spl._pieces:
+            assert isinstance(piece.n_workers, int) and piece.n_workers >= 1

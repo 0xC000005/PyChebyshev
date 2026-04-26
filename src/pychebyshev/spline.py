@@ -115,6 +115,7 @@ class ChebyshevSpline:
         additional_data: object = None,
         *,
         defer_build: bool = False,
+        n_workers: int | None = None,
     ):
         # Unwrap typed helpers (v0.16). Lazy import avoids circular dependency.
         from pychebyshev import Domain, Ns
@@ -134,6 +135,8 @@ class ChebyshevSpline:
                 f"error-threshold auto-calibration."
             )
         self.max_n = max_n
+        from pychebyshev._parallel import _normalize_n_workers
+        self.n_workers = _normalize_n_workers(n_workers)
 
         # Normalize n_nodes — None means "auto this dim" (mirrors
         # ChebyshevApproximation.__init__).
@@ -258,6 +261,7 @@ class ChebyshevSpline:
                     max_derivative_order=self.max_derivative_order,
                     additional_data=self.additional_data,
                     defer_build=True,
+                    n_workers=self.n_workers,
                 )
                 self._pieces[flat_idx] = piece
 
@@ -387,6 +391,7 @@ class ChebyshevSpline:
                 error_threshold=self.error_threshold,
                 max_n=self.max_n,
                 additional_data=self.additional_data,
+                n_workers=self.n_workers,
             )
             piece.build(verbose=False)
             self._pieces[flat_idx] = piece
