@@ -5,6 +5,19 @@ All notable changes to PyChebyshev will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [0.17.0] - 2026-04-25
+
+### Added — Integrate Everywhere
+
+- `ChebyshevSlider.integrate(dims=None, bounds=None)` — full and partial integration via the sliding-decomposition closed form. Returns a scalar on full integration; a `ChebyshevSlider` over surviving dims on partial.
+- `ChebyshevTT.integrate(dims=None, bounds=None)` — full and partial integration via Fejér-1 quadrature contraction into each integrated core's node axis. Returns a scalar on full integration; a `ChebyshevTT` over surviving dims on partial. Works on TT objects built via Cross, SVD, and ALS methods.
+- New private helpers in `_calculus.py`: `_slider_partition_intersect()`, `_integrate_tt_along_dim()`.
+- Extended user-guide page `docs/user-guide/calculus.md` with v0.17 Slider/TT integration sections.
+
+After v0.17, all four PyChebyshev classes support integration. Roots/min/max on Slider/TT remain deferred to v0.21.
+
+**Beyond MoCaX:** MoCaX 4.3.1 has no `integrate()` API on any class.
+
 ## [0.16.0] - 2026-04-25
 
 ### Added — Polish Bundle (final MoCaX 4.3.1 cosmetic mirror)

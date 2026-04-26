@@ -337,3 +337,52 @@ def _validate_calculus_args(ndim, dim, fixed, domain):
         slice_params.append((d, v))
 
     return dim, slice_params
+
+
+def _slider_partition_intersect(
+    group_dims: list[int], integrate_dims: list[int]
+) -> tuple[str, list[int]]:
+    """Classify a slide group against an integration set.
+
+    Parameters
+    ----------
+    group_dims : list[int]
+        Dimensions covered by the slide group.
+    integrate_dims : list[int]
+        Dimensions being integrated over.
+
+    Returns
+    -------
+    kind : str
+        One of: "full" (entire group integrated), "partial" (some dims
+        integrated), "none" (no group dims integrated).
+    kept : list[int]
+        Dimensions of the group NOT being integrated. Empty for "full".
+    """
+    group_set = set(group_dims)
+    integrate_set = set(integrate_dims)
+    overlap = group_set & integrate_set
+    if not overlap:
+        return "none", list(group_dims)
+    if overlap == group_set:
+        return "full", []
+    return "partial", [d for d in group_dims if d not in integrate_set]
+
+
+def _integrate_tt_along_dim(core: np.ndarray, weights: np.ndarray) -> np.ndarray:
+    """Contract a single TT core along its node axis with quadrature weights.
+
+    Parameters
+    ----------
+    core : np.ndarray
+        Shape ``(r_left, n, r_right)``.
+    weights : np.ndarray
+        Shape ``(n,)`` — quadrature weights scaled to the dim's domain.
+
+    Returns
+    -------
+    np.ndarray
+        Shape ``(r_left, r_right)`` — the contracted matrix
+        ``M = sum_j core[:, j, :] * weights[j]``.
+    """
+    return np.einsum("rjs,j->rs", core, weights)
