@@ -367,3 +367,22 @@ def _slider_partition_intersect(
     if overlap == group_set:
         return "full", []
     return "partial", [d for d in group_dims if d not in integrate_set]
+
+
+def _integrate_tt_along_dim(core: np.ndarray, weights: np.ndarray) -> np.ndarray:
+    """Contract a single TT core along its node axis with quadrature weights.
+
+    Parameters
+    ----------
+    core : np.ndarray
+        Shape ``(r_left, n, r_right)``.
+    weights : np.ndarray
+        Shape ``(n,)`` — quadrature weights scaled to the dim's domain.
+
+    Returns
+    -------
+    np.ndarray
+        Shape ``(r_left, r_right)`` — the contracted matrix
+        ``M = sum_j core[:, j, :] * weights[j]``.
+    """
+    return np.einsum("rjs,j->rs", core, weights)

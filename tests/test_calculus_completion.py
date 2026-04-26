@@ -48,3 +48,43 @@ class TestSliderPartitionIntersect:
         kind, kept = _slider_partition_intersect(group_dims=[1], integrate_dims=[0, 1, 2])
         assert kind == "full"
         assert kept == []
+
+
+from pychebyshev._calculus import _integrate_tt_along_dim
+
+
+# ============================================================================
+# T2: _integrate_tt_along_dim() helper
+# ============================================================================
+
+class TestIntegrateTTAlongDim:
+    def test_contract_single_core(self):
+        """Contracting a (1, n, 1) core along its node axis with weights
+        returns a (1, 1) matrix."""
+        # Rank-1 core, n=4 nodes, values [1, 2, 3, 4]
+        core = np.array([[[1.0], [2.0], [3.0], [4.0]]])  # shape (1, 4, 1)
+        weights = np.array([0.25, 0.25, 0.25, 0.25])  # uniform
+        result = _integrate_tt_along_dim(core, weights)
+        # Expected: 1*0.25 + 2*0.25 + 3*0.25 + 4*0.25 = 2.5
+        assert result.shape == (1, 1)
+        np.testing.assert_allclose(result, [[2.5]])
+
+    def test_contract_higher_rank_core(self):
+        """Contracting a (2, 3, 2) core preserves the rank dimensions."""
+        rng = np.random.default_rng(42)
+        core = rng.standard_normal((2, 3, 2))
+        weights = np.array([0.5, 0.25, 0.25])
+        result = _integrate_tt_along_dim(core, weights)
+        assert result.shape == (2, 2)
+        # Manual check
+        expected = (
+            core[:, 0, :] * 0.5 + core[:, 1, :] * 0.25 + core[:, 2, :] * 0.25
+        )
+        np.testing.assert_allclose(result, expected)
+
+    def test_contract_n_nodes_one(self):
+        """A core with n=1 (singleton dim) integrates to weights[0] * core[:,0,:]."""
+        core = np.array([[[3.0, 4.0]]])  # shape (1, 1, 2)
+        weights = np.array([2.0])
+        result = _integrate_tt_along_dim(core, weights)
+        np.testing.assert_allclose(result, [[6.0, 8.0]])
