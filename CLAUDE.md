@@ -12,7 +12,7 @@ PyChebyshev is a pip-installable Python library for multi-dimensional Chebyshev 
 # Setup
 uv sync
 
-# Run tests (~733 tests, ~110s due to 5D Black-Scholes builds)
+# Run tests (~838 tests, ~110s due to 5D Black-Scholes builds)
 uv run pytest tests/ -v
 
 # Run a single test
@@ -53,6 +53,12 @@ The installable package. Public classes: `ChebyshevApproximation`, `ChebyshevSpl
   `is_construction_finished`/`get_constructor_type`/`get_used_ns`, and the
   `get_derivative_id` integer registry + `eval(..., derivative_id=...)` (the
   last one excluding `ChebyshevTT`).
+- v0.16 adds `clone()`, instance getters (`get_max_derivative_order`,
+  `get_error_threshold`, `get_special_points`, `get_evaluation_points`,
+  `get_num_evaluation_points`), `peek_format_version()` static,
+  `is_dimensionality_allowed()` static, `defer_build=True` +
+  `set_original_function_values()`, and optional `Domain`/`Ns`/`SpecialPoints`
+  typed helpers (constructors accept both forms).
 
 ### Benchmark Scripts (project root)
 
@@ -70,6 +76,7 @@ Not part of the library. Compare Chebyshev barycentric against alternative metho
 - `compare_extrude_slice.py` — PyChebyshev extrusion/slicing vs MoCaX comparison (requires `mocaxextend_lib/`)
 - `compare_from_values.py` — PyChebyshev nodes()/from_values() vs MoCaX Extend comparison (requires `mocaxextend_lib/`)
 - `compare_special_points.py` — PyChebyshev special_points vs MoCaX MocaxSpecialPoints + MocaxNs comparison (requires `mocax_lib/`)
+- `compare_v016_polish.py` — PyChebyshev v0.16 polish surface vs MoCaX 4.3.1 cosmetic API (requires `mocaxpy`; gracefully skips MoCaX side if not installed)
 
 ### Tests (`tests/`)
 
@@ -89,6 +96,11 @@ Not part of the library. Compare Chebyshev barycentric against alternative metho
   binary rejection, derivative_id registry on Approximation/Spline/Slider,
   introspection trio (`is_construction_finished`, `get_constructor_type`,
   `get_used_ns`).
+- `test_v016_polish.py` — ~74 tests: clone() on all four classes, instance getters
+  (`get_max_derivative_order`, `get_error_threshold`, `get_special_points`,
+  `get_evaluation_points`, `get_num_evaluation_points`), `peek_format_version`,
+  `is_dimensionality_allowed`, `defer_build` + `set_original_function_values`,
+  `Domain`/`Ns`/`SpecialPoints` typed helpers.
 
 ### CI/CD (`.github/workflows/`)
 

@@ -113,7 +113,15 @@ class ChebyshevSpline:
         error_threshold: float | None = None,
         max_n: int = 64,
         additional_data: object = None,
+        *,
+        defer_build: bool = False,
     ):
+        # Unwrap typed helpers (v0.16). Lazy import avoids circular dependency.
+        from pychebyshev import Domain, Ns
+        if isinstance(domain, Domain):
+            domain = list(domain.bounds)
+        if isinstance(n_nodes, Ns):
+            n_nodes = list(n_nodes.counts)
         self.function = function
         self.num_dimensions = num_dimensions
         self.domain = domain
@@ -216,6 +224,98 @@ class ChebyshevSpline:
         self._built = False
         self._build_time = 0.0
         self._cached_error_estimate: float | None = None
+
+        # Deferred-build path: create empty per-piece Approximations with grid
+        # metadata only, no function evaluation.
+        if defer_build:
+            if function is not None:
+                raise ValueError(
+                    "defer_build=True requires function=None (the deferred-construction "
+                    "workflow expects values to be supplied via "
+                    "set_original_function_values() later)"
+                )
+            # Build each piece as a deferred ChebyshevApproximation
+            import itertools as _itertools
+            for flat_idx, multi_idx in enumerate(
+                _itertools.product(*[range(s) for s in self._shape])
+            ):
+                sub_domain = [
+                    list(self._intervals[d][multi_idx[d]])
+                    for d in range(self.num_dimensions)
+                ]
+                if self._n_nodes_nested:
+                    piece_n_nodes = [
+                        self.n_nodes[d][multi_idx[d]]
+                        for d in range(self.num_dimensions)
+                    ]
+                else:
+                    piece_n_nodes = list(self.n_nodes)
+                piece = ChebyshevApproximation(
+                    None,
+                    self.num_dimensions,
+                    sub_domain,
+                    piece_n_nodes,
+                    max_derivative_order=self.max_derivative_order,
+                    additional_data=self.additional_data,
+                    defer_build=True,
+                )
+                self._pieces[flat_idx] = piece
+
+    def set_original_function_values(self, per_piece_values) -> None:
+        """Populate each piece's tensor in place.
+
+        Pairs with ``defer_build=True`` ctor: once you have per-piece function
+        values (e.g., computed externally), call this to complete construction.
+        After this call the spline is fully evaluable.
+
+        Parameters
+        ----------
+        per_piece_values : list of array_like
+            One array per piece in C-order (matching the ``_pieces`` list).
+            Each array must have the correct shape for its piece.
+
+        Raises
+        ------
+        RuntimeError
+            If any piece is already constructed, or if the spline is in an
+            invalid state.
+        ValueError
+            On length mismatch or per-piece shape mismatch.
+        """
+        if len(per_piece_values) != len(self._pieces):
+            raise ValueError(
+                f"expected {len(self._pieces)} piece tensors, "
+                f"got {len(per_piece_values)}"
+            )
+        # PRE-VALIDATE all per-piece arrays before mutating any piece.
+        # This ensures atomicity: either all pieces get filled, or none do.
+        validated = []
+        for i, (piece, vals) in enumerate(zip(self._pieces, per_piece_values)):
+            if piece is None:
+                raise RuntimeError(f"piece {i} is None — invalid state")
+            if piece.tensor_values is not None:
+                raise RuntimeError(
+                    f"piece {i} is already constructed; "
+                    "set_original_function_values() is for defer_build=True splines"
+                )
+            arr = np.asarray(vals, dtype=np.float64)
+            expected_shape = tuple(piece.n_nodes)
+            if arr.shape != expected_shape:
+                raise ValueError(
+                    f"piece {i}: values shape {arr.shape} does not match "
+                    f"expected {expected_shape}"
+                )
+            if not np.isfinite(arr).all():
+                raise ValueError(
+                    f"piece {i}: values contains NaN or Inf (must be finite)"
+                )
+            validated.append(arr)
+        # Now safe to mutate — all validation passed.
+        for piece, arr in zip(self._pieces, validated):
+            piece.tensor_values = arr
+            piece.function = None
+        self._built = True
+        self.function = None
 
     def build(self, verbose: bool = True) -> None:
         """Build all pieces by evaluating the function on each sub-domain.
@@ -750,6 +850,88 @@ class ChebyshevSpline:
     def get_descriptor(self) -> str:
         """Return the descriptor label (default ``""``)."""
         return self.descriptor
+
+    def get_max_derivative_order(self) -> int:
+        """Return the maximum derivative order this interpolant was constructed
+        with. Derivative orders up to and including this value are queryable
+        via ``eval(point, derivative_order=...)``."""
+        return self.max_derivative_order
+
+    @staticmethod
+    def is_dimensionality_allowed(num_dimensions: int) -> bool:
+        """Return whether this interpolant class supports the given number of
+        dimensions. Returns True for any ``num_dimensions >= 1``. Provided as
+        a hook for future per-class capability caps."""
+        return isinstance(num_dimensions, int) and num_dimensions >= 1
+
+    def get_error_threshold(self) -> float | None:
+        """Return the error threshold this interpolant was constructed with,
+        or ``None`` if no threshold was specified (fixed-N construction)."""
+        return self.error_threshold
+
+    def get_num_evaluation_points(self) -> int:
+        """Return the number of points in the evaluation grid, summed across
+        pieces.
+
+        Equals ``sum(prod(piece.n_nodes))``. Under auto-N construction this
+        differs from :attr:`total_build_evals`, which counts cumulative
+        function-evaluation work across the doubling iterations rather than
+        the final grid size.
+
+        Returns
+        -------
+        int
+            Total number of grid points across all pieces.
+        """
+        return int(
+            sum(int(np.prod(piece.n_nodes)) for piece in self._pieces)
+        )
+
+    def get_evaluation_points(self) -> np.ndarray:
+        """Return the concatenated grid of evaluation points across all pieces.
+
+        Pieces are visited in C-order. Within each piece, points are listed
+        in C-order as for :meth:`ChebyshevApproximation.get_evaluation_points`.
+
+        Returns
+        -------
+        np.ndarray
+            Shape ``(N, num_dimensions)`` where ``N`` equals
+            :meth:`get_num_evaluation_points`.
+        """
+        parts = [piece.get_evaluation_points() for piece in self._pieces]
+        return np.concatenate(parts, axis=0)
+
+    def clone(self) -> "ChebyshevSpline":
+        """Return an independent deep copy of this interpolant.
+
+        All mutable state (piece tensors, descriptor, additional_data,
+        derivative-id registry) is duplicated. Mutating the clone does not
+        affect the original.
+
+        Note
+        ----
+        Like :meth:`save` / :meth:`load`, the source ``function`` callable is
+        not duplicated -- the clone has ``function = None``. All evaluation,
+        algebra, serialization, and v0.16 surface methods continue to work;
+        only :meth:`build` (which requires a function) does not.
+
+        Returns
+        -------
+        ChebyshevSpline
+            A new instance with deep-copied state.
+        """
+        import copy
+        return copy.deepcopy(self)
+
+    def get_special_points(self) -> list[list[float]] | None:
+        """Return the per-dimension knot/kink locations this spline was built
+        around.
+
+        Returns the ``knots`` parameter that was passed to the constructor,
+        as a list of per-dimension knot lists.
+        """
+        return self.knots
 
     def save(
         self,

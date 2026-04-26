@@ -1038,7 +1038,15 @@ class ChebyshevTT:
         tolerance: float = 1e-6,
         max_sweeps: int = 10,
         additional_data: object = None,
+        *,
+        max_derivative_order: int = 2,
     ):
+        # Unwrap typed helpers (v0.16). Lazy import avoids circular dependency.
+        from pychebyshev import Domain, Ns
+        if isinstance(domain, Domain):
+            domain = list(domain.bounds)
+        if isinstance(n_nodes, Ns):
+            n_nodes = list(n_nodes.counts)
         # Validate inputs
         if len(domain) != num_dimensions:
             raise ValueError(
@@ -1056,6 +1064,7 @@ class ChebyshevTT:
         self.max_rank = max_rank
         self.tolerance = tolerance
         self.max_sweeps = max_sweeps
+        self.max_derivative_order = max_derivative_order
 
         # Build-time state
         self._coeff_cores: List[np.ndarray] | None = None
@@ -1808,6 +1817,8 @@ class ChebyshevTT:
             self.additional_data = None
         if not hasattr(self, "descriptor"):
             self.descriptor = ""
+        if not hasattr(self, "max_derivative_order"):
+            self.max_derivative_order = 2
 
     def is_construction_finished(self) -> bool:
         """Return True iff this TT interpolant is built and usable."""
@@ -1843,6 +1854,76 @@ class ChebyshevTT:
     def get_descriptor(self) -> str:
         """Return the descriptor label (default ``""``)."""
         return self.descriptor
+
+    def get_max_derivative_order(self) -> int:
+        """Return the maximum derivative order this interpolant was constructed
+        with. Derivative orders up to and including this value are queryable
+        via ``eval_multi(point, derivative_orders=...)``."""
+        return self.max_derivative_order
+
+    def get_num_evaluation_points(self) -> int:
+        """Return the number of points in the underlying Cartesian evaluation
+        grid (``prod(n_nodes)``).
+
+        Note: TT-Cross actually queries a sparse subset of size
+        ``O(d·n·r²)``; this method returns the full Cartesian grid size to
+        match :meth:`get_evaluation_points` and MoCaX semantics. The actual
+        TT-Cross f-evaluation count is exposed separately as
+        ``self.total_build_evals``.
+
+        Returns
+        -------
+        int
+            Size of the full Cartesian Chebyshev grid.
+        """
+        return int(np.prod(self.n_nodes))
+
+    def get_evaluation_points(self) -> np.ndarray:
+        """Return the full Cartesian grid of node positions across all
+        dimensions. Note: TT-Cross only queries a sparse subset; this method
+        returns the underlying full grid the cross algorithm samples from
+        (matching :meth:`get_num_evaluation_points`).
+
+        Returns
+        -------
+        np.ndarray
+            Shape ``(N, num_dimensions)`` where ``N = prod(n_nodes)``.
+        """
+        per_dim = []
+        for d in range(self.num_dimensions):
+            nodes_std = chebpts1(self.n_nodes[d])  # [-1, 1], ascending
+            a, b = self.domain[d]
+            per_dim.append(np.sort(0.5 * (a + b) + 0.5 * (b - a) * nodes_std))
+        grids = np.meshgrid(*per_dim, indexing="ij")
+        return np.stack([g.ravel() for g in grids], axis=-1).astype(np.float64)
+
+    def clone(self) -> "ChebyshevTT":
+        """Return an independent deep copy of this interpolant.
+
+        All mutable state (TT cores, descriptor, additional_data) is
+        duplicated. Mutating the clone does not affect the original.
+
+        Note
+        ----
+        Like :meth:`save` / :meth:`load`, the source ``function`` callable is
+        not duplicated -- the clone has ``function = None``. All evaluation,
+        algebra, serialization, and v0.16 surface methods continue to work;
+        only :meth:`build` (which requires a function) does not.
+
+        Returns
+        -------
+        ChebyshevTT
+            A new instance with deep-copied state.
+        """
+        import copy
+        return copy.deepcopy(self)
+
+    @staticmethod
+    def is_dimensionality_allowed(num_dimensions: int) -> bool:
+        """Return whether this interpolant class supports the given number of
+        dimensions. Returns True for any ``num_dimensions >= 1``. Provided as
+        a hook for future per-class capability caps."""
+        return isinstance(num_dimensions, int) and num_dimensions >= 1
 
     def save(self, path: str | os.PathLike) -> None:
         """Save the built TT interpolant to a file.

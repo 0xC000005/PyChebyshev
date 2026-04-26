@@ -279,6 +279,8 @@ class ChebyshevApproximation:
         max_n: int = 64,
         special_points: List[List[float]] | None = None,
         additional_data: object = None,
+        *,
+        defer_build: bool = False,
     ):
         """Dispatch to ChebyshevSpline when special_points declares any kink.
 
@@ -292,6 +294,14 @@ class ChebyshevApproximation:
         ``__new__(cls)`` without positional arguments; real construction
         still goes through ``__init__``.
         """
+        # Unwrap typed helpers (v0.16). Lazy import avoids circular dependency.
+        from pychebyshev import Domain, Ns, SpecialPoints as _SP
+        if isinstance(domain, Domain):
+            domain = list(domain.bounds)
+        if isinstance(n_nodes, Ns):
+            n_nodes = list(n_nodes.counts)
+        if isinstance(special_points, _SP):
+            special_points = [list(k) for k in special_points.knots_per_dim]
         if special_points is not None:
             # Outer validation runs whether or not any dim is non-empty, so
             # typos like special_points=[[]] on a 2D problem or
@@ -322,6 +332,7 @@ class ChebyshevApproximation:
                     error_threshold=error_threshold,
                     max_n=max_n,
                     additional_data=additional_data,
+                    defer_build=defer_build,
                 )
         return super().__new__(cls)
 
@@ -336,7 +347,17 @@ class ChebyshevApproximation:
         max_n: int = 64,
         special_points: List[List[float]] | None = None,
         additional_data: object = None,
+        *,
+        defer_build: bool = False,
     ):
+        # Unwrap typed helpers (v0.16). Lazy import avoids circular dependency.
+        from pychebyshev import Domain, Ns, SpecialPoints as _SP
+        if isinstance(domain, Domain):
+            domain = list(domain.bounds)
+        if isinstance(n_nodes, Ns):
+            n_nodes = list(n_nodes.counts)
+        if isinstance(special_points, _SP):
+            special_points = [list(k) for k in special_points.knots_per_dim]
         self.function = function
         self.num_dimensions = num_dimensions
         self.domain = domain
@@ -350,6 +371,7 @@ class ChebyshevApproximation:
             )
         self.max_n = max_n
         self.max_derivative_order = max_derivative_order
+        self.special_points = special_points
         self.descriptor: str = ""
         self.additional_data = additional_data
         self._derivative_id_registry: dict[tuple[int, ...], int] = {}
@@ -357,7 +379,7 @@ class ChebyshevApproximation:
 
         # Normalize n_nodes — None means "auto this dim"
         if n_nodes is None:
-            if error_threshold is None:
+            if error_threshold is None and not defer_build:
                 raise ValueError(
                     "Must provide either n_nodes (explicit) or error_threshold "
                     "(auto-N). Got neither."
@@ -386,6 +408,24 @@ class ChebyshevApproximation:
         self._eval_cache: dict = {}
         self._cached_error_estimate: float | None = None
 
+        # Deferred-build path: grid metadata only, no function evaluation.
+        if defer_build:
+            if function is not None:
+                raise ValueError(
+                    "defer_build=True requires function=None (the deferred-construction "
+                    "workflow expects values to be supplied via "
+                    "set_original_function_values() later)"
+                )
+            if self.n_nodes is None or any(
+                not isinstance(n, int) or n <= 0 for n in self.n_nodes
+            ):
+                raise ValueError(
+                    "defer_build=True requires explicit positive int n_nodes; "
+                    "auto-N (error_threshold) is not supported in deferred mode"
+                )
+            self._initialize_grid_only()
+            return
+
         # Generate nodes only if n_nodes is fully resolved; otherwise
         # _build_with_threshold() (Task 3) will (re)generate on each iteration.
         self.nodes: List[np.ndarray] = []
@@ -405,6 +445,75 @@ class ChebyshevApproximation:
             a, b = self.domain[d]
             nodes_scaled = 0.5 * (a + b) + 0.5 * (b - a) * nodes_std
             self.nodes.append(np.sort(nodes_scaled))
+
+    def _initialize_grid_only(self) -> None:
+        """Populate nodes, weights, diff_matrices, and eval_cache without evaluating
+        the function.  Called by ``__init__`` when ``defer_build=True``.
+
+        Uses the same code path as :meth:`from_values` to guarantee bit-identical
+        grid metadata.
+        """
+        from pychebyshev._extrude_slice import _make_nodes_for_dim
+
+        self.nodes = []
+        for d in range(self.num_dimensions):
+            lo, hi = self.domain[d]
+            self.nodes.append(_make_nodes_for_dim(lo, hi, self.n_nodes[d]))
+
+        self.weights = []
+        for d in range(self.num_dimensions):
+            self.weights.append(compute_barycentric_weights(self.nodes[d]))
+
+        self.diff_matrices = []
+        for d in range(self.num_dimensions):
+            self.diff_matrices.append(
+                compute_differentiation_matrix(self.nodes[d], self.weights[d])
+            )
+
+        # Pre-allocate eval cache for deprecated fast_eval()
+        self._eval_cache = {}
+        for d in range(self.num_dimensions - 1, 0, -1):
+            shape = tuple(self.n_nodes[i] for i in range(d))
+            self._eval_cache[d] = np.zeros(shape)
+
+    def set_original_function_values(self, values) -> None:
+        """In-place mutator: populate this interpolant's tensor with explicit
+        function values.  After this call the interpolant is fully evaluable.
+
+        Pairs with ``defer_build=True`` ctor: construct an empty grid-metadata
+        object, then fill its tensor here — an in-place alternative to the
+        :meth:`from_values` classmethod factory.
+
+        Parameters
+        ----------
+        values : array_like
+            Tensor of shape ``tuple(self.n_nodes)`` containing the function
+            values at the points returned by :meth:`get_evaluation_points`,
+            laid out in C-order (matching :meth:`nodes` output).
+
+        Raises
+        ------
+        RuntimeError
+            If this interpolant is already constructed (``build()`` was called,
+            or this method was already called).
+        ValueError
+            On shape mismatch or if *values* contains NaN or Inf.
+        """
+        if self.tensor_values is not None:
+            raise RuntimeError(
+                "interpolant is already constructed; "
+                "set_original_function_values() is for defer_build=True objects"
+            )
+        arr = np.asarray(values, dtype=np.float64)
+        expected_shape = tuple(self.n_nodes)
+        if arr.shape != expected_shape:
+            raise ValueError(
+                f"values shape {arr.shape} does not match expected {expected_shape}"
+            )
+        if not np.isfinite(arr).all():
+            raise ValueError("values contains NaN or Inf (must be finite)")
+        self.tensor_values = arr.copy()
+        self.function = None  # function-less interpolant
 
     def build(self, verbose: bool = True) -> None:
         """Build the Chebyshev approximation by evaluating the function on the grid.
@@ -944,6 +1053,30 @@ class ChebyshevApproximation:
         """Return the descriptor label (default ``""``)."""
         return self.descriptor
 
+    def get_max_derivative_order(self) -> int:
+        """Return the maximum derivative order this interpolant was constructed
+        with. Derivative orders up to and including this value are queryable
+        via ``eval(point, derivative_order=...)``."""
+        return self.max_derivative_order
+
+    @staticmethod
+    def is_dimensionality_allowed(num_dimensions: int) -> bool:
+        """Return whether this interpolant class supports the given number of
+        dimensions. Returns True for any ``num_dimensions >= 1``. Provided as
+        a hook for future per-class capability caps."""
+        return isinstance(num_dimensions, int) and num_dimensions >= 1
+
+    def get_special_points(self) -> list[list[float]] | None:
+        """Return the special points (kinks/knots) declared at construction.
+
+        Returns ``None`` if no ``special_points`` was passed. If
+        ``special_points`` declared any non-empty list, ``__new__``
+        dispatched to :class:`ChebyshevSpline`; this getter on a
+        :class:`ChebyshevApproximation` therefore returns either ``None``
+        or a list-of-empty-lists.
+        """
+        return self.special_points
+
     def get_derivative_id(self, derivative_order: List[int]) -> int:
         """Register a derivative-orders tuple and return a stable session-local int.
 
@@ -1127,6 +1260,52 @@ class ChebyshevApproximation:
         """
         return self.error_threshold
 
+    def get_num_evaluation_points(self) -> int:
+        """Return the number of points where ``f`` was (or will be) evaluated.
+
+        For a fixed-grid construction this is ``prod(n_nodes)``.
+
+        Returns
+        -------
+        int
+            Total number of grid points at which ``f`` is evaluated.
+        """
+        return int(np.prod(self.n_nodes))
+
+    def get_evaluation_points(self) -> np.ndarray:
+        """Return the grid of points where ``f`` was (or will be) evaluated.
+
+        Returns
+        -------
+        np.ndarray
+            Shape ``(N, num_dimensions)`` where ``N = prod(n_nodes)``. Points
+            are listed in C-order: dim-0 outermost, dim-(d-1) innermost.
+        """
+        grids = np.meshgrid(*self.nodes, indexing="ij")
+        return np.stack([g.ravel() for g in grids], axis=-1).astype(np.float64)
+
+    def clone(self) -> "ChebyshevApproximation":
+        """Return an independent deep copy of this interpolant.
+
+        All mutable state (tensors, descriptor, additional_data,
+        derivative-id registry) is duplicated. Mutating the clone does not
+        affect the original.
+
+        Note
+        ----
+        Like :meth:`save` / :meth:`load`, the source ``function`` callable is
+        not duplicated -- the clone has ``function = None``. All evaluation,
+        algebra, serialization, and v0.16 surface methods continue to work;
+        only :meth:`build` (which requires a function) does not.
+
+        Returns
+        -------
+        ChebyshevApproximation
+            A new instance with deep-copied state.
+        """
+        import copy
+        return copy.deepcopy(self)
+
     # ------------------------------------------------------------------
     # Serialization
     # ------------------------------------------------------------------
@@ -1172,6 +1351,8 @@ class ChebyshevApproximation:
             self._derivative_id_registry = {}
         if not hasattr(self, "_derivative_id_to_orders"):
             self._derivative_id_to_orders = []
+        if not hasattr(self, "special_points"):
+            self.special_points = None
 
         # Reconstruct pre-allocated eval cache for fast_eval() (deprecated)
         self._eval_cache = {}
@@ -1269,6 +1450,36 @@ class ChebyshevApproximation:
                 f"Expected a {cls.__name__} instance, got {type(obj).__name__}"
             )
         return obj
+
+    @staticmethod
+    def peek_format_version(filename: str) -> int:
+        """Read a .pcb file's header and return its major format version
+        integer. Does not deserialize the body.
+
+        See ``docs/user-guide/binary-format.md`` for the format spec.
+
+        Parameters
+        ----------
+        filename : str
+            Path to a .pcb file.
+
+        Returns
+        -------
+        int
+            The major format version (currently 1).
+
+        Raises
+        ------
+        ValueError
+            If the file's first 4 bytes do not match the .pcb magic, or if
+            the file is shorter than the 12-byte header.
+        FileNotFoundError
+            If the file does not exist.
+        IOError
+            If the file cannot be opened.
+        """
+        from pychebyshev._binary import peek_format_version
+        return peek_format_version(filename)
 
     # ------------------------------------------------------------------
     # Pre-computed values: nodes first, values later
@@ -1495,6 +1706,7 @@ class ChebyshevApproximation:
         obj.build_time = 0.0
         obj.n_evaluations = 0
         obj._cached_error_estimate = None
+        obj.special_points = None
         obj.descriptor = ""
         obj.additional_data = None
         obj._derivative_id_registry = {}
@@ -1532,6 +1744,7 @@ class ChebyshevApproximation:
         obj.build_time = 0.0
         obj.n_evaluations = 0
         obj._cached_error_estimate = None
+        obj.special_points = None
         obj.descriptor = ""
         obj.additional_data = None
         obj._derivative_id_registry = {}
@@ -1621,6 +1834,7 @@ class ChebyshevApproximation:
         obj.tensor_values = tensor
         obj.build_time = 0.0
         obj.n_evaluations = 0
+        obj.special_points = None
         obj.descriptor = ""
         obj.additional_data = None
         obj._cached_error_estimate = None
@@ -1711,6 +1925,7 @@ class ChebyshevApproximation:
         obj.tensor_values = tensor
         obj.build_time = 0.0
         obj.n_evaluations = 0
+        obj.special_points = None
         obj.descriptor = ""
         obj.additional_data = None
         obj._cached_error_estimate = None
@@ -1830,6 +2045,7 @@ class ChebyshevApproximation:
         obj.tensor_values = tensor
         obj.build_time = 0.0
         obj.n_evaluations = 0
+        obj.special_points = None
         obj.descriptor = ""
         obj.additional_data = None
         obj._cached_error_estimate = None

@@ -34,6 +34,51 @@ CLASS_TAG_SPLINE = 2
 _HEADER_SIZE = 12  # 4 magic + 1 major + 1 minor + 2 class_tag + 4 reserved
 
 
+# --- Public header utility -----------------------------------------------
+
+
+def peek_format_version(filename: str) -> int:
+    """Read the .pcb file header and return the major format version.
+
+    Does not deserialize the body. Useful for forward-compat tooling and
+    cross-language readers that want to negotiate format support before
+    committing to a full read.
+
+    Parameters
+    ----------
+    filename : str
+        Path to a .pcb file.
+
+    Returns
+    -------
+    int
+        The major format version (currently 1).
+
+    Raises
+    ------
+    ValueError
+        If the file's first 4 bytes do not match the .pcb magic
+        ``b"PCB\\x00"``, or if the file is shorter than the 12-byte header.
+    FileNotFoundError
+        If the file does not exist.
+    IOError
+        If the file cannot be opened.
+    """
+    with open(filename, "rb") as f:
+        header = f.read(_HEADER_SIZE)
+    if len(header) < _HEADER_SIZE:
+        raise ValueError(
+            f"file {filename!r} is shorter than the {_HEADER_SIZE}-byte "
+            f".pcb header"
+        )
+    if header[:4] != MAGIC:
+        raise ValueError(
+            f"file {filename!r} is not a .pcb file (magic mismatch: "
+            f"got {header[:4]!r}, expected {MAGIC!r})"
+        )
+    return int(header[4])
+
+
 # --- Low-level helpers ---------------------------------------------------
 
 

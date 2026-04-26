@@ -114,3 +114,80 @@ Pickle `load()` is the exception — it preserves the saved object's metadata
 | `getConstructorType()` | `get_constructor_type()` |
 | `getUsedNs()` | `get_used_ns()` |
 | `isConstructionFinished()` | `is_construction_finished()` |
+
+---
+
+## v0.16 polish surface
+
+The v0.16 release adds the final cosmetic mirror of the MoCaX 4.3.1 API.
+All additions are strictly additive.
+
+### `clone()`
+
+Return an independent deep copy of any interpolant:
+
+```python
+cheb2 = cheb1.clone()
+cheb2.set_descriptor("variant")
+# cheb1 is untouched
+```
+
+Available on `ChebyshevApproximation`, `ChebyshevSpline`, `ChebyshevSlider`,
+`ChebyshevTT`. Like `save()`/`load()`, the source `function` callable is not
+duplicated — the clone has `function = None`.
+
+### Instance getters
+
+| Method | Available on | Returns |
+|---|---|---|
+| `get_max_derivative_order()` | all four | `int` |
+| `get_error_threshold()` | Approximation, Spline | `float \| None` |
+| `get_special_points()` | Approximation, Spline | `list[list[float]] \| None` |
+| `get_evaluation_points()` | all four | `np.ndarray` shape `(N, num_dim)` |
+| `get_num_evaluation_points()` | all four | `int` |
+
+`get_evaluation_points()` returns the flat `(N, num_dim)` grid (MoCaX style,
+matches `len(get_evaluation_points()) == get_num_evaluation_points()`).
+
+### Static helpers
+
+```python
+ChebyshevApproximation.peek_format_version("model.pcb")  # → 1
+
+ChebyshevTT.is_dimensionality_allowed(5)  # → True
+```
+
+### Deferred construction (Approximation, Spline)
+
+Construct a grid-only interpolant, then fill its tensor in place:
+
+```python
+cheb = ChebyshevApproximation(None, 2, [[-1,1],[-1,1]], [10,10],
+                               defer_build=True)
+
+# Compute values externally — e.g. on a distributed cluster
+points = cheb.get_evaluation_points()  # (100, 2)
+values = compute_function_on_cluster(points).reshape(10, 10)
+
+cheb.set_original_function_values(values)
+# now evaluable
+result = cheb.eval([0.3, -0.4], [0, 0])
+```
+
+This is the in-place analog of the `from_values()` factory. Bit-identical
+results in both paths.
+
+### Optional typed helpers
+
+```python
+from pychebyshev import Domain, Ns, SpecialPoints, ChebyshevApproximation
+
+cheb = ChebyshevApproximation(
+    f, 2,
+    Domain([(0.0, 1.0), (0.0, 1.0)]),  # equivalent to [[0,1],[0,1]]
+    Ns([15, 15]),                       # equivalent to [15, 15]
+)
+```
+
+Constructors of all four classes accept both raw lists and these frozen
+dataclasses.

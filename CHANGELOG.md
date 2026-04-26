@@ -5,6 +5,20 @@ All notable changes to PyChebyshev will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [0.16.0] - 2026-04-25
+
+### Added — Polish Bundle (final MoCaX 4.3.1 cosmetic mirror)
+
+- `clone()` deep copy method on all four classes (`ChebyshevApproximation`, `ChebyshevSpline`, `ChebyshevSlider`, `ChebyshevTT`). Like save/load, the source `function` callable is not duplicated; clone has `function = None`.
+- Instance getters: `get_max_derivative_order()` (all four), `get_error_threshold()` (Approximation/Spline), `get_special_points()` (Approximation/Spline; Approximation now stores `special_points` with `__setstate__` backfill), `get_evaluation_points()` and `get_num_evaluation_points()` (all four; eval grid size semantics, matching `len(get_evaluation_points()) == get_num_evaluation_points()`).
+- `peek_format_version(filename)` static on `ChebyshevApproximation` — read `.pcb` major version without deserializing.
+- `is_dimensionality_allowed(num_dim)` static on all four classes (returns True for any positive int; hook for future per-class capability caps).
+- `defer_build=True` keyword-only ctor flag + `set_original_function_values(values)` instance mutator on `ChebyshevApproximation` and `ChebyshevSpline` — in-place deferred construction. Bit-identical to the `from_values()` factory. Spline path threads `additional_data` to pieces; atomic per-piece validation.
+- Optional typed helpers `Domain`, `Ns`, `SpecialPoints` (frozen dataclasses) exported from the package; constructors of all four classes accept raw lists or these dataclasses.
+- `ChebyshevTT` ctor now accepts `max_derivative_order: int = 2` keyword-only kwarg; `__setstate__` backfill for backward-compat pickles.
+
+All additions are strictly additive — no breaking changes.
+
 ## [0.15.0] - 2026-04-25
 
 ### Added

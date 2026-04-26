@@ -87,6 +87,12 @@ class ChebyshevSlider:
         max_derivative_order: int = 2,
         additional_data: object = None,
     ):
+        # Unwrap typed helpers (v0.16). Lazy import avoids circular dependency.
+        from pychebyshev import Domain, Ns
+        if isinstance(domain, Domain):
+            domain = list(domain.bounds)
+        if isinstance(n_nodes, Ns):
+            n_nodes = list(n_nodes.counts)
         self.function = function
         self.num_dimensions = num_dimensions
         self.domain = domain
@@ -445,6 +451,77 @@ class ChebyshevSlider:
     def get_descriptor(self) -> str:
         """Return the descriptor label (default ``""``)."""
         return self.descriptor
+
+    def get_max_derivative_order(self) -> int:
+        """Return the maximum derivative order this interpolant was constructed
+        with. Derivative orders up to and including this value are queryable
+        via ``eval(point, derivative_order=...)``."""
+        return self.max_derivative_order
+
+    def get_num_evaluation_points(self) -> int:
+        """Return the number of points in the evaluation grid (slides only).
+
+        The pivot point's ``f``-evaluation during build is not counted — the
+        pivot is a build-time singleton, not a grid point. Equals
+        ``sum(prod(n_nodes[d] for d in group) for group in partition)``.
+
+        Returns
+        -------
+        int
+            Total number of slide grid points (excluding the pivot evaluation).
+        """
+        return int(self.total_build_evals)
+
+    def get_evaluation_points(self) -> np.ndarray:
+        """Return the slide evaluation grid lifted into d-D coordinate space.
+
+        Each slide's local grid is returned with off-group dims set to the
+        pivot value. The pivot row itself is not included (the pivot is a
+        build-time singleton, not a grid point). Returns shape
+        ``(get_num_evaluation_points(), num_dimensions)``.
+
+        Returns
+        -------
+        np.ndarray
+            Shape ``(N, num_dimensions)`` where ``N`` equals
+            :meth:`get_num_evaluation_points`.
+        """
+        pivot = np.array(self.pivot_point, dtype=np.float64)
+        rows = []
+        for slide, group in zip(self.slides, self.partition):
+            grid = slide.get_evaluation_points()  # (n_local, len(group))
+            full = np.tile(pivot, (len(grid), 1))
+            full[:, group] = grid
+            rows.append(full)
+        return np.concatenate(rows, axis=0)
+
+    def clone(self) -> "ChebyshevSlider":
+        """Return an independent deep copy of this interpolant.
+
+        All mutable state (slides, descriptor, additional_data) is duplicated.
+        Mutating the clone does not affect the original.
+
+        Note
+        ----
+        Like :meth:`save` / :meth:`load`, the source ``function`` callable is
+        not duplicated -- the clone has ``function = None``. All evaluation,
+        algebra, serialization, and v0.16 surface methods continue to work;
+        only :meth:`build` (which requires a function) does not.
+
+        Returns
+        -------
+        ChebyshevSlider
+            A new instance with deep-copied state.
+        """
+        import copy
+        return copy.deepcopy(self)
+
+    @staticmethod
+    def is_dimensionality_allowed(num_dimensions: int) -> bool:
+        """Return whether this interpolant class supports the given number of
+        dimensions. Returns True for any ``num_dimensions >= 1``. Provided as
+        a hook for future per-class capability caps."""
+        return isinstance(num_dimensions, int) and num_dimensions >= 1
 
     def save(self, path: str | os.PathLike) -> None:
         """Save the built slider to a file.
