@@ -281,6 +281,7 @@ class ChebyshevApproximation:
         additional_data: object = None,
         *,
         defer_build: bool = False,
+        n_workers: int | None = None,
     ):
         """Dispatch to ChebyshevSpline when special_points declares any kink.
 
@@ -349,6 +350,7 @@ class ChebyshevApproximation:
         additional_data: object = None,
         *,
         defer_build: bool = False,
+        n_workers: int | None = None,
     ):
         # Unwrap typed helpers (v0.16). Lazy import avoids circular dependency.
         from pychebyshev import Domain, Ns, SpecialPoints as _SP
@@ -374,6 +376,8 @@ class ChebyshevApproximation:
         self.special_points = special_points
         self.descriptor: str = ""
         self.additional_data = additional_data
+        from pychebyshev._parallel import _normalize_n_workers
+        self.n_workers = _normalize_n_workers(n_workers)
         self._derivative_id_registry: dict[tuple[int, ...], int] = {}
         self._derivative_id_to_orders: list[tuple[int, ...]] = []
 
@@ -655,10 +659,15 @@ class ChebyshevApproximation:
         self._cached_error_estimate = None
 
         # Step 1: Evaluate at all node combinations
-        self.tensor_values = np.zeros(self.n_nodes)
-        for idx in np.ndindex(*self.n_nodes):
-            point = [self.nodes[d][idx[d]] for d in range(self.num_dimensions)]
-            self.tensor_values[idx] = self.function(point, self.additional_data)
+        from pychebyshev._parallel import _evaluate_in_parallel
+        points = [
+            [self.nodes[d][idx[d]] for d in range(self.num_dimensions)]
+            for idx in np.ndindex(*self.n_nodes)
+        ]
+        flat = _evaluate_in_parallel(
+            self.function, points, self.additional_data, self.n_workers
+        )
+        self.tensor_values = flat.reshape(self.n_nodes)
         self.n_evaluations = total
 
         # Step 2: Pre-compute barycentric weights
