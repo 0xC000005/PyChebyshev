@@ -22,6 +22,7 @@ from typing import Callable, List, Tuple
 import numpy as np
 
 from pychebyshev.barycentric import ChebyshevApproximation
+from pychebyshev._progress import _maybe_progress
 
 
 class ChebyshevSlider:
@@ -124,7 +125,7 @@ class ChebyshevSlider:
         self._derivative_id_registry: dict[tuple[int, ...], int] = {}
         self._derivative_id_to_orders: list[tuple[int, ...]] = []
 
-    def build(self, verbose: bool = True) -> None:
+    def build(self, verbose: bool | int = True) -> None:
         """Build all slides by evaluating the function at slide-specific grids.
 
         For each slide, dimensions outside the slide group are fixed at
@@ -132,8 +133,9 @@ class ChebyshevSlider:
 
         Parameters
         ----------
-        verbose : bool, optional
-            If True, print build progress. Default is True.
+        verbose : bool or int, optional
+            If True or 1, print build progress. If 2, also show a tqdm
+            progress bar (requires ``pychebyshev[viz]``). Default is True.
         """
         start = time.time()
         self._cached_error_estimate = None
@@ -154,7 +156,9 @@ class ChebyshevSlider:
             )
 
         self.slides = []
-        for slide_idx, group in enumerate(self.partition):
+        for slide_idx, group in enumerate(
+            _maybe_progress(self.partition, desc="Building slides", verbose=verbose)
+        ):
             slide_dim = len(group)
             slide_domain = [self.domain[d] for d in group]
             slide_n_nodes = [self.n_nodes[d] for d in group]
@@ -1313,3 +1317,36 @@ class ChebyshevSlider:
                 )
 
         return "\n".join(lines)
+
+    def plot_1d(self, ax=None, n_points=200, fixed=None):
+        """Plot the 1-D slice of this interpolant.
+
+        Requires the optional ``pychebyshev[viz]`` dependency group.
+
+        Parameters
+        ----------
+        ax : matplotlib.axes.Axes | None
+            Pre-existing axes (creates a new figure if None).
+        n_points : int
+            Number of sample points along the free dim.
+        fixed : dict[int, float] | None
+            Map of dim → value to constrain other dims, leaving exactly one free.
+
+        Returns
+        -------
+        matplotlib.axes.Axes
+        """
+        from pychebyshev._viz import _plot_1d_impl
+        return _plot_1d_impl(self, ax=ax, n_points=n_points, fixed=fixed)
+
+    def plot_2d_surface(self, ax=None, n_points=50, fixed=None):
+        """Plot a 3-D surface for the 2-D slice. Requires matplotlib."""
+        from pychebyshev._viz import _plot_2d_surface_impl
+        return _plot_2d_surface_impl(self, ax=ax, n_points=n_points, fixed=fixed)
+
+    def plot_2d_contour(self, ax=None, n_points=50, n_levels=20, fixed=None):
+        """Plot a filled-contour 2-D slice. Requires matplotlib."""
+        from pychebyshev._viz import _plot_2d_contour_impl
+        return _plot_2d_contour_impl(
+            self, ax=ax, n_points=n_points, n_levels=n_levels, fixed=fixed
+        )

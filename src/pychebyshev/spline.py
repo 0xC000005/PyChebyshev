@@ -24,6 +24,7 @@ from typing import Callable, List, Tuple
 import numpy as np
 
 from pychebyshev.barycentric import ChebyshevApproximation
+from pychebyshev._progress import _maybe_progress
 
 
 def _is_nested_n_nodes(n_nodes: list) -> bool:
@@ -115,6 +116,7 @@ class ChebyshevSpline:
         additional_data: object = None,
         *,
         defer_build: bool = False,
+        n_workers: int | None = None,
     ):
         # Unwrap typed helpers (v0.16). Lazy import avoids circular dependency.
         from pychebyshev import Domain, Ns
@@ -134,6 +136,8 @@ class ChebyshevSpline:
                 f"error-threshold auto-calibration."
             )
         self.max_n = max_n
+        from pychebyshev._parallel import _normalize_n_workers
+        self.n_workers = _normalize_n_workers(n_workers)
 
         # Normalize n_nodes — None means "auto this dim" (mirrors
         # ChebyshevApproximation.__init__).
@@ -258,6 +262,7 @@ class ChebyshevSpline:
                     max_derivative_order=self.max_derivative_order,
                     additional_data=self.additional_data,
                     defer_build=True,
+                    n_workers=self.n_workers,
                 )
                 self._pieces[flat_idx] = piece
 
@@ -317,7 +322,7 @@ class ChebyshevSpline:
         self._built = True
         self.function = None
 
-    def build(self, verbose: bool = True) -> None:
+    def build(self, verbose: bool | int = True) -> None:
         """Build all pieces by evaluating the function on each sub-domain.
 
         Each piece is an independent :class:`ChebyshevApproximation` built
@@ -325,8 +330,9 @@ class ChebyshevSpline:
 
         Parameters
         ----------
-        verbose : bool, optional
-            If True, print build progress.  Default is True.
+        verbose : bool or int, optional
+            If True or 1, print build progress. If 2, also show a tqdm
+            progress bar (requires ``pychebyshev[viz]``). Default is True.
         """
         if self.function is None:
             raise RuntimeError(
@@ -361,8 +367,9 @@ class ChebyshevSpline:
                     f"{total_evals:,} total evaluations)..."
                 )
 
+        piece_indices = list(itertools.product(*[range(s) for s in self._shape]))
         for flat_idx, multi_idx in enumerate(
-            itertools.product(*[range(s) for s in self._shape])
+            _maybe_progress(piece_indices, desc="Building spline pieces", verbose=verbose)
         ):
             # Compute sub-domain for this piece
             sub_domain = [
@@ -387,6 +394,7 @@ class ChebyshevSpline:
                 error_threshold=self.error_threshold,
                 max_n=self.max_n,
                 additional_data=self.additional_data,
+                n_workers=self.n_workers,
             )
             piece.build(verbose=False)
             self._pieces[flat_idx] = piece
@@ -812,6 +820,8 @@ class ChebyshevSpline:
             self._derivative_id_registry = {}
         if not hasattr(self, "_derivative_id_to_orders"):
             self._derivative_id_to_orders = []
+        if not hasattr(self, "n_workers"):
+            self.n_workers = None
 
     def is_construction_finished(self) -> bool:
         """Return True iff this spline is built and usable."""
@@ -1266,6 +1276,7 @@ class ChebyshevSpline:
         obj._cached_error_estimate = None
         obj.descriptor = ""
         obj.additional_data = None
+        obj.n_workers = None
         obj._derivative_id_registry = {}
         obj._derivative_id_to_orders = []
 
@@ -1294,6 +1305,7 @@ class ChebyshevSpline:
         obj._cached_error_estimate = None
         obj.descriptor = ""
         obj.additional_data = None
+        obj.n_workers = None
         obj._derivative_id_registry = {}
         obj._derivative_id_to_orders = []
         return obj
@@ -1380,6 +1392,7 @@ class ChebyshevSpline:
         obj._build_time = 0.0
         obj.descriptor = ""
         obj.additional_data = None
+        obj.n_workers = None
         obj._derivative_id_registry = {}
         obj._derivative_id_to_orders = []
         obj._cached_error_estimate = None
@@ -1481,6 +1494,7 @@ class ChebyshevSpline:
         obj._build_time = 0.0
         obj.descriptor = ""
         obj.additional_data = None
+        obj.n_workers = None
         obj._derivative_id_registry = {}
         obj._derivative_id_to_orders = []
         obj._cached_error_estimate = None
@@ -1665,6 +1679,7 @@ class ChebyshevSpline:
         obj._build_time = 0.0
         obj.descriptor = ""
         obj.additional_data = None
+        obj.n_workers = None
         obj._derivative_id_registry = {}
         obj._derivative_id_to_orders = []
         obj._cached_error_estimate = None
@@ -1984,3 +1999,36 @@ class ChebyshevSpline:
             lines.append(f"  Error est:   {self.error_estimate():.2e}")
 
         return "\n".join(lines)
+
+    def plot_1d(self, ax=None, n_points=200, fixed=None):
+        """Plot the 1-D slice of this interpolant.
+
+        Requires the optional ``pychebyshev[viz]`` dependency group.
+
+        Parameters
+        ----------
+        ax : matplotlib.axes.Axes | None
+            Pre-existing axes (creates a new figure if None).
+        n_points : int
+            Number of sample points along the free dim.
+        fixed : dict[int, float] | None
+            Map of dim → value to constrain other dims, leaving exactly one free.
+
+        Returns
+        -------
+        matplotlib.axes.Axes
+        """
+        from pychebyshev._viz import _plot_1d_impl
+        return _plot_1d_impl(self, ax=ax, n_points=n_points, fixed=fixed)
+
+    def plot_2d_surface(self, ax=None, n_points=50, fixed=None):
+        """Plot a 3-D surface for the 2-D slice. Requires matplotlib."""
+        from pychebyshev._viz import _plot_2d_surface_impl
+        return _plot_2d_surface_impl(self, ax=ax, n_points=n_points, fixed=fixed)
+
+    def plot_2d_contour(self, ax=None, n_points=50, n_levels=20, fixed=None):
+        """Plot a filled-contour 2-D slice. Requires matplotlib."""
+        from pychebyshev._viz import _plot_2d_contour_impl
+        return _plot_2d_contour_impl(
+            self, ax=ax, n_points=n_points, n_levels=n_levels, fixed=fixed
+        )

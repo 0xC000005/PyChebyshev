@@ -1323,7 +1323,7 @@ wheels = [
 
 [[package]]
 name = "pychebyshev"
-version = "0.18.0"
+version = "0.19.0"
 source = { editable = "." }
 dependencies = [
     { name = "numpy", version = "2.2.6", source = { registry = "https://pypi.org/simple" }, marker = "python_full_version < '3.11'" },
@@ -1347,6 +1347,10 @@ docs = [
 jit = [
     { name = "numba" },
 ]
+viz = [
+    { name = "matplotlib" },
+    { name = "tqdm" },
+]
 
 [package.dev-dependencies]
 dev = [
@@ -1361,6 +1365,7 @@ dev = [
 requires-dist = [
     { name = "blackscholes", marker = "extra == 'dev'", specifier = ">=0.2.0" },
     { name = "matplotlib", marker = "extra == 'dev'", specifier = ">=3.10" },
+    { name = "matplotlib", marker = "extra == 'viz'", specifier = ">=3.5" },
     { name = "mkdocs-material", marker = "extra == 'docs'", specifier = ">=9.5" },
     { name = "mkdocstrings", extras = ["python"], marker = "extra == 'docs'", specifier = ">=0.24" },
     { name = "numba", marker = "extra == 'jit'", specifier = ">=0.60" },
@@ -1369,8 +1374,9 @@ requires-dist = [
     { name = "ruff", marker = "extra == 'dev'", specifier = ">=0.4" },
     { name = "scipy", specifier = ">=1.12" },
     { name = "tqdm", marker = "extra == 'dev'", specifier = ">=4.60" },
+    { name = "tqdm", marker = "extra == 'viz'", specifier = ">=4.60" },
 ]
-provides-extras = ["jit", "dev", "docs"]
+provides-extras = ["viz", "jit", "dev", "docs"]
 
 [package.metadata.requires-dev]
 dev = [

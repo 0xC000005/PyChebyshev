@@ -12,7 +12,7 @@ PyChebyshev is a pip-installable Python library for multi-dimensional Chebyshev 
 # Setup
 uv sync
 
-# Run tests (~949 tests, ~110s due to 5D Black-Scholes builds)
+# Run tests (~989 tests, ~110s due to 5D Black-Scholes builds)
 uv run pytest tests/ -v
 
 # Run a single test
@@ -67,6 +67,11 @@ The installable package. Public classes: `ChebyshevApproximation`, `ChebyshevSpl
   (`+`, `-`, `*` scalar, in-place variants, `__neg__`), and `to_dense()`.
   After v0.18, ChebyshevTT has full surface parity with
   ChebyshevApproximation for non-calculus features.
+- v0.19 adds parallel build (`n_workers=` on Approximation/Spline),
+  tqdm progress bars (`verbose=2` on Spline/Slider/TT),
+  `plot_convergence()` (Approximation), and `plot_1d`/`plot_2d_surface`/`plot_2d_contour`
+  instance methods on all four classes. New optional dep group
+  `pychebyshev[viz]` (matplotlib + tqdm).
 
 ### Benchmark Scripts (project root)
 
@@ -87,6 +92,7 @@ Not part of the library. Compare Chebyshev barycentric against alternative metho
 - `compare_v016_polish.py` — PyChebyshev v0.16 polish surface vs MoCaX 4.3.1 cosmetic API (requires `mocaxpy`; gracefully skips MoCaX side if not installed)
 - `compare_calculus_completion.py` — PyChebyshev v0.17 Slider/TT integrate vs MoCaX 4.3.1 (no equivalent — beyond-MoCaX feature)
 - `compare_v018_tt_parity.py` — PyChebyshev v0.18 TT surface (extrude/slice/algebra/from_values/to_dense) vs MoCaX 4.3.1
+- `compare_v019_build_diagnostics.py` — PyChebyshev v0.19 build optimization (parallel eval, progress bars, visualization) — no MoCaX equivalent
 
 ### Tests (`tests/`)
 
@@ -117,6 +123,9 @@ Not part of the library. Compare Chebyshev barycentric against alternative metho
 - `test_v018_tt_parity.py` — ~52 tests: `ChebyshevTT.nodes()`, `from_values()`,
   `extrude()`, `slice()`, algebra (`+`, `-`, `*` scalar, in-place, `__neg__`),
   `to_dense()`; cross-feature and round-trip checks.
+- `test_v019_build_diagnostics.py` — ~40 tests: parallel build via `n_workers=`,
+  tqdm progress bars (`verbose=2`), `plot_convergence()`, `plot_1d()`,
+  `plot_2d_surface()`, `plot_2d_contour()`; cross-feature integration.
 
 ### CI/CD (`.github/workflows/`)
 

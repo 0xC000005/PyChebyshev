@@ -161,7 +161,7 @@ non-calculus surface.
 
 **Beyond MoCaX:** richer TT primitives than MoCaXExtend exposes.
 
-## v0.19 — Build & Diagnostics :material-clock-outline:
+## v0.19 — Build & Diagnostics :material-check:
 
 Ergonomics for users with slow `f` or large grids.
 

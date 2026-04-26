@@ -281,6 +281,7 @@ class ChebyshevApproximation:
         additional_data: object = None,
         *,
         defer_build: bool = False,
+        n_workers: int | None = None,
     ):
         """Dispatch to ChebyshevSpline when special_points declares any kink.
 
@@ -333,6 +334,7 @@ class ChebyshevApproximation:
                     max_n=max_n,
                     additional_data=additional_data,
                     defer_build=defer_build,
+                    n_workers=n_workers,
                 )
         return super().__new__(cls)
 
@@ -349,6 +351,7 @@ class ChebyshevApproximation:
         additional_data: object = None,
         *,
         defer_build: bool = False,
+        n_workers: int | None = None,
     ):
         # Unwrap typed helpers (v0.16). Lazy import avoids circular dependency.
         from pychebyshev import Domain, Ns, SpecialPoints as _SP
@@ -374,6 +377,8 @@ class ChebyshevApproximation:
         self.special_points = special_points
         self.descriptor: str = ""
         self.additional_data = additional_data
+        from pychebyshev._parallel import _normalize_n_workers
+        self.n_workers = _normalize_n_workers(n_workers)
         self._derivative_id_registry: dict[tuple[int, ...], int] = {}
         self._derivative_id_to_orders: list[tuple[int, ...]] = []
 
@@ -515,7 +520,7 @@ class ChebyshevApproximation:
         self.tensor_values = arr.copy()
         self.function = None  # function-less interpolant
 
-    def build(self, verbose: bool = True) -> None:
+    def build(self, verbose: bool | int = True) -> None:
         """Build the Chebyshev approximation by evaluating the function on the grid.
 
         If ``error_threshold`` was provided to ``__init__``, runs the
@@ -525,8 +530,9 @@ class ChebyshevApproximation:
 
         Parameters
         ----------
-        verbose : bool, optional
-            If True, print build progress. Default is True.
+        verbose : bool or int, optional
+            If True or 1, print build progress. If 2, also show a tqdm
+            progress bar (requires ``pychebyshev[viz]``). Default is True.
 
         Notes
         -----
@@ -558,7 +564,7 @@ class ChebyshevApproximation:
         else:
             self._build_fixed_grid(verbose=verbose)
 
-    def _build_with_threshold(self, verbose: bool = True) -> None:
+    def _build_with_threshold(self, verbose: bool | int = True) -> None:
         """Iteratively double auto-dim Ns until error_estimate <= threshold.
 
         The dim with the largest per-dimension last-coefficient
@@ -638,7 +644,7 @@ class ChebyshevApproximation:
         self.n_evaluations = total_evals
         self.build_time = total_build_time
 
-    def _build_fixed_grid(self, verbose: bool = True) -> None:
+    def _build_fixed_grid(self, verbose: bool | int = True) -> None:
         """Build tensor values on the already-resolved (all-int) grid.
 
         Original body of build() — now called by the public build()
@@ -655,10 +661,25 @@ class ChebyshevApproximation:
         self._cached_error_estimate = None
 
         # Step 1: Evaluate at all node combinations
-        self.tensor_values = np.zeros(self.n_nodes)
-        for idx in np.ndindex(*self.n_nodes):
-            point = [self.nodes[d][idx[d]] for d in range(self.num_dimensions)]
-            self.tensor_values[idx] = self.function(point, self.additional_data)
+        if self.n_workers is None or self.n_workers == 1:
+            # Fast path: in-place fill (original behavior, no intermediate list)
+            self.tensor_values = np.zeros(self.n_nodes)
+            for idx in np.ndindex(*self.n_nodes):
+                point = [self.nodes[d][idx[d]] for d in range(self.num_dimensions)]
+                self.tensor_values[idx] = float(
+                    self.function(point, self.additional_data)
+                )
+        else:
+            # Parallel path: build points list, dispatch to pool, reshape
+            from pychebyshev._parallel import _evaluate_in_parallel
+            points = [
+                [self.nodes[d][idx[d]] for d in range(self.num_dimensions)]
+                for idx in np.ndindex(*self.n_nodes)
+            ]
+            flat = _evaluate_in_parallel(
+                self.function, points, self.additional_data, self.n_workers
+            )
+            self.tensor_values = flat.reshape(self.n_nodes)
         self.n_evaluations = total
 
         # Step 2: Pre-compute barycentric weights
@@ -1306,6 +1327,93 @@ class ChebyshevApproximation:
         import copy
         return copy.deepcopy(self)
 
+    def plot_convergence(self, target_error=None, max_n=64, ax=None):
+        """Plot convergence: builds at increasing N, plots error decay.
+
+        Requires the optional ``pychebyshev[viz]`` dependency group.
+
+        Parameters
+        ----------
+        target_error : float | None
+            If provided, draws a horizontal dashed line at this level.
+        max_n : int
+            Largest N to try in the doubling sweep.
+        ax : matplotlib.axes.Axes | None
+            Pre-existing axes to plot into. Creates a new figure if None.
+
+        Returns
+        -------
+        matplotlib.axes.Axes
+        """
+        try:
+            import matplotlib.pyplot as plt
+        except ImportError:
+            raise ImportError(
+                "plot_convergence requires matplotlib; install with "
+                "`pip install pychebyshev[viz]`"
+            )
+
+        if self.function is None:
+            raise RuntimeError(
+                "plot_convergence requires a function-bound interpolant "
+                "(this object has function=None — built via from_values, algebra, or load)"
+            )
+
+        ns = list(range(4, max_n + 1, 2))
+        errors = []
+        for n in ns:
+            cheb = ChebyshevApproximation(
+                self.function, self.num_dimensions, self.domain,
+                n_nodes=[n] * self.num_dimensions,
+                additional_data=self.additional_data,
+            )
+            cheb.build(verbose=False)
+            errors.append(cheb.error_estimate())
+
+        if ax is None:
+            _, ax = plt.subplots()
+        ax.semilogy(ns, errors, marker="o")
+        ax.set_xlabel("Number of nodes per dimension (N)")
+        ax.set_ylabel("Error estimate (log scale)")
+        ax.set_title(f"Convergence — {self.num_dimensions}-D Chebyshev")
+        if target_error is not None:
+            ax.axhline(target_error, linestyle="--", color="red", label=f"target={target_error}")
+            ax.legend()
+        return ax
+
+    def plot_1d(self, ax=None, n_points=200, fixed=None):
+        """Plot the 1-D slice of this interpolant.
+
+        Requires the optional ``pychebyshev[viz]`` dependency group.
+
+        Parameters
+        ----------
+        ax : matplotlib.axes.Axes | None
+            Pre-existing axes (creates a new figure if None).
+        n_points : int
+            Number of sample points along the free dim.
+        fixed : dict[int, float] | None
+            Map of dim → value to constrain other dims, leaving exactly one free.
+
+        Returns
+        -------
+        matplotlib.axes.Axes
+        """
+        from pychebyshev._viz import _plot_1d_impl
+        return _plot_1d_impl(self, ax=ax, n_points=n_points, fixed=fixed)
+
+    def plot_2d_surface(self, ax=None, n_points=50, fixed=None):
+        """Plot a 3-D surface for the 2-D slice. Requires matplotlib."""
+        from pychebyshev._viz import _plot_2d_surface_impl
+        return _plot_2d_surface_impl(self, ax=ax, n_points=n_points, fixed=fixed)
+
+    def plot_2d_contour(self, ax=None, n_points=50, n_levels=20, fixed=None):
+        """Plot a filled-contour 2-D slice. Requires matplotlib."""
+        from pychebyshev._viz import _plot_2d_contour_impl
+        return _plot_2d_contour_impl(
+            self, ax=ax, n_points=n_points, n_levels=n_levels, fixed=fixed
+        )
+
     # ------------------------------------------------------------------
     # Serialization
     # ------------------------------------------------------------------
@@ -1353,6 +1461,8 @@ class ChebyshevApproximation:
             self._derivative_id_to_orders = []
         if not hasattr(self, "special_points"):
             self.special_points = None
+        if not hasattr(self, "n_workers"):
+            self.n_workers = None
 
         # Reconstruct pre-allocated eval cache for fast_eval() (deprecated)
         self._eval_cache = {}
@@ -1709,6 +1819,7 @@ class ChebyshevApproximation:
         obj.special_points = None
         obj.descriptor = ""
         obj.additional_data = None
+        obj.n_workers = None
         obj._derivative_id_registry = {}
         obj._derivative_id_to_orders = []
 
@@ -1747,6 +1858,7 @@ class ChebyshevApproximation:
         obj.special_points = None
         obj.descriptor = ""
         obj.additional_data = None
+        obj.n_workers = None
         obj._derivative_id_registry = {}
         obj._derivative_id_to_orders = []
         # Pre-allocate eval cache for deprecated fast_eval()
@@ -1837,6 +1949,7 @@ class ChebyshevApproximation:
         obj.special_points = None
         obj.descriptor = ""
         obj.additional_data = None
+        obj.n_workers = None
         obj._cached_error_estimate = None
         obj._derivative_id_registry = {}
         obj._derivative_id_to_orders = []
@@ -1928,6 +2041,7 @@ class ChebyshevApproximation:
         obj.special_points = None
         obj.descriptor = ""
         obj.additional_data = None
+        obj.n_workers = None
         obj._cached_error_estimate = None
         obj._derivative_id_registry = {}
         obj._derivative_id_to_orders = []
@@ -2048,6 +2162,7 @@ class ChebyshevApproximation:
         obj.special_points = None
         obj.descriptor = ""
         obj.additional_data = None
+        obj.n_workers = None
         obj._cached_error_estimate = None
         obj._derivative_id_registry = {}
         obj._derivative_id_to_orders = []
