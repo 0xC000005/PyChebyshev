@@ -1429,6 +1429,156 @@ class ChebyshevTT:
             M = np.einsum("ij,ipa,jpb->ab", M, A, B)
         return float(M[0, 0])
 
+    def integrate(
+        self,
+        dims: "List[int] | int | None" = None,
+        bounds: "List[tuple] | tuple | None" = None,
+    ) -> "float | ChebyshevTT":
+        """Integrate the TT-approximated function over selected dimensions.
+
+        Parameters
+        ----------
+        dims : list of int, int, or None
+            Dimensions to integrate over. ``None`` (default) integrates over
+            all dimensions (full integration → scalar).
+        bounds : list of (lo, hi), (lo, hi), or None
+            Per-dim integration bounds. Length must match ``dims``. ``None``
+            means each dim's full domain. Individual ``None`` entries also
+            mean full domain for that dim.
+
+        Returns
+        -------
+        float
+            Scalar result when all dimensions are integrated.
+        ChebyshevTT
+            TT over surviving dimensions when only some dims are integrated.
+
+        Raises
+        ------
+        RuntimeError
+            If ``build()`` has not been called.
+        ValueError
+            If ``dims`` contains out-of-range indices, or ``bounds`` are
+            invalid (outside domain, lo > hi, or length mismatch).
+        """
+        from pychebyshev._calculus import (
+            _compute_fejer1_weights,
+            _compute_sub_interval_weights,
+            _integrate_tt_along_dim,
+            _normalize_bounds,
+        )
+
+        self._check_built()
+
+        # Normalize dims (None = all)
+        if dims is None:
+            dims_sorted = list(range(self.num_dimensions))
+        elif isinstance(dims, int):
+            dims_sorted = [dims]
+        else:
+            dims_sorted = sorted(set(dims))
+
+        if any(d < 0 or d >= self.num_dimensions for d in dims_sorted):
+            raise ValueError(
+                f"dims contains out-of-range index "
+                f"(num_dimensions={self.num_dimensions}, dims={dims_sorted})"
+            )
+
+        # Normalize bounds: returns list of (lo, hi) or None per dim
+        normalized_bounds = _normalize_bounds(dims_sorted, bounds, self.domain)
+
+        # Compute scaled quadrature weights per integrated dim.
+        # Cores are in Chebyshev coefficient space; convert to value space
+        # first via _coeff_core_to_value_core before applying Fejer-1 weights.
+        weights_per_dim = {}
+        for d, bd in zip(dims_sorted, normalized_bounds):
+            n = self.n_nodes[d]
+            a, b = self.domain[d]
+            if bd is None:
+                # Full domain: use standard Fejer-1 weights scaled by (b-a)/2
+                weights_unscaled = _compute_fejer1_weights(n)
+                scale = (b - a) / 2.0
+                weights_per_dim[d] = weights_unscaled * scale
+            else:
+                # Sub-interval: map bounds to reference [-1, 1], use
+                # _compute_sub_interval_weights which already returns the
+                # integral over [t_lo, t_hi] in reference space.
+                # We then scale by (b-a)/2 to account for the physical domain.
+                b_lo, b_hi = bd
+                t_lo = 2.0 * (b_lo - a) / (b - a) - 1.0
+                t_hi = 2.0 * (b_hi - a) / (b - a) - 1.0
+                weights_sub = _compute_sub_interval_weights(n, t_lo, t_hi)
+                scale = (b - a) / 2.0
+                weights_per_dim[d] = weights_sub * scale
+
+        # Contract each integrated core: coefficient core → value core → M_k
+        contracted = {}
+        for d in dims_sorted:
+            val_core = _coeff_core_to_value_core(self._coeff_cores[d])
+            contracted[d] = _integrate_tt_along_dim(val_core, weights_per_dim[d])
+
+        if len(dims_sorted) == self.num_dimensions:
+            # Full integration: chain-multiply all M_k matrices → scalar
+            result = contracted[dims_sorted[0]]
+            for d in dims_sorted[1:]:
+                result = result @ contracted[d]
+            return float(result.ravel()[0])
+
+        # Partial integration: absorb each contracted matrix into a
+        # neighboring kept core via matrix multiplication on the rank dim.
+        integrated_set = set(dims_sorted)
+        new_coeff_cores = []
+        pending = None  # accumulated product of consecutive M_k matrices
+
+        for k in range(self.num_dimensions):
+            if k in integrated_set:
+                M = contracted[k]
+                if pending is not None:
+                    M = pending @ M
+                pending = M
+                continue
+            # k is a kept dim — absorb any pending matrix into this core's
+            # left rank dimension
+            core = self._coeff_cores[k].copy()
+            if pending is not None:
+                core = np.einsum("lr,rjs->ljs", pending, core)
+                pending = None
+            new_coeff_cores.append(core)
+
+        # If pending remains (trailing integrated dims), absorb into the
+        # right rank of the last kept core
+        if pending is not None and new_coeff_cores:
+            last = new_coeff_cores[-1]
+            last = np.einsum("ljs,sr->ljr", last, pending)
+            new_coeff_cores[-1] = last
+
+        # Construct result TT via factory bypass (skip __init__ / build())
+        kept_dims = [d for d in range(self.num_dimensions) if d not in integrated_set]
+        new_domain = [self.domain[d] for d in kept_dims]
+        new_n_nodes = [self.n_nodes[d] for d in kept_dims]
+
+        result_tt = self.__class__.__new__(self.__class__)
+        result_tt.function = None
+        result_tt.num_dimensions = len(kept_dims)
+        result_tt.domain = new_domain
+        result_tt.n_nodes = new_n_nodes
+        result_tt._coeff_cores = new_coeff_cores
+        result_tt._tt_ranks = (
+            [c.shape[0] for c in new_coeff_cores] + [new_coeff_cores[-1].shape[2]]
+        )
+        result_tt._built = True
+        result_tt._build_time = 0.0
+        result_tt._total_build_evals = 0
+        result_tt._cached_error_estimate = None
+        result_tt.max_rank = self.max_rank
+        result_tt.tolerance = self.tolerance
+        result_tt.max_sweeps = self.max_sweeps
+        result_tt.max_derivative_order = self.max_derivative_order
+        result_tt.descriptor = self.descriptor
+        result_tt.additional_data = self.additional_data
+        result_tt.method = self.method
+        return result_tt
+
     def eval(self, point: List[float]) -> float:
         """Evaluate at a single point via TT inner product.
 

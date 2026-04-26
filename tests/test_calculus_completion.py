@@ -88,3 +88,52 @@ class TestIntegrateTTAlongDim:
         weights = np.array([2.0])
         result = _integrate_tt_along_dim(core, weights)
         np.testing.assert_allclose(result, [[6.0, 8.0]])
+
+
+# ============================================================================
+# T3: TT full integration (returns scalar)
+# ============================================================================
+
+class TestTTFullIntegrate:
+    def test_separable_function(self):
+        """f(x, y) = sin(x) * cos(y) over [-1, 1]^2.
+
+        ∫∫ sin(x)cos(y) dx dy = [−cos(x)]_{-1}^{1} · [sin(y)]_{-1}^{1}
+                              = (−cos(1) + cos(−1)) · (sin(1) − sin(−1))
+                              = 0 · (2 sin(1)) = 0
+        """
+        def f(x, _):
+            return math.sin(x[0]) * math.cos(x[1])
+
+        tt = ChebyshevTT(f, 2, [[-1, 1], [-1, 1]], [12, 12])
+        tt.build(verbose=False)
+        result = tt.integrate()  # full integration over all dims
+        assert result == pytest.approx(0.0, abs=1e-8)
+
+    def test_constant_function(self):
+        """f(x) = 7 over [0, 2] × [0, 3] integrates to 7 × 6 = 42."""
+        def f(x, _):
+            return 7.0
+
+        tt = ChebyshevTT(f, 2, [[0, 2], [0, 3]], [4, 4])
+        tt.build(verbose=False)
+        result = tt.integrate()
+        assert result == pytest.approx(42.0, abs=1e-10)
+
+    def test_against_scipy_nquad(self):
+        """5-D separable function vs scipy.integrate.nquad."""
+        from scipy.integrate import nquad
+
+        def f_scalar(x, _):
+            return math.exp(-(x[0] ** 2 + x[1] ** 2 + x[2] ** 2 + x[3] ** 2 + x[4] ** 2))
+
+        domain = [[-1, 1]] * 5
+        tt = ChebyshevTT(f_scalar, 5, domain, [10] * 5)
+        tt.build(verbose=False)
+        cheb_result = tt.integrate()
+
+        def f_nquad(*args):
+            return math.exp(-sum(a ** 2 for a in args))
+
+        scipy_result, _ = nquad(f_nquad, domain)
+        assert cheb_result == pytest.approx(scipy_result, rel=1e-4)
