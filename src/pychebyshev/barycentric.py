@@ -519,7 +519,7 @@ class ChebyshevApproximation:
         self.tensor_values = arr.copy()
         self.function = None  # function-less interpolant
 
-    def build(self, verbose: bool = True) -> None:
+    def build(self, verbose: bool | int = True) -> None:
         """Build the Chebyshev approximation by evaluating the function on the grid.
 
         If ``error_threshold`` was provided to ``__init__``, runs the
@@ -529,8 +529,9 @@ class ChebyshevApproximation:
 
         Parameters
         ----------
-        verbose : bool, optional
-            If True, print build progress. Default is True.
+        verbose : bool or int, optional
+            If True or 1, print build progress. If 2, also show a tqdm
+            progress bar (requires ``pychebyshev[viz]``). Default is True.
 
         Notes
         -----
@@ -562,7 +563,7 @@ class ChebyshevApproximation:
         else:
             self._build_fixed_grid(verbose=verbose)
 
-    def _build_with_threshold(self, verbose: bool = True) -> None:
+    def _build_with_threshold(self, verbose: bool | int = True) -> None:
         """Iteratively double auto-dim Ns until error_estimate <= threshold.
 
         The dim with the largest per-dimension last-coefficient
@@ -642,7 +643,7 @@ class ChebyshevApproximation:
         self.n_evaluations = total_evals
         self.build_time = total_build_time
 
-    def _build_fixed_grid(self, verbose: bool = True) -> None:
+    def _build_fixed_grid(self, verbose: bool | int = True) -> None:
         """Build tensor values on the already-resolved (all-int) grid.
 
         Original body of build() — now called by the public build()

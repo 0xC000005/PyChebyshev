@@ -142,3 +142,54 @@ class TestParallelBuildSpline:
         # Each piece should have positive int n_workers (cpu_count)
         for piece in spl._pieces:
             assert isinstance(piece.n_workers, int) and piece.n_workers >= 1
+
+
+# ============================================================================
+# T5: Progress bars (verbose=2) on all 4 classes
+# ============================================================================
+
+def _t5_f_simple(x, _):
+    return x[0]
+
+
+def _t5_f_2d(x, _):
+    return x[0] + x[1]
+
+
+class TestProgressBars:
+    def test_verbose_2_does_not_break_approximation_build(self):
+        cheb = ChebyshevApproximation(_t5_f_simple, 1, [[-1, 1]], [4])
+        cheb.build(verbose=2)
+        assert cheb.is_construction_finished()
+
+    def test_verbose_2_does_not_break_spline_build(self):
+        spl = ChebyshevSpline(
+            _t5_f_simple, 1, [[-1, 1]], knots=[[0.0]], n_nodes=[4]
+        )
+        spl.build(verbose=2)
+        assert spl.is_construction_finished()
+
+    def test_verbose_2_does_not_break_slider_build(self):
+        slider = ChebyshevSlider(
+            _t5_f_2d, 2, [[-1, 1], [-1, 1]], [4, 4],
+            partition=[[0], [1]], pivot_point=[0.0, 0.0],
+        )
+        slider.build(verbose=2)
+        assert slider.is_construction_finished()
+
+    def test_verbose_2_does_not_break_tt_build(self):
+        tt = ChebyshevTT(_t5_f_2d, 2, [[-1, 1], [-1, 1]], [4, 4])
+        tt.build(verbose=2)
+        assert tt.is_construction_finished()
+
+    def test_verbose_false_no_progress_output(self, capsys):
+        cheb = ChebyshevApproximation(_t5_f_simple, 1, [[-1, 1]], [4])
+        cheb.build(verbose=False)
+        captured = capsys.readouterr()
+        assert "it/s" not in captured.err and "it/s" not in captured.out
+
+    def test_verbose_true_unchanged(self):
+        # Existing verbose=True path should still work
+        cheb = ChebyshevApproximation(_t5_f_simple, 1, [[-1, 1]], [4])
+        cheb.build(verbose=True)
+        assert cheb.is_construction_finished()

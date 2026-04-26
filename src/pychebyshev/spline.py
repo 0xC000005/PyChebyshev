@@ -24,6 +24,7 @@ from typing import Callable, List, Tuple
 import numpy as np
 
 from pychebyshev.barycentric import ChebyshevApproximation
+from pychebyshev._progress import _maybe_progress
 
 
 def _is_nested_n_nodes(n_nodes: list) -> bool:
@@ -321,7 +322,7 @@ class ChebyshevSpline:
         self._built = True
         self.function = None
 
-    def build(self, verbose: bool = True) -> None:
+    def build(self, verbose: bool | int = True) -> None:
         """Build all pieces by evaluating the function on each sub-domain.
 
         Each piece is an independent :class:`ChebyshevApproximation` built
@@ -329,8 +330,9 @@ class ChebyshevSpline:
 
         Parameters
         ----------
-        verbose : bool, optional
-            If True, print build progress.  Default is True.
+        verbose : bool or int, optional
+            If True or 1, print build progress. If 2, also show a tqdm
+            progress bar (requires ``pychebyshev[viz]``). Default is True.
         """
         if self.function is None:
             raise RuntimeError(
@@ -365,8 +367,9 @@ class ChebyshevSpline:
                     f"{total_evals:,} total evaluations)..."
                 )
 
+        piece_indices = list(itertools.product(*[range(s) for s in self._shape]))
         for flat_idx, multi_idx in enumerate(
-            itertools.product(*[range(s) for s in self._shape])
+            _maybe_progress(piece_indices, desc="Building spline pieces", verbose=verbose)
         ):
             # Compute sub-domain for this piece
             sub_domain = [

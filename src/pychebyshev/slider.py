@@ -22,6 +22,7 @@ from typing import Callable, List, Tuple
 import numpy as np
 
 from pychebyshev.barycentric import ChebyshevApproximation
+from pychebyshev._progress import _maybe_progress
 
 
 class ChebyshevSlider:
@@ -124,7 +125,7 @@ class ChebyshevSlider:
         self._derivative_id_registry: dict[tuple[int, ...], int] = {}
         self._derivative_id_to_orders: list[tuple[int, ...]] = []
 
-    def build(self, verbose: bool = True) -> None:
+    def build(self, verbose: bool | int = True) -> None:
         """Build all slides by evaluating the function at slide-specific grids.
 
         For each slide, dimensions outside the slide group are fixed at
@@ -132,8 +133,9 @@ class ChebyshevSlider:
 
         Parameters
         ----------
-        verbose : bool, optional
-            If True, print build progress. Default is True.
+        verbose : bool or int, optional
+            If True or 1, print build progress. If 2, also show a tqdm
+            progress bar (requires ``pychebyshev[viz]``). Default is True.
         """
         start = time.time()
         self._cached_error_estimate = None
@@ -154,7 +156,9 @@ class ChebyshevSlider:
             )
 
         self.slides = []
-        for slide_idx, group in enumerate(self.partition):
+        for slide_idx, group in enumerate(
+            _maybe_progress(self.partition, desc="Building slides", verbose=verbose)
+        ):
             slide_dim = len(group)
             slide_domain = [self.domain[d] for d in group]
             slide_n_nodes = [self.n_nodes[d] for d in group]

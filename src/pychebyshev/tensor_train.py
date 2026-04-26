@@ -28,6 +28,8 @@ import numpy as np
 from numpy.polynomial.chebyshev import chebpts1
 from scipy.fft import dct, idct
 
+from pychebyshev._progress import _maybe_progress
+
 
 # ======================================================================
 # Module-level helpers
@@ -124,7 +126,7 @@ def _tt_cross(
     max_rank: int,
     tol: float,
     max_sweeps: int,
-    verbose: bool,
+    verbose: bool | int,
     seed: int | None = None,
 ) -> Tuple[List[np.ndarray], int]:
     """Build TT cores from a callable via alternating TT-Cross.
@@ -297,7 +299,7 @@ def _tt_cross(
     # --- Sweep loop ---
     cores = [None] * d
 
-    for sweep in range(max_sweeps):
+    for sweep in _maybe_progress(range(max_sweeps), desc="TT-Cross sweeps", verbose=verbose):
         # ============================================================
         # Left-to-right half-sweep (k = 0, ..., d-2)
         #
@@ -1134,7 +1136,7 @@ class ChebyshevTT:
 
     def build(
         self,
-        verbose: bool = True,
+        verbose: bool | int = True,
         seed: int | None = None,
         method: str = "cross",
     ) -> None:
@@ -1157,8 +1159,10 @@ class ChebyshevTT:
 
         Parameters
         ----------
-        verbose : bool, optional
-            If True, print build progress. Default is True.
+        verbose : bool or int, optional
+            If True or 1, print build progress. If 2, also show a tqdm
+            progress bar on the sweep loop (requires ``pychebyshev[viz]``).
+            Default is True.
         seed : int or None, optional
             Random seed for initialization. Used by ``method='cross'`` to
             seed TT-Cross initialization and by ``method='als'`` to
