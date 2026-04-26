@@ -674,3 +674,178 @@ class TestTypedHelpers:
         )
         slider.build(verbose=False)
         assert slider.num_dimensions == 2
+
+    # ------------------------------------------------------------------
+    # Gap 5: spline.py:122, 124 — Domain/Ns on Spline
+    # ------------------------------------------------------------------
+
+    def test_spline_accepts_typed_domain_and_ns(self):
+        from pychebyshev import Domain, Ns
+
+        def f(x, _):
+            return abs(x[0])
+
+        # n_nodes=[8] means 8 nodes per piece (1D spline, 1 knot → 2 pieces)
+        spl = ChebyshevSpline(
+            f, 1, Domain([(-1.0, 1.0)]), knots=[[0.0]], n_nodes=Ns([8]),
+        )
+        spl.build(verbose=False)
+        assert spl.eval([0.5], [0]) == pytest.approx(0.5, abs=1e-3)
+
+    # ------------------------------------------------------------------
+    # Gap 6: tensor_train.py:1047, 1049 — Domain/Ns on TT
+    # ------------------------------------------------------------------
+
+    def test_tt_accepts_typed_domain_and_ns(self):
+        from pychebyshev import Domain, Ns
+
+        def f(x, _):
+            return math.sin(x[0]) * math.cos(x[1])
+
+        tt = ChebyshevTT(
+            f, 2, Domain([(-1.0, 1.0), (-1.0, 1.0)]), Ns([8, 8]),
+        )
+        tt.build(verbose=False)
+        assert tt.num_dimensions == 2
+        assert tt.n_nodes == [8, 8]
+
+    # ------------------------------------------------------------------
+    # Gap 7: slider.py:95 — Ns on Slider
+    # ------------------------------------------------------------------
+
+    def test_slider_accepts_typed_ns(self):
+        from pychebyshev import Ns
+
+        def f(x, _):
+            return math.sin(x[0]) + math.sin(x[1])
+
+        slider = ChebyshevSlider(
+            f, 2, [[-1, 1], [-1, 1]], Ns([8, 8]),
+            partition=[[0], [1]], pivot_point=[0.0, 0.0],
+        )
+        slider.build(verbose=False)
+        assert slider.n_nodes == [8, 8]
+
+    # ------------------------------------------------------------------
+    # Gap 4: barycentric.py:360 — SpecialPoints typed helper; all-empty
+    # knots stay in __init__ (line 360) since __new__ only dispatches
+    # when at least one dimension has a kink.
+    # ------------------------------------------------------------------
+
+    def test_special_points_typed_all_empty_keeps_approximation(self):
+        """SpecialPoints with all-empty knots: __new__ does NOT dispatch,
+        so __init__ runs and unwraps the typed helper at line 360."""
+        from pychebyshev import SpecialPoints
+
+        def f(x, _):
+            return math.sin(x[0]) + math.sin(x[1])
+
+        cheb = ChebyshevApproximation(
+            f, 2, [[-1, 1], [-1, 1]], [8, 8],
+            special_points=SpecialPoints([[], []]),
+        )
+        cheb.build(verbose=False)
+        assert isinstance(cheb, ChebyshevApproximation)
+        assert cheb.get_special_points() == [[], []]
+
+
+# ============================================================================
+# Gap 1: barycentric.py:414, 422 — defer_build rejection paths
+# (appended to TestSetOriginalFunctionValues above, duplicated here as a
+#  separate class to avoid ordering issues with the file structure)
+# ============================================================================
+
+class TestDeferBuildRejections:
+    def test_defer_build_with_function_rejected(self):
+        """defer_build=True must reject a non-None function (would be ignored)."""
+        def f(x, _):
+            return x[0]
+
+        with pytest.raises(ValueError, match="function=None|requires function"):
+            ChebyshevApproximation(
+                f, 1, [[-1, 1]], [4], defer_build=True,
+            )
+
+    def test_defer_build_with_auto_n_rejected(self):
+        """defer_build=True must reject auto-N (error_threshold) construction."""
+        with pytest.raises(ValueError, match="positive int n_nodes|auto-N"):
+            ChebyshevApproximation(
+                None, 1, [[-1, 1]], n_nodes=None, error_threshold=1e-6,
+                defer_build=True,
+            )
+
+    def test_defer_build_with_invalid_n_nodes_none_entry_rejected(self):
+        """defer_build=True must reject n_nodes with None entries (even with error_threshold)."""
+        # Must supply error_threshold to bypass the earlier "None entry without error_threshold"
+        # guard and reach the defer_build validation at line 422.
+        with pytest.raises(ValueError, match="positive int n_nodes"):
+            ChebyshevApproximation(
+                None, 2, [[-1, 1], [-1, 1]], n_nodes=[5, None],
+                error_threshold=1e-6, defer_build=True,
+            )
+
+    def test_defer_build_with_invalid_n_nodes_zero_entry_rejected(self):
+        """defer_build=True must reject n_nodes with non-positive entries."""
+        with pytest.raises(ValueError, match="positive int n_nodes"):
+            ChebyshevApproximation(
+                None, 2, [[-1, 1], [-1, 1]], n_nodes=[5, 0], defer_build=True,
+            )
+
+
+# ============================================================================
+# Gap 2: spline.py:286, 295, 297, 309 — set_original_function_values paths
+# ============================================================================
+
+class TestSplineSetValuesPaths:
+    def test_spline_set_values_length_mismatch_rejected(self):
+        """Passing wrong number of piece arrays must raise ValueError."""
+        deferred = ChebyshevSpline(
+            None, 1, [[-1, 1]], knots=[[0.0]], n_nodes=[8, 8],
+            defer_build=True,
+        )
+        # Spline has 2 pieces; pass 1 array
+        with pytest.raises(ValueError, match="expected 2|piece tensors"):
+            deferred.set_original_function_values([np.zeros(8)])
+
+    def test_spline_set_values_already_built_rejected(self):
+        """Calling set_original_function_values on a built spline must reject."""
+        def f(x, _):
+            return abs(x[0])
+
+        spl = ChebyshevSpline(f, 1, [[-1, 1]], knots=[[0.0]], n_nodes=[8, 8])
+        spl.build(verbose=False)
+        with pytest.raises(RuntimeError, match="already constructed|defer_build"):
+            spl.set_original_function_values([np.zeros(8), np.zeros(8)])
+
+    def test_spline_set_values_nan_rejected(self):
+        """NaN in any piece tensor must raise ValueError."""
+        # 1D spline with 1 knot (2 pieces), n_nodes=[4] → each piece has shape (4,)
+        deferred = ChebyshevSpline(
+            None, 1, [[-1, 1]], knots=[[0.0]], n_nodes=[4],
+            defer_build=True,
+        )
+        bad = np.array([0.0, float("nan"), 0.0, 0.0])
+        with pytest.raises(ValueError, match="NaN|Inf|finite"):
+            deferred.set_original_function_values([bad, np.zeros(4)])
+
+
+# ============================================================================
+# Gap 3: barycentric.py:1355 — __setstate__ backfill for special_points
+# ============================================================================
+
+class TestSetStateBackfill:
+    def test_setstate_backfill_for_legacy_pickle(self):
+        """Pre-v0.16 pickles lack special_points — verify __setstate__ backfills it."""
+        def f(x, _):
+            return math.sin(x[0])
+
+        cheb = ChebyshevApproximation(f, 1, [[-1, 1]], [8])
+        cheb.build(verbose=False)
+        # Strip special_points from state to simulate a pre-v0.16 pickle
+        state = cheb.__getstate__()
+        if "special_points" in state:
+            del state["special_points"]
+        restored = ChebyshevApproximation.__new__(ChebyshevApproximation)
+        restored.__setstate__(state)
+        # Backfill should set special_points to None
+        assert restored.get_special_points() is None
