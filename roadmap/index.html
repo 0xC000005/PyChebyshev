@@ -1004,6 +1004,72 @@
 </li>
       
         <li class="md-nav__item">
+  <a href="#v016-polish-bundle-material-check" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        v0.16 — Polish Bundle :material-check:
+      
+    </span>
+  </a>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#v017-integrate-everywhere-material-clock-outline" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        v0.17 — Integrate Everywhere :material-clock-outline:
+      
+    </span>
+  </a>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#v018-tt-feature-parity-material-clock-outline" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        v0.18 — TT Feature Parity :material-clock-outline:
+      
+    </span>
+  </a>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#v019-build-diagnostics-material-clock-outline" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        v0.19 — Build &amp; Diagnostics :material-clock-outline:
+      
+    </span>
+  </a>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#v020-adaptive-refinement-interop-material-clock-outline" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        v0.20 — Adaptive Refinement + Interop :material-clock-outline:
+      
+    </span>
+  </a>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#v021-advanced-calculus-material-clock-outline" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        v0.21 — Advanced Calculus :material-clock-outline:
+      
+    </span>
+  </a>
+  
+</li>
+      
+        <li class="md-nav__item">
   <a href="#v100-parity-announcement-material-clock-outline" class="md-nav__link">
     <span class="md-ellipsis">
       
@@ -1130,6 +1196,72 @@
     <span class="md-ellipsis">
       
         v0.15 — Ergonomics Bundle :material-check:
+      
+    </span>
+  </a>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#v016-polish-bundle-material-check" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        v0.16 — Polish Bundle :material-check:
+      
+    </span>
+  </a>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#v017-integrate-everywhere-material-clock-outline" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        v0.17 — Integrate Everywhere :material-clock-outline:
+      
+    </span>
+  </a>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#v018-tt-feature-parity-material-clock-outline" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        v0.18 — TT Feature Parity :material-clock-outline:
+      
+    </span>
+  </a>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#v019-build-diagnostics-material-clock-outline" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        v0.19 — Build &amp; Diagnostics :material-clock-outline:
+      
+    </span>
+  </a>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#v020-adaptive-refinement-interop-material-clock-outline" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        v0.20 — Adaptive Refinement + Interop :material-clock-outline:
+      
+    </span>
+  </a>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#v021-advanced-calculus-material-clock-outline" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        v0.21 — Advanced Calculus :material-clock-outline:
       
     </span>
   </a>
@@ -1299,13 +1431,94 @@ only, no new dependencies.</p>
 <p>All additive, no breaking changes.</p>
 <p><strong>Closes MoCaX gaps:</strong> <code>additional_data</code>, <code>get_derivative_id</code>, descriptor,
 introspection.</p>
+<h2 id="v016-polish-bundle-material-check">v0.16 — Polish Bundle :material-check:<a class="headerlink" href="#v016-polish-bundle-material-check" title="Permanent link">&para;</a></h2>
+<p>Final cosmetic mirror of the MoCaX 4.3.1 surface. Strictly additive, no
+breaking changes.</p>
+<ul>
+<li><code>clone()</code> — deep copy on all four classes</li>
+<li><code>get_special_points()</code>, <code>get_max_derivative_order()</code>,
+  <code>get_error_threshold()</code> — instance getters</li>
+<li><code>get_evaluation_points()</code> / <code>get_num_evaluation_points()</code> — flat
+  <code>(N, num_dim)</code> grid post-construction (MoCaX-style)</li>
+<li><code>set_original_function_values(values)</code> — in-place deferred
+  construction (alt to the <code>from_values()</code> factory)</li>
+<li><code>peek_format_version(filename)</code> static — read <code>.pcb</code> version without
+  deserializing</li>
+<li><code>is_dimensionality_allowed(num_dim)</code> static — pre-flight capability check</li>
+<li>Optional typed helpers <code>Domain</code>, <code>Ns</code>, <code>SpecialPoints</code> (constructors
+  accept both raw lists and these dataclasses)</li>
+</ul>
+<p><strong>Closes MoCaX gaps:</strong> the last cosmetic surface methods.</p>
+<h2 id="v017-integrate-everywhere-material-clock-outline">v0.17 — Integrate Everywhere :material-clock-outline:<a class="headerlink" href="#v017-integrate-everywhere-material-clock-outline" title="Permanent link">&para;</a></h2>
+<p>Extend the v0.9 calculus toolkit so every class supports integration.</p>
+<ul>
+<li><code>ChebyshevSlider.integrate(dims=None, bounds=None)</code> — full and partial
+  integration via the sliding-decomposition closed form</li>
+<li><code>ChebyshevTT.integrate(dims=None, bounds=None)</code> — full and partial
+  integration via Fejér-1 weight contraction into TT cores</li>
+</ul>
+<p>After v0.17, <code>integrate()</code> is available on all four classes. Roots and
+min/max on Slider/TT remain deferred to v0.21.</p>
+<p><strong>Beyond MoCaX:</strong> MoCaX has no <code>integrate()</code> API on any class.</p>
+<h2 id="v018-tt-feature-parity-material-clock-outline">v0.18 — TT Feature Parity :material-clock-outline:<a class="headerlink" href="#v018-tt-feature-parity-material-clock-outline" title="Permanent link">&para;</a></h2>
+<p>Bring <code>ChebyshevTT</code> up to parity with <code>ChebyshevApproximation</code> for the
+non-calculus surface.</p>
+<ul>
+<li>TT <code>extrude()</code> — add a dim by appending a constant core</li>
+<li>TT <code>slice()</code> — fix a dim by contracting a core via barycentric weights</li>
+<li>TT <code>from_values()</code> classmethod — build from a precomputed full tensor
+  (skip TT-Cross)</li>
+<li>TT <code>nodes()</code> static — generate the Chebyshev grid without function eval</li>
+<li>TT algebra <code>+</code>, <code>-</code>, <code>*</code> (scalar) — core stacking + rounding</li>
+<li><code>to_dense()</code> / <code>from_dense()</code> — convert between TT and Approximation</li>
+</ul>
+<p><strong>Beyond MoCaX:</strong> richer TT primitives than MoCaXExtend exposes.</p>
+<h2 id="v019-build-diagnostics-material-clock-outline">v0.19 — Build &amp; Diagnostics :material-clock-outline:<a class="headerlink" href="#v019-build-diagnostics-material-clock-outline" title="Permanent link">&para;</a></h2>
+<p>Ergonomics for users with slow <code>f</code> or large grids.</p>
+<ul>
+<li>Parallel function evaluation at build time (<code>n_workers=</code> ctor kwarg via
+  <code>concurrent.futures.ProcessPoolExecutor</code>)</li>
+<li><code>tqdm</code>-based progress bars during construction (opt-in, <code>verbose=2</code>)</li>
+<li><code>plot_convergence(target_error)</code> helper — builds at increasing N,
+  plots error decay</li>
+<li>Visualization helpers: <code>plot_1d</code>, <code>plot_2d_surface</code>, <code>plot_2d_contour</code></li>
+</ul>
+<p>New optional dependency group <code>pychebyshev[viz]</code> for matplotlib + tqdm.</p>
+<p><strong>Beyond MoCaX:</strong> MoCaX has neither parallel build nor visualization
+helpers.</p>
+<h2 id="v020-adaptive-refinement-interop-material-clock-outline">v0.20 — Adaptive Refinement + Interop :material-clock-outline:<a class="headerlink" href="#v020-adaptive-refinement-interop-material-clock-outline" title="Permanent link">&para;</a></h2>
+<p>Smart node placement plus delivery of the v0.14 <code>.pcb</code> portability promise.</p>
+<ul>
+<li>Auto-knot detection for <code>ChebyshevSpline</code> — scan for kinks via
+  curvature/derivative discontinuity, place knots automatically</li>
+<li>Sobol indices computed from spectral coefficients (cheap once the
+  interpolant exists)</li>
+<li>Auto dimension reordering by importance (helps TT rank growth)</li>
+<li>Reference <code>.pcb</code> reader implementations in <strong>Rust</strong> and <strong>Julia</strong> as
+  separate sub-repos (<code>0xC000005/pcb-readers</code>)</li>
+</ul>
+<p><strong>Beyond MoCaX:</strong> MoCaX is closed-source; <code>.pcb</code> ecosystem is
+PyChebyshev-unique.</p>
+<h2 id="v021-advanced-calculus-material-clock-outline">v0.21 — Advanced Calculus :material-clock-outline:<a class="headerlink" href="#v021-advanced-calculus-material-clock-outline" title="Permanent link">&para;</a></h2>
+<p>Research-grade extensions to close the remaining calculus surface.</p>
+<ul>
+<li>N-D rootfinding via Möller–Stetter colleague matrices
+  (Trefethen 2017 ch. 24) on <code>ChebyshevApproximation</code> and
+  <code>ChebyshevSpline</code></li>
+<li><code>roots()</code>, <code>minimize()</code>, <code>maximize()</code> on <code>ChebyshevSlider</code> and
+  <code>ChebyshevTT</code> (1-D-at-a-time + Brent's method bracket where no closed
+  form exists)</li>
+<li>Higher-order partial derivatives on demand (currently capped at
+  construction-time <code>max_derivative_order</code>)</li>
+</ul>
+<p><strong>Beyond MoCaX:</strong> spectral N-D rootfinding has no MoCaX analog.</p>
 <h2 id="v100-parity-announcement-material-clock-outline">v1.0.0 — Parity Announcement :material-clock-outline:<a class="headerlink" href="#v100-parity-announcement-material-clock-outline" title="Permanent link">&para;</a></h2>
-<p>Feature-complete against MoCaX Intelligence 4.3.1. No new code — this release
-is:</p>
+<p>Feature-complete against MoCaX Intelligence 4.3.1, plus the beyond-MoCaX
+extensions from v0.16–v0.21. No new code — this release is:</p>
 <ul>
 <li>Status bump <code>Beta</code> → <code>Production/Stable</code></li>
 <li>API stability commitment going forward</li>
-<li>Summary CHANGELOG entry covering the parity items</li>
+<li>Summary CHANGELOG entry covering the parity arc + extensions</li>
 <li>Refreshed README with the final performance comparison</li>
 </ul>
 <hr />

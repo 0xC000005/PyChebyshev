@@ -946,6 +946,78 @@
   
 </li>
       
+        <li class="md-nav__item">
+  <a href="#v016-polish-surface" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        v0.16 polish surface
+      
+    </span>
+  </a>
+  
+    <nav class="md-nav" aria-label="v0.16 polish surface">
+      <ul class="md-nav__list">
+        
+          <li class="md-nav__item">
+  <a href="#clone" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        clone()
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#instance-getters" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Instance getters
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#static-helpers" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Static helpers
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#deferred-construction-approximation-spline" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Deferred construction (Approximation, Spline)
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#optional-typed-helpers" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Optional typed helpers
+      
+    </span>
+  </a>
+  
+</li>
+        
+      </ul>
+    </nav>
+  
+</li>
+      
     </ul>
   
 </nav>
@@ -1152,6 +1224,78 @@
   
 </li>
       
+        <li class="md-nav__item">
+  <a href="#v016-polish-surface" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        v0.16 polish surface
+      
+    </span>
+  </a>
+  
+    <nav class="md-nav" aria-label="v0.16 polish surface">
+      <ul class="md-nav__list">
+        
+          <li class="md-nav__item">
+  <a href="#clone" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        clone()
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#instance-getters" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Instance getters
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#static-helpers" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Static helpers
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#deferred-construction-approximation-spline" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Deferred construction (Approximation, Spline)
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#optional-typed-helpers" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Optional typed helpers
+      
+    </span>
+  </a>
+  
+</li>
+        
+      </ul>
+    </nav>
+  
+</li>
+      
     </ul>
   
 </nav>
@@ -1304,6 +1448,89 @@ inherited. Re-attach metadata on the result if needed.</p>
 </tr>
 </tbody>
 </table>
+<hr />
+<h2 id="v016-polish-surface">v0.16 polish surface<a class="headerlink" href="#v016-polish-surface" title="Permanent link">&para;</a></h2>
+<p>The v0.16 release adds the final cosmetic mirror of the MoCaX 4.3.1 API.
+All additions are strictly additive.</p>
+<h3 id="clone"><code>clone()</code><a class="headerlink" href="#clone" title="Permanent link">&para;</a></h3>
+<p>Return an independent deep copy of any interpolant:</p>
+<div class="highlight"><pre><span></span><code><a id="__codelineno-5-1" name="__codelineno-5-1" href="#__codelineno-5-1"></a><span class="n">cheb2</span> <span class="o">=</span> <span class="n">cheb1</span><span class="o">.</span><span class="n">clone</span><span class="p">()</span>
+<a id="__codelineno-5-2" name="__codelineno-5-2" href="#__codelineno-5-2"></a><span class="n">cheb2</span><span class="o">.</span><span class="n">set_descriptor</span><span class="p">(</span><span class="s2">&quot;variant&quot;</span><span class="p">)</span>
+<a id="__codelineno-5-3" name="__codelineno-5-3" href="#__codelineno-5-3"></a><span class="c1"># cheb1 is untouched</span>
+</code></pre></div>
+<p>Available on <code>ChebyshevApproximation</code>, <code>ChebyshevSpline</code>, <code>ChebyshevSlider</code>,
+<code>ChebyshevTT</code>. Like <code>save()</code>/<code>load()</code>, the source <code>function</code> callable is not
+duplicated — the clone has <code>function = None</code>.</p>
+<h3 id="instance-getters">Instance getters<a class="headerlink" href="#instance-getters" title="Permanent link">&para;</a></h3>
+<table>
+<thead>
+<tr>
+<th>Method</th>
+<th>Available on</th>
+<th>Returns</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td><code>get_max_derivative_order()</code></td>
+<td>all four</td>
+<td><code>int</code></td>
+</tr>
+<tr>
+<td><code>get_error_threshold()</code></td>
+<td>Approximation, Spline</td>
+<td><code>float \| None</code></td>
+</tr>
+<tr>
+<td><code>get_special_points()</code></td>
+<td>Approximation, Spline</td>
+<td><code>list[list[float]] \| None</code></td>
+</tr>
+<tr>
+<td><code>get_evaluation_points()</code></td>
+<td>all four</td>
+<td><code>np.ndarray</code> shape <code>(N, num_dim)</code></td>
+</tr>
+<tr>
+<td><code>get_num_evaluation_points()</code></td>
+<td>all four</td>
+<td><code>int</code></td>
+</tr>
+</tbody>
+</table>
+<p><code>get_evaluation_points()</code> returns the flat <code>(N, num_dim)</code> grid (MoCaX style,
+matches <code>len(get_evaluation_points()) == get_num_evaluation_points()</code>).</p>
+<h3 id="static-helpers">Static helpers<a class="headerlink" href="#static-helpers" title="Permanent link">&para;</a></h3>
+<div class="highlight"><pre><span></span><code><a id="__codelineno-6-1" name="__codelineno-6-1" href="#__codelineno-6-1"></a><span class="n">ChebyshevApproximation</span><span class="o">.</span><span class="n">peek_format_version</span><span class="p">(</span><span class="s2">&quot;model.pcb&quot;</span><span class="p">)</span>  <span class="c1"># → 1</span>
+<a id="__codelineno-6-2" name="__codelineno-6-2" href="#__codelineno-6-2"></a>
+<a id="__codelineno-6-3" name="__codelineno-6-3" href="#__codelineno-6-3"></a><span class="n">ChebyshevTT</span><span class="o">.</span><span class="n">is_dimensionality_allowed</span><span class="p">(</span><span class="mi">5</span><span class="p">)</span>  <span class="c1"># → True</span>
+</code></pre></div>
+<h3 id="deferred-construction-approximation-spline">Deferred construction (Approximation, Spline)<a class="headerlink" href="#deferred-construction-approximation-spline" title="Permanent link">&para;</a></h3>
+<p>Construct a grid-only interpolant, then fill its tensor in place:</p>
+<div class="highlight"><pre><span></span><code><a id="__codelineno-7-1" name="__codelineno-7-1" href="#__codelineno-7-1"></a><span class="n">cheb</span> <span class="o">=</span> <span class="n">ChebyshevApproximation</span><span class="p">(</span><span class="kc">None</span><span class="p">,</span> <span class="mi">2</span><span class="p">,</span> <span class="p">[[</span><span class="o">-</span><span class="mi">1</span><span class="p">,</span><span class="mi">1</span><span class="p">],[</span><span class="o">-</span><span class="mi">1</span><span class="p">,</span><span class="mi">1</span><span class="p">]],</span> <span class="p">[</span><span class="mi">10</span><span class="p">,</span><span class="mi">10</span><span class="p">],</span>
+<a id="__codelineno-7-2" name="__codelineno-7-2" href="#__codelineno-7-2"></a>                               <span class="n">defer_build</span><span class="o">=</span><span class="kc">True</span><span class="p">)</span>
+<a id="__codelineno-7-3" name="__codelineno-7-3" href="#__codelineno-7-3"></a>
+<a id="__codelineno-7-4" name="__codelineno-7-4" href="#__codelineno-7-4"></a><span class="c1"># Compute values externally — e.g. on a distributed cluster</span>
+<a id="__codelineno-7-5" name="__codelineno-7-5" href="#__codelineno-7-5"></a><span class="n">points</span> <span class="o">=</span> <span class="n">cheb</span><span class="o">.</span><span class="n">get_evaluation_points</span><span class="p">()</span>  <span class="c1"># (100, 2)</span>
+<a id="__codelineno-7-6" name="__codelineno-7-6" href="#__codelineno-7-6"></a><span class="n">values</span> <span class="o">=</span> <span class="n">compute_function_on_cluster</span><span class="p">(</span><span class="n">points</span><span class="p">)</span><span class="o">.</span><span class="n">reshape</span><span class="p">(</span><span class="mi">10</span><span class="p">,</span> <span class="mi">10</span><span class="p">)</span>
+<a id="__codelineno-7-7" name="__codelineno-7-7" href="#__codelineno-7-7"></a>
+<a id="__codelineno-7-8" name="__codelineno-7-8" href="#__codelineno-7-8"></a><span class="n">cheb</span><span class="o">.</span><span class="n">set_original_function_values</span><span class="p">(</span><span class="n">values</span><span class="p">)</span>
+<a id="__codelineno-7-9" name="__codelineno-7-9" href="#__codelineno-7-9"></a><span class="c1"># now evaluable</span>
+<a id="__codelineno-7-10" name="__codelineno-7-10" href="#__codelineno-7-10"></a><span class="n">result</span> <span class="o">=</span> <span class="n">cheb</span><span class="o">.</span><span class="n">eval</span><span class="p">([</span><span class="mf">0.3</span><span class="p">,</span> <span class="o">-</span><span class="mf">0.4</span><span class="p">],</span> <span class="p">[</span><span class="mi">0</span><span class="p">,</span> <span class="mi">0</span><span class="p">])</span>
+</code></pre></div>
+<p>This is the in-place analog of the <code>from_values()</code> factory. Bit-identical
+results in both paths.</p>
+<h3 id="optional-typed-helpers">Optional typed helpers<a class="headerlink" href="#optional-typed-helpers" title="Permanent link">&para;</a></h3>
+<div class="highlight"><pre><span></span><code><a id="__codelineno-8-1" name="__codelineno-8-1" href="#__codelineno-8-1"></a><span class="kn">from</span><span class="w"> </span><span class="nn">pychebyshev</span><span class="w"> </span><span class="kn">import</span> <span class="n">Domain</span><span class="p">,</span> <span class="n">Ns</span><span class="p">,</span> <span class="n">SpecialPoints</span><span class="p">,</span> <span class="n">ChebyshevApproximation</span>
+<a id="__codelineno-8-2" name="__codelineno-8-2" href="#__codelineno-8-2"></a>
+<a id="__codelineno-8-3" name="__codelineno-8-3" href="#__codelineno-8-3"></a><span class="n">cheb</span> <span class="o">=</span> <span class="n">ChebyshevApproximation</span><span class="p">(</span>
+<a id="__codelineno-8-4" name="__codelineno-8-4" href="#__codelineno-8-4"></a>    <span class="n">f</span><span class="p">,</span> <span class="mi">2</span><span class="p">,</span>
+<a id="__codelineno-8-5" name="__codelineno-8-5" href="#__codelineno-8-5"></a>    <span class="n">Domain</span><span class="p">([(</span><span class="mf">0.0</span><span class="p">,</span> <span class="mf">1.0</span><span class="p">),</span> <span class="p">(</span><span class="mf">0.0</span><span class="p">,</span> <span class="mf">1.0</span><span class="p">)]),</span>  <span class="c1"># equivalent to [[0,1],[0,1]]</span>
+<a id="__codelineno-8-6" name="__codelineno-8-6" href="#__codelineno-8-6"></a>    <span class="n">Ns</span><span class="p">([</span><span class="mi">15</span><span class="p">,</span> <span class="mi">15</span><span class="p">]),</span>                       <span class="c1"># equivalent to [15, 15]</span>
+<a id="__codelineno-8-7" name="__codelineno-8-7" href="#__codelineno-8-7"></a><span class="p">)</span>
+</code></pre></div>
+<p>Constructors of all four classes accept both raw lists and these frozen
+dataclasses.</p>
 
 
 

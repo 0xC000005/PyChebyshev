@@ -1264,6 +1264,61 @@
 </li>
       
         <li class="md-nav__item">
+  <a href="#pychebyshev.tensor_train.ChebyshevTT.get_max_derivative_order" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        get_max_derivative_order
+      
+    </span>
+  </a>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#pychebyshev.tensor_train.ChebyshevTT.get_num_evaluation_points" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        get_num_evaluation_points
+      
+    </span>
+  </a>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#pychebyshev.tensor_train.ChebyshevTT.get_evaluation_points" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        get_evaluation_points
+      
+    </span>
+  </a>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#pychebyshev.tensor_train.ChebyshevTT.clone" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        clone
+      
+    </span>
+  </a>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#pychebyshev.tensor_train.ChebyshevTT.is_dimensionality_allowed" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        is_dimensionality_allowed
+      
+    </span>
+  </a>
+  
+</li>
+      
+        <li class="md-nav__item">
   <a href="#pychebyshev.tensor_train.ChebyshevTT.save" class="md-nav__link">
     <span class="md-ellipsis">
       
@@ -2306,6 +2361,61 @@
     <span class="md-ellipsis">
       
         get_descriptor
+      
+    </span>
+  </a>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#pychebyshev.tensor_train.ChebyshevTT.get_max_derivative_order" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        get_max_derivative_order
+      
+    </span>
+  </a>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#pychebyshev.tensor_train.ChebyshevTT.get_num_evaluation_points" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        get_num_evaluation_points
+      
+    </span>
+  </a>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#pychebyshev.tensor_train.ChebyshevTT.get_evaluation_points" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        get_evaluation_points
+      
+    </span>
+  </a>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#pychebyshev.tensor_train.ChebyshevTT.clone" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        clone
+      
+    </span>
+  </a>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#pychebyshev.tensor_train.ChebyshevTT.is_dimensionality_allowed" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        is_dimensionality_allowed
       
     </span>
   </a>
@@ -4473,6 +4583,192 @@ from Ruiz &amp; Zeron (2021), Section 3.4, adapted for TT format.</p>
     <div class="doc doc-contents ">
 
         <p>Return the descriptor label (default <code>""</code>).</p>
+
+
+    </div>
+
+</div>
+
+<div class="doc doc-object doc-function">
+
+
+<h2 id="pychebyshev.tensor_train.ChebyshevTT.get_max_derivative_order" class="doc doc-heading">
+            <code class="highlight language-python"><span class="n">get_max_derivative_order</span><span class="p">()</span></code>
+
+<a href="#pychebyshev.tensor_train.ChebyshevTT.get_max_derivative_order" class="headerlink" title="Permanent link">&para;</a></h2>
+
+
+    <div class="doc doc-contents ">
+
+        <p>Return the maximum derivative order this interpolant was constructed
+with. Derivative orders up to and including this value are queryable
+via <code>eval_multi(point, derivative_orders=...)</code>.</p>
+
+
+    </div>
+
+</div>
+
+<div class="doc doc-object doc-function">
+
+
+<h2 id="pychebyshev.tensor_train.ChebyshevTT.get_num_evaluation_points" class="doc doc-heading">
+            <code class="highlight language-python"><span class="n">get_num_evaluation_points</span><span class="p">()</span></code>
+
+<a href="#pychebyshev.tensor_train.ChebyshevTT.get_num_evaluation_points" class="headerlink" title="Permanent link">&para;</a></h2>
+
+
+    <div class="doc doc-contents ">
+
+        <p>Return the number of points in the underlying Cartesian evaluation
+grid (<code>prod(n_nodes)</code>).</p>
+<p>Note: TT-Cross actually queries a sparse subset of size
+<code>O(d·n·r²)</code>; this method returns the full Cartesian grid size to
+match :meth:<code>get_evaluation_points</code> and MoCaX semantics. The actual
+TT-Cross f-evaluation count is exposed separately as
+<code>self.total_build_evals</code>.</p>
+
+
+    <p><span class="doc-section-title">Returns:</span></p>
+    <table>
+      <thead>
+        <tr>
+          <th>Type</th>
+          <th>Description</th>
+        </tr>
+      </thead>
+      <tbody>
+          <tr class="doc-section-item">
+            <td>
+                  <code><span title="int">int</span></code>
+            </td>
+            <td>
+              <div class="doc-md-description">
+                <p>Size of the full Cartesian Chebyshev grid.</p>
+              </div>
+            </td>
+          </tr>
+      </tbody>
+    </table>
+
+
+    </div>
+
+</div>
+
+<div class="doc doc-object doc-function">
+
+
+<h2 id="pychebyshev.tensor_train.ChebyshevTT.get_evaluation_points" class="doc doc-heading">
+            <code class="highlight language-python"><span class="n">get_evaluation_points</span><span class="p">()</span></code>
+
+<a href="#pychebyshev.tensor_train.ChebyshevTT.get_evaluation_points" class="headerlink" title="Permanent link">&para;</a></h2>
+
+
+    <div class="doc doc-contents ">
+
+        <p>Return the full Cartesian grid of node positions across all
+dimensions. Note: TT-Cross only queries a sparse subset; this method
+returns the underlying full grid the cross algorithm samples from
+(matching :meth:<code>get_num_evaluation_points</code>).</p>
+
+
+    <p><span class="doc-section-title">Returns:</span></p>
+    <table>
+      <thead>
+        <tr>
+          <th>Type</th>
+          <th>Description</th>
+        </tr>
+      </thead>
+      <tbody>
+          <tr class="doc-section-item">
+            <td>
+                  <code><span title="numpy.ndarray">ndarray</span></code>
+            </td>
+            <td>
+              <div class="doc-md-description">
+                <p>Shape <code>(N, num_dimensions)</code> where <code>N = prod(n_nodes)</code>.</p>
+              </div>
+            </td>
+          </tr>
+      </tbody>
+    </table>
+
+
+    </div>
+
+</div>
+
+<div class="doc doc-object doc-function">
+
+
+<h2 id="pychebyshev.tensor_train.ChebyshevTT.clone" class="doc doc-heading">
+            <code class="highlight language-python"><span class="n">clone</span><span class="p">()</span></code>
+
+<a href="#pychebyshev.tensor_train.ChebyshevTT.clone" class="headerlink" title="Permanent link">&para;</a></h2>
+
+
+    <div class="doc doc-contents ">
+
+        <p>Return an independent deep copy of this interpolant.</p>
+<p>All mutable state (TT cores, descriptor, additional_data) is
+duplicated. Mutating the clone does not affect the original.</p>
+
+
+<details class="note" open>
+  <summary>Note</summary>
+  <p>Like :meth:<code>save</code> / :meth:<code>load</code>, the source <code>function</code> callable is
+not duplicated -- the clone has <code>function = None</code>. All evaluation,
+algebra, serialization, and v0.16 surface methods continue to work;
+only :meth:<code>build</code> (which requires a function) does not.</p>
+</details>
+
+    <p><span class="doc-section-title">Returns:</span></p>
+    <table>
+      <thead>
+        <tr>
+          <th>Type</th>
+          <th>Description</th>
+        </tr>
+      </thead>
+      <tbody>
+          <tr class="doc-section-item">
+            <td>
+                  <code><a class="autorefs autorefs-internal" title="pychebyshev.tensor_train.ChebyshevTT" href="#pychebyshev.tensor_train.ChebyshevTT">ChebyshevTT</a></code>
+            </td>
+            <td>
+              <div class="doc-md-description">
+                <p>A new instance with deep-copied state.</p>
+              </div>
+            </td>
+          </tr>
+      </tbody>
+    </table>
+
+
+    </div>
+
+</div>
+
+<div class="doc doc-object doc-function">
+
+
+<h2 id="pychebyshev.tensor_train.ChebyshevTT.is_dimensionality_allowed" class="doc doc-heading">
+            <code class="highlight language-python"><span class="n">is_dimensionality_allowed</span><span class="p">(</span><span class="n">num_dimensions</span><span class="p">)</span></code>
+
+  <span class="doc doc-labels">
+      <small class="doc doc-label doc-label-staticmethod"><code>staticmethod</code></small>
+  </span>
+
+<a href="#pychebyshev.tensor_train.ChebyshevTT.is_dimensionality_allowed" class="headerlink" title="Permanent link">&para;</a></h2>
+
+
+    <div class="doc doc-contents ">
+
+        <p>Return whether this interpolant class supports the given number of
+dimensions. Returns True for any <code>num_dimensions &gt;= 1</code>. Provided as
+a hook for future per-class capability caps.</p>
 
 
     </div>
