@@ -259,3 +259,90 @@ class TestTTExtrude:
         assert integrated.eval([0.3]) == pytest.approx(
             math.sin(0.3), abs=1e-6
         )
+
+
+# ============================================================================
+# T5: TT slice(params)
+# ============================================================================
+
+class TestTTSlice:
+    def test_single_dim_slice_returns_tt(self):
+        def f(x, _):
+            return x[0] + x[1]
+
+        tt = ChebyshevTT(f, 2, [[-1, 1], [-1, 1]], [6, 6])
+        tt.build(verbose=False)
+        result = tt.slice((0, 0.5))
+        assert isinstance(result, ChebyshevTT)
+        assert result.num_dimensions == 1
+
+    def test_slice_at_node_uses_fast_path(self):
+        """Slicing at a Chebyshev node should give exact result."""
+        def f(x, _):
+            return math.sin(x[0]) * math.cos(x[1])
+
+        n = 6
+        tt = ChebyshevTT(f, 2, [[-1, 1], [-1, 1]], [n, n])
+        tt.build(verbose=False)
+        nodes_x = ChebyshevTT.nodes(2, [[-1, 1], [-1, 1]], [n, n])["nodes_per_dim"][0]
+        # Slice dim 0 at the third node
+        result = tt.slice((0, float(nodes_x[2])))
+        # Compare against tt.eval([nodes_x[2], y]) for various y
+        for y in [-0.5, 0.0, 0.5]:
+            assert result.eval([y]) == pytest.approx(
+                tt.eval([float(nodes_x[2]), y]), abs=1e-10
+            )
+
+    def test_slice_at_interior_value_matches_eval(self):
+        def f(x, _):
+            return math.sin(x[0]) + math.cos(x[1])
+
+        tt = ChebyshevTT(f, 2, [[-1, 1], [-1, 1]], [10, 10])
+        tt.build(verbose=False)
+        result = tt.slice((1, 0.3))
+        # f(x, 0.3) = sin(x) + cos(0.3)
+        for x_test in [-0.5, 0.0, 0.4]:
+            assert result.eval([x_test]) == pytest.approx(
+                math.sin(x_test) + math.cos(0.3), abs=1e-6
+            )
+
+    def test_slice_endpoint_dim_left(self):
+        """Slice dim 0 (no left neighbor)."""
+        def f(x, _):
+            return x[0] * x[1]
+
+        tt = ChebyshevTT(f, 2, [[-1, 1], [-1, 1]], [4, 6])
+        tt.build(verbose=False)
+        result = tt.slice((0, 0.5))
+        # f(0.5, y) = 0.5 * y
+        assert result.eval([0.6]) == pytest.approx(0.3, abs=1e-8)
+
+    def test_slice_endpoint_dim_right(self):
+        """Slice the last dim (no right neighbor)."""
+        def f(x, _):
+            return x[0] * x[1]
+
+        tt = ChebyshevTT(f, 2, [[-1, 1], [-1, 1]], [6, 4])
+        tt.build(verbose=False)
+        result = tt.slice((1, 0.5))
+        # f(x, 0.5) = 0.5 * x
+        assert result.eval([0.3]) == pytest.approx(0.15, abs=1e-8)
+
+    def test_slice_validates_value_within_domain(self):
+        def f(x, _):
+            return x[0]
+
+        tt = ChebyshevTT(f, 1, [[-1, 1]], [4])
+        tt.build(verbose=False)
+        with pytest.raises(ValueError):
+            tt.slice((0, 5.0))  # outside [-1, 1]
+
+    def test_slice_descriptor_preserved(self):
+        def f(x, _):
+            return x[0] + x[1]
+
+        tt = ChebyshevTT(f, 2, [[-1, 1], [-1, 1]], [4, 4])
+        tt.build(verbose=False)
+        tt.set_descriptor("source")
+        result = tt.slice((0, 0.0))
+        assert result.get_descriptor() == "source"

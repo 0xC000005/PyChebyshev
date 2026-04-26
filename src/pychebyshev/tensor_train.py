@@ -1736,6 +1736,87 @@ class ChebyshevTT:
         obj._cached_error_estimate = None
         return obj
 
+    def slice(self, params):
+        """Fix one or more dimensions at given values, returning a lower-dim TT.
+
+        Contracts each targeted TT core at the given value via barycentric
+        interpolation (converting from coefficient space to value space first),
+        then absorbs the resulting matrix into a neighboring core.
+
+        Parameters
+        ----------
+        params : tuple | list[tuple]
+            Either a single tuple ``(dim_idx, value)`` or a list of such
+            tuples. ``value`` must lie within the domain for that dimension.
+
+        Returns
+        -------
+        ChebyshevTT
+            TT over ``(num_dimensions - len(params))`` dims.
+
+        Raises
+        ------
+        RuntimeError
+            If the interpolant has not been built yet.
+        ValueError
+            If a slice value is outside the domain, if slicing all
+            dimensions, or if ``dim_index`` is out of range or duplicated.
+        """
+        self._check_built()
+
+        from pychebyshev._extrude_slice import (
+            _normalize_slicing_params,
+            _make_nodes_for_dim,
+            _slice_tt_core,
+        )
+
+        norm_params = _normalize_slicing_params(params, self.num_dimensions)
+
+        # Validate values within domain before modifying anything
+        for dim_idx, value in norm_params:
+            lo, hi = self.domain[dim_idx]
+            if value < lo or value > hi:
+                raise ValueError(
+                    f"Slice value {value} for dim {dim_idx} is outside "
+                    f"domain [{lo}, {hi}]"
+                )
+
+        new_cores = list(self._coeff_cores)
+        new_domain = list(self.domain)
+        new_n_nodes = list(self.n_nodes)
+        # Process slices in DESCENDING dim order so earlier indices remain valid
+        for dim_idx, value in sorted(norm_params, key=lambda p: -p[0]):
+            lo, hi = new_domain[dim_idx]
+            nodes = _make_nodes_for_dim(lo, hi, new_n_nodes[dim_idx])
+            new_cores = _slice_tt_core(new_cores, dim_idx, value, lo, hi, nodes)
+            new_domain.pop(dim_idx)
+            new_n_nodes.pop(dim_idx)
+
+        if len(new_cores) == 0:
+            raise RuntimeError("internal error: cannot slice all dimensions")
+
+        new_tt_ranks = [c.shape[0] for c in new_cores] + [new_cores[-1].shape[2]]
+
+        obj = self.__class__.__new__(self.__class__)
+        obj.function = None
+        obj.num_dimensions = len(new_n_nodes)
+        obj.domain = new_domain
+        obj.n_nodes = new_n_nodes
+        obj.max_rank = self.max_rank
+        obj.tolerance = self.tolerance
+        obj.max_sweeps = self.max_sweeps
+        obj.max_derivative_order = self.max_derivative_order
+        obj.additional_data = self.additional_data
+        obj.descriptor = self.descriptor
+        obj.method = self.method
+        obj._coeff_cores = new_cores
+        obj._tt_ranks = new_tt_ranks
+        obj._built = True
+        obj._build_time = 0.0
+        obj._total_build_evals = 0
+        obj._cached_error_estimate = None
+        return obj
+
     def eval(self, point: List[float]) -> float:
         """Evaluate at a single point via TT inner product.
 
