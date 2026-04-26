@@ -555,6 +555,69 @@ price = tt_loaded.eval([100, 100, 1.0, 0.25, 0.05])
   than $O(n^d)$, a large `max_rank` (say, 50+) can still be expensive for costly
   functions.
 
+## v0.18 Surface (TT Feature Parity)
+
+After v0.18, `ChebyshevTT` has full surface parity with `ChebyshevApproximation` for non-calculus features.
+
+### Static `nodes()` and classmethod `from_values()`
+
+```python
+# Generate the Chebyshev grid without evaluating any function
+grid = ChebyshevTT.nodes(2, [[-1, 1], [-1, 1]], [10, 10])
+# grid["nodes_per_dim"] is a list of per-dim arrays
+
+# Build directly from a precomputed full tensor (skip TT-Cross)
+tt = ChebyshevTT.from_values(dense, 2, [[-1, 1], [-1, 1]], [10, 10])
+```
+
+The `from_values()` path runs TT-SVD compression on the input dense tensor.
+Useful when function values are computed externally (e.g. on a distributed
+cluster) and you want to skip TT-Cross.
+
+### `extrude()` and `slice()`
+
+```python
+# Add a constant dim:
+extruded = tt.extrude((1, (0.0, 1.0), 5))  # insert at position 1, domain [0,1], 5 nodes
+
+# Fix a dim:
+sliced = tt.slice((0, 0.5))  # fix dim 0 at 0.5
+```
+
+`extrude()` inserts a rank-preserving constant core (Kronecker delta on rank, c_0=1
+in coefficient space). `slice()` contracts the targeted dim's core via barycentric
+weights and absorbs the contracted matrix into a neighbor -- same pattern as v0.17
+TT integrate.
+
+### Algebra (`+`, `-`, `*` scalar)
+
+```python
+result = tt_a + tt_b               # block-diagonal core stacking + TT-SVD rounding
+result = tt_a - tt_b               # same
+result = tt_a * 2.5                # scale leftmost core
+result = -tt                       # negate one core
+```
+
+Result rank is automatically rounded to `max(tt_a.max_rank, tt_b.max_rank)` to
+prevent rank explosion on chained operations. Use `run_completion()` (v0.13) to
+re-round to a different target.
+
+In-place variants (`+=`, `-=`, `*=`, `/=`) work identically and may return new objects.
+
+`tt_a * tt_b` (TT-by-TT product) is **not supported** -- Chebyshev expansion is
+linear in coefficients, but the product of two Chebyshev expansions has higher
+degree and cannot fit on the same grid.
+
+### `to_dense()`
+
+```python
+dense = tt.to_dense()  # shape tuple(n_nodes); the materialized N-D tensor
+```
+
+Inverse of `from_values()`. Useful for inspection or piping through
+`ChebyshevApproximation.from_values(...)` for barycentric conversion.
+Use sparingly: storage is `prod(n_nodes)` floats.
+
 ## References
 
 - Goreinov, S. A., Tyrtyshnikov, E. E. & Zamarashkin, N. L. (1997).
