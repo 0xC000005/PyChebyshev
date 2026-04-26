@@ -459,26 +459,32 @@ class ChebyshevSlider:
         return self.max_derivative_order
 
     def get_num_evaluation_points(self) -> int:
-        """Return the number of points where ``f`` was evaluated during
-        sliding decomposition (across all slides + pivot).
+        """Return the number of points in the evaluation grid (slides only).
+
+        The pivot point's ``f``-evaluation during build is not counted — the
+        pivot is a build-time singleton, not a grid point. Equals
+        ``sum(prod(n_nodes[d] for d in group) for group in partition)``.
 
         Returns
         -------
         int
-            Total number of function evaluations consumed during build.
+            Total number of slide grid points (excluding the pivot evaluation).
         """
         return int(self.total_build_evals)
 
     def get_evaluation_points(self) -> np.ndarray:
-        """Return all evaluation points consumed by the slider build:
-        each slide's grid lifted back to the global d-D coordinate space
-        (off-group dims set to the pivot value).
+        """Return the slide evaluation grid lifted into d-D coordinate space.
+
+        Each slide's local grid is returned with off-group dims set to the
+        pivot value. The pivot row itself is not included (the pivot is a
+        build-time singleton, not a grid point). Returns shape
+        ``(get_num_evaluation_points(), num_dimensions)``.
 
         Returns
         -------
         np.ndarray
             Shape ``(N, num_dimensions)`` where ``N`` equals
-            :meth:`get_num_evaluation_points` (``total_build_evals``).
+            :meth:`get_num_evaluation_points`.
         """
         pivot = np.array(self.pivot_point, dtype=np.float64)
         rows = []

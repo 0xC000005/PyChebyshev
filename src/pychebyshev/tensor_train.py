@@ -1865,10 +1865,11 @@ class ChebyshevTT:
         """Return the number of points in the underlying Cartesian evaluation
         grid (``prod(n_nodes)``).
 
-        TT-Cross samples a sparse subset of this grid via maxvol pivoting; the
-        actual number of function calls consumed during construction is
-        :attr:`total_build_evals`. This method returns the *full* grid size,
-        matching :meth:`get_evaluation_points` and MoCaX semantics.
+        Note: TT-Cross actually queries a sparse subset of size
+        ``O(d·n·r²)``; this method returns the full Cartesian grid size to
+        match :meth:`get_evaluation_points` and MoCaX semantics. The actual
+        TT-Cross f-evaluation count is exposed separately as
+        ``self.total_build_evals``.
 
         Returns
         -------

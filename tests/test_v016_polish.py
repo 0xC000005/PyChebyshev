@@ -47,6 +47,46 @@ class TestGetMaxDerivativeOrder:
     def test_tt_returns_value(self, tt_sin_3d):
         assert tt_sin_3d.get_max_derivative_order() == 2
 
+    def test_tt_returns_custom(self):
+        def f(x, _):
+            return math.sin(x[0]) + math.cos(x[1])
+
+        tt = ChebyshevTT(
+            f, 2, [[-1, 1], [-1, 1]], [8, 8], max_derivative_order=4,
+        )
+        tt.build(verbose=False)
+        assert tt.get_max_derivative_order() == 4
+
+    def test_tt_max_derivative_order_survives_pickle(self, tmp_path):
+        def f(x, _):
+            return math.sin(x[0])
+
+        tt = ChebyshevTT(
+            f, 1, [[-1, 1]], [8], max_derivative_order=3,
+        )
+        tt.build(verbose=False)
+        path = tmp_path / "tt.pkl"
+        tt.save(str(path))
+        loaded = ChebyshevTT.load(str(path))
+        assert loaded.get_max_derivative_order() == 3
+
+    def test_tt_setstate_backfill_for_legacy_pickle(self):
+        """Pre-v0.16 pickles lack max_derivative_order — verify __setstate__ backfills it."""
+        def f(x, _):
+            return math.sin(x[0])
+
+        tt = ChebyshevTT(f, 1, [[-1, 1]], [8])
+        tt.build(verbose=False)
+        # Strip the v0.16 attribute to simulate a pre-v0.16 pickle
+        state = tt.__getstate__()
+        if "max_derivative_order" in state:
+            del state["max_derivative_order"]
+
+        # Reconstruct and verify backfill
+        restored = ChebyshevTT.__new__(ChebyshevTT)
+        restored.__setstate__(state)
+        assert restored.get_max_derivative_order() == 2  # default backfill
+
 
 # ============================================================================
 # A4: get_error_threshold()
