@@ -1143,6 +1143,17 @@
 </li>
       
         <li class="md-nav__item">
+  <a href="#pychebyshev.tensor_train.ChebyshevTT.integrate" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        integrate
+      
+    </span>
+  </a>
+  
+</li>
+      
+        <li class="md-nav__item">
   <a href="#pychebyshev.tensor_train.ChebyshevTT.eval" class="md-nav__link">
     <span class="md-ellipsis">
       
@@ -2240,6 +2251,17 @@
     <span class="md-ellipsis">
       
         inner_product
+      
+    </span>
+  </a>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#pychebyshev.tensor_train.ChebyshevTT.integrate" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        integrate
       
     </span>
   </a>
@@ -4004,6 +4026,141 @@ of <code>self</code> and <code>other</code>.</p>
               <div class="doc-md-description">
                 <p>If <code>other</code> is not a ChebyshevTT, or has a different <code>domain</code>
 or <code>n_nodes</code>.</p>
+              </div>
+            </td>
+          </tr>
+      </tbody>
+    </table>
+
+
+    </div>
+
+</div>
+
+<div class="doc doc-object doc-function">
+
+
+<h2 id="pychebyshev.tensor_train.ChebyshevTT.integrate" class="doc doc-heading">
+            <code class="highlight language-python"><span class="n">integrate</span><span class="p">(</span><span class="n">dims</span><span class="o">=</span><span class="kc">None</span><span class="p">,</span> <span class="n">bounds</span><span class="o">=</span><span class="kc">None</span><span class="p">)</span></code>
+
+<a href="#pychebyshev.tensor_train.ChebyshevTT.integrate" class="headerlink" title="Permanent link">&para;</a></h2>
+
+
+    <div class="doc doc-contents ">
+
+        <p>Integrate the TT-approximated function over selected dimensions.</p>
+
+
+<p><span class="doc-section-title">Parameters:</span></p>
+    <table>
+      <thead>
+        <tr>
+          <th>Name</th>
+          <th>Type</th>
+          <th>Description</th>
+          <th>Default</th>
+        </tr>
+      </thead>
+      <tbody>
+          <tr class="doc-section-item">
+            <td>
+                <code>dims</code>
+            </td>
+            <td>
+                  <code>list of int, int, or None</code>
+            </td>
+            <td>
+              <div class="doc-md-description">
+                <p>Dimensions to integrate over. <code>None</code> (default) integrates over
+all dimensions (full integration → scalar).</p>
+              </div>
+            </td>
+            <td>
+                  <code>None</code>
+            </td>
+          </tr>
+          <tr class="doc-section-item">
+            <td>
+                <code>bounds</code>
+            </td>
+            <td>
+                  <code>list of (lo, hi), (lo, hi), or None</code>
+            </td>
+            <td>
+              <div class="doc-md-description">
+                <p>Per-dim integration bounds. Length must match <code>dims</code>. <code>None</code>
+means each dim's full domain. Individual <code>None</code> entries also
+mean full domain for that dim.</p>
+              </div>
+            </td>
+            <td>
+                  <code>None</code>
+            </td>
+          </tr>
+      </tbody>
+    </table>
+
+
+    <p><span class="doc-section-title">Returns:</span></p>
+    <table>
+      <thead>
+        <tr>
+          <th>Type</th>
+          <th>Description</th>
+        </tr>
+      </thead>
+      <tbody>
+          <tr class="doc-section-item">
+            <td>
+                  <code><span title="float">float</span></code>
+            </td>
+            <td>
+              <div class="doc-md-description">
+                <p>Scalar result when all dimensions are integrated.</p>
+              </div>
+            </td>
+          </tr>
+          <tr class="doc-section-item">
+            <td>
+                  <code><a class="autorefs autorefs-internal" title="pychebyshev.tensor_train.ChebyshevTT" href="#pychebyshev.tensor_train.ChebyshevTT">ChebyshevTT</a></code>
+            </td>
+            <td>
+              <div class="doc-md-description">
+                <p>TT over surviving dimensions when only some dims are integrated.</p>
+              </div>
+            </td>
+          </tr>
+      </tbody>
+    </table>
+
+
+<p><span class="doc-section-title">Raises:</span></p>
+    <table>
+      <thead>
+        <tr>
+          <th>Type</th>
+          <th>Description</th>
+        </tr>
+      </thead>
+      <tbody>
+          <tr class="doc-section-item">
+            <td>
+                  <code><span title="RuntimeError">RuntimeError</span></code>
+            </td>
+            <td>
+              <div class="doc-md-description">
+                <p>If <code>build()</code> has not been called.</p>
+              </div>
+            </td>
+          </tr>
+          <tr class="doc-section-item">
+            <td>
+                  <code><span title="ValueError">ValueError</span></code>
+            </td>
+            <td>
+              <div class="doc-md-description">
+                <p>If <code>dims</code> contains out-of-range indices, or <code>bounds</code> are
+invalid (outside domain, lo &gt; hi, or length mismatch).</p>
               </div>
             </td>
           </tr>

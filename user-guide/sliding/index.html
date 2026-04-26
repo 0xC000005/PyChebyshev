@@ -952,6 +952,17 @@
   
 </li>
       
+        <li class="md-nav__item">
+  <a href="#pychebyshev.slider.ChebyshevSlider.integrate" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        integrate
+      
+    </span>
+  </a>
+  
+</li>
+      
     </ul>
   
 </nav>
@@ -1774,6 +1785,17 @@
     <span class="md-ellipsis">
       
         slice
+      
+    </span>
+  </a>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#pychebyshev.slider.ChebyshevSlider.integrate" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        integrate
       
     </span>
   </a>
@@ -3268,6 +3290,141 @@ The result has <code>function=None</code>.</p>
               <div class="doc-md-description">
                 <p>If a slice value is outside the domain, if slicing all
 dimensions, or if <code>dim_index</code> is out of range or duplicated.</p>
+              </div>
+            </td>
+          </tr>
+      </tbody>
+    </table>
+
+
+    </div>
+
+</div>
+
+<div class="doc doc-object doc-function">
+
+
+<h2 id="pychebyshev.slider.ChebyshevSlider.integrate" class="doc doc-heading">
+            <code class="highlight language-python"><span class="n">integrate</span><span class="p">(</span><span class="n">dims</span><span class="o">=</span><span class="kc">None</span><span class="p">,</span> <span class="n">bounds</span><span class="o">=</span><span class="kc">None</span><span class="p">)</span></code>
+
+<a href="#pychebyshev.slider.ChebyshevSlider.integrate" class="headerlink" title="Permanent link">&para;</a></h2>
+
+
+    <div class="doc doc-contents ">
+
+        <p>Integrate the slider approximation over one or more dimensions.</p>
+<p>Uses the closed-form decomposition of the sliding sum
+<code>f(x) ≈ pv + Σ_i [s_i(x_{G_i}) - pv]</code>.  Each slide's integral
+is computed via :meth:<code>ChebyshevApproximation.integrate</code>.</p>
+<p>Full integration (<code>dims=None</code>) collapses every dimension and
+returns a scalar.  Partial integration returns a new
+:class:<code>ChebyshevSlider</code> over the surviving dimensions, with an
+adjusted pivot value that absorbs the contributions of every
+slide whose group is fully integrated.</p>
+
+
+<p><span class="doc-section-title">Parameters:</span></p>
+    <table>
+      <thead>
+        <tr>
+          <th>Name</th>
+          <th>Type</th>
+          <th>Description</th>
+          <th>Default</th>
+        </tr>
+      </thead>
+      <tbody>
+          <tr class="doc-section-item">
+            <td>
+                <code>dims</code>
+            </td>
+            <td>
+                  <code>int, list of int, or None</code>
+            </td>
+            <td>
+              <div class="doc-md-description">
+                <p>Dimensions to integrate out.  <code>None</code> integrates every
+dimension and returns a scalar.</p>
+              </div>
+            </td>
+            <td>
+                  <code>None</code>
+            </td>
+          </tr>
+          <tr class="doc-section-item">
+            <td>
+                <code>bounds</code>
+            </td>
+            <td>
+                  <code>tuple, list of tuple/None, or None</code>
+            </td>
+            <td>
+              <div class="doc-md-description">
+                <p>Sub-interval bounds for integration.  <code>None</code> (default)
+integrates over the full domain of each integrated dimension.
+A list of tuples/<code>None</code> provides per-dim bounds with
+positional correspondence to <em>dims</em> (after sorting).</p>
+              </div>
+            </td>
+            <td>
+                  <code>None</code>
+            </td>
+          </tr>
+      </tbody>
+    </table>
+
+
+    <p><span class="doc-section-title">Returns:</span></p>
+    <table>
+      <thead>
+        <tr>
+          <th>Type</th>
+          <th>Description</th>
+        </tr>
+      </thead>
+      <tbody>
+          <tr class="doc-section-item">
+            <td>
+                  <code><span title="float">float</span> or <a class="autorefs autorefs-internal" title="pychebyshev.slider.ChebyshevSlider" href="#pychebyshev.slider.ChebyshevSlider">ChebyshevSlider</a></code>
+            </td>
+            <td>
+              <div class="doc-md-description">
+                <p>Scalar if every dimension is integrated; otherwise a
+lower-dimensional slider (already built, <code>function=None</code>).</p>
+              </div>
+            </td>
+          </tr>
+      </tbody>
+    </table>
+
+
+<p><span class="doc-section-title">Raises:</span></p>
+    <table>
+      <thead>
+        <tr>
+          <th>Type</th>
+          <th>Description</th>
+        </tr>
+      </thead>
+      <tbody>
+          <tr class="doc-section-item">
+            <td>
+                  <code><span title="RuntimeError">RuntimeError</span></code>
+            </td>
+            <td>
+              <div class="doc-md-description">
+                <p>If <code>build()</code> has not been called.</p>
+              </div>
+            </td>
+          </tr>
+          <tr class="doc-section-item">
+            <td>
+                  <code><span title="ValueError">ValueError</span></code>
+            </td>
+            <td>
+              <div class="doc-md-description">
+                <p>If any dimension index is out of range/duplicated, or if
+bounds are outside the domain.</p>
               </div>
             </td>
           </tr>
