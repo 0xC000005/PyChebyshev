@@ -449,3 +449,76 @@ class TestSliderPartialIntegrate:
         slider.set_descriptor("source")
         result = slider.integrate(dims=[0])
         assert result.get_descriptor() == "source"
+
+
+# ============================================================================
+# T8: Cross-class consistency
+# ============================================================================
+
+class TestCrossClassIntegrateConsistency:
+    def test_approx_vs_tt_separable(self):
+        """Same separable function fit by Approximation and TT integrate equally."""
+        def f(x, _):
+            return math.sin(x[0]) * math.cos(x[1])
+
+        domain = [[-1, 1]] * 2
+        cheb = ChebyshevApproximation(f, 2, domain, [12, 12])
+        cheb.build(verbose=False)
+        tt = ChebyshevTT(f, 2, domain, [12, 12])
+        tt.build(verbose=False)
+        a = cheb.integrate()
+        b = tt.integrate()
+        assert a == pytest.approx(b, abs=1e-8)
+
+    def test_approx_vs_slider_additive(self):
+        """Additive function: Approximation and Slider integrate equally."""
+        def f(x, _):
+            return math.sin(x[0]) + math.cos(x[1])
+
+        domain = [[-1, 1]] * 2
+        cheb = ChebyshevApproximation(f, 2, domain, [10, 10])
+        cheb.build(verbose=False)
+        slider = ChebyshevSlider(
+            f, 2, domain, [10, 10], partition=[[0], [1]], pivot_point=[0.0, 0.0],
+        )
+        slider.build(verbose=False)
+        a = cheb.integrate()
+        b = slider.integrate()
+        assert a == pytest.approx(b, abs=1e-6)
+
+    def test_unit_volume_normalization_all_classes(self):
+        """Constant 1 integrates to vol(D) on all four classes."""
+        def f(x, _):
+            return 1.0
+
+        domain = [[0, 2], [0, 3]]
+        expected = 2.0 * 3.0  # = 6.0
+
+        cheb = ChebyshevApproximation(f, 2, domain, [4, 4])
+        cheb.build(verbose=False)
+        assert cheb.integrate() == pytest.approx(expected, abs=1e-10)
+
+        spl = ChebyshevSpline(f, 2, domain, [4, 4])
+        spl.build(verbose=False)
+        assert spl.integrate() == pytest.approx(expected, abs=1e-10)
+
+        slider = ChebyshevSlider(
+            f, 2, domain, [4, 4], partition=[[0], [1]], pivot_point=[1.0, 1.5],
+        )
+        slider.build(verbose=False)
+        assert slider.integrate() == pytest.approx(expected, abs=1e-10)
+
+        tt = ChebyshevTT(f, 2, domain, [4, 4])
+        tt.build(verbose=False)
+        assert tt.integrate() == pytest.approx(expected, abs=1e-10)
+
+    def test_partial_integrate_then_eval(self):
+        """Partial integrate result is evaluable."""
+        def f(x, _):
+            return x[0] * x[1] + x[0]
+
+        tt = ChebyshevTT(f, 2, [[-1, 1]] * 2, [6, 6])
+        tt.build(verbose=False)
+        # ∫_{-1}^{1} (x*y + x) dx = 0 + 0 = 0 → result is 0 for all y
+        result_tt = tt.integrate(dims=[0])
+        assert result_tt.eval([0.5]) == pytest.approx(0.0, abs=1e-10)
