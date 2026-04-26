@@ -222,3 +222,91 @@ class TestTTPartialIntegrate:
         tt.build(verbose=False)
         result = tt.integrate(dims=[0])
         assert result.additional_data == sentinel
+
+
+# ============================================================================
+# T5: TT bounds + validation
+# ============================================================================
+
+class TestTTIntegrateBoundsAndValidation:
+    def test_with_sub_interval_bounds(self):
+        """∫_0^1 x dx = 0.5 over [-1, 1]."""
+        def f(x, _):
+            return x[0]
+
+        tt = ChebyshevTT(f, 1, [[-1, 1]], [4])
+        tt.build(verbose=False)
+        result = tt.integrate(dims=[0], bounds=[(0.0, 1.0)])
+        assert result == pytest.approx(0.5, abs=1e-10)
+
+    def test_validation_dims_oob(self):
+        def f(x, _):
+            return x[0]
+
+        tt = ChebyshevTT(f, 2, [[-1, 1]] * 2, [4, 4])
+        tt.build(verbose=False)
+        with pytest.raises(ValueError, match="out-of-range"):
+            tt.integrate(dims=[5])
+
+    def test_validation_bounds_outside_domain(self):
+        def f(x, _):
+            return x[0]
+
+        tt = ChebyshevTT(f, 1, [[-1, 1]], [4])
+        tt.build(verbose=False)
+        with pytest.raises(ValueError):
+            tt.integrate(dims=[0], bounds=[(-2.0, 2.0)])
+
+    def test_validation_bounds_length_mismatch(self):
+        def f(x, _):
+            return x[0]
+
+        tt = ChebyshevTT(f, 2, [[-1, 1]] * 2, [4, 4])
+        tt.build(verbose=False)
+        with pytest.raises(ValueError):
+            tt.integrate(dims=[0], bounds=[(0, 1), (0, 1)])  # 2 bounds, 1 dim
+
+    def test_dims_order_invariance(self):
+        """integrate(dims=[0, 1]) == integrate(dims=[1, 0])."""
+        def f(x, _):
+            return math.sin(x[0]) + math.cos(x[1])
+
+        tt = ChebyshevTT(f, 2, [[-1, 1]] * 2, [10, 10])
+        tt.build(verbose=False)
+        a = tt.integrate(dims=[0, 1])
+        # Re-build to get an independent TT
+        tt2 = ChebyshevTT(f, 2, [[-1, 1]] * 2, [10, 10])
+        tt2.build(verbose=False)
+        b = tt2.integrate(dims=[1, 0])
+        assert a == pytest.approx(b, abs=1e-10)
+
+    def test_works_after_method_svd(self):
+        def f(x, _):
+            return x[0] * x[1]
+
+        tt = ChebyshevTT(f, 2, [[-1, 1]] * 2, [6, 6])
+        tt.build(verbose=False, method="svd")
+        result = tt.integrate()
+        assert result == pytest.approx(0.0, abs=1e-10)
+
+    def test_works_after_method_als(self):
+        def f(x, _):
+            return x[0] * x[1] + math.sin(x[0])
+
+        tt = ChebyshevTT(f, 2, [[-1, 1]] * 2, [8, 8])
+        tt.build(verbose=False, method="als")
+        result = tt.integrate()
+        # ∫ x*y dx dy = 0; ∫ sin(x) dx dy = 2 * 0 = 0 over [-1,1]^2
+        assert result == pytest.approx(0.0, abs=1e-8)
+
+    def test_serialization_round_trip(self, tmp_path):
+        def f(x, _):
+            return x[0] * x[1]
+
+        tt = ChebyshevTT(f, 2, [[-1, 1]] * 2, [6, 6])
+        tt.build(verbose=False)
+        result = tt.integrate(dims=[0])
+        path = tmp_path / "result.pkl"
+        result.save(str(path))
+        loaded = ChebyshevTT.load(str(path))
+        assert loaded.eval([0.5]) == pytest.approx(result.eval([0.5]), abs=1e-12)
