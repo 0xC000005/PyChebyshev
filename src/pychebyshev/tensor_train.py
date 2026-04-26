@@ -633,6 +633,61 @@ def _tt_svd(
     return cores, total_evals
 
 
+def _tt_svd_from_tensor(
+    tensor: np.ndarray,
+    max_rank: int,
+    tol: float,
+) -> List[np.ndarray]:
+    """TT-SVD decomposition of a precomputed dense tensor.
+
+    Same sequential SVD algorithm as :func:`_tt_svd` but accepts a
+    pre-built tensor directly instead of evaluating a function on a grid.
+
+    Parameters
+    ----------
+    tensor : np.ndarray
+        Full N-D tensor of function values, shape ``(n_0, n_1, ..., n_{d-1})``.
+    max_rank : int
+        Maximum TT rank.
+    tol : float
+        Singular value truncation tolerance relative to ``sigma_max``.
+
+    Returns
+    -------
+    cores : list of ndarray
+        TT cores, each of shape ``(r_{k-1}, n_k, r_k)``. These are
+        **value** cores (function values at Chebyshev nodes along axis 1).
+    """
+    n = list(tensor.shape)
+    d = len(n)
+
+    cores = []
+    C = tensor.astype(np.float64)
+    r_prev = 1
+
+    for k in range(d - 1):
+        C = C.reshape(r_prev * n[k], -1)
+        U, S, Vt = np.linalg.svd(C, full_matrices=False)
+
+        # Determine rank: cap at max_rank, drop near-zero singular values
+        rank = min(max_rank, len(S))
+        if S[0] > 0:
+            effective = int(np.sum(S > tol * S[0]))
+            rank = max(1, min(rank, effective))
+
+        U = U[:, :rank]
+        S = S[:rank]
+        Vt = Vt[:rank, :]
+
+        cores.append(U.reshape(r_prev, n[k], rank))
+        C = np.diag(S) @ Vt
+        r_prev = rank
+
+    # Last core
+    cores.append(C.reshape(r_prev, n[d - 1], 1))
+    return cores
+
+
 # ======================================================================
 # Orthogonalization primitives
 # ======================================================================
@@ -2067,6 +2122,102 @@ class ChebyshevTT:
         """
         import copy
         return copy.deepcopy(self)
+
+    @classmethod
+    def from_values(
+        cls,
+        tensor_values,
+        num_dimensions: int,
+        domain,
+        n_nodes,
+        max_rank: int | None = None,
+        tolerance: float = 1e-6,
+        max_derivative_order: int = 2,
+        additional_data=None,
+        descriptor: str = "",
+    ) -> "ChebyshevTT":
+        """Build a TT interpolant directly from a precomputed dense tensor.
+
+        Skips TT-Cross — runs TT-SVD compression on the supplied dense
+        tensor of function values at the Chebyshev grid.
+
+        Parameters
+        ----------
+        tensor_values : array-like
+            Shape ``tuple(n_nodes)``. Values at the Chebyshev grid returned
+            by :meth:`nodes`.
+        num_dimensions : int
+        domain : list[tuple[float, float]] | Domain
+        n_nodes : list[int] | Ns
+        max_rank : int or None
+            Maximum TT rank.  ``None`` defaults to ``max(n_nodes)``.
+        tolerance : float
+            TT-SVD singular-value truncation tolerance.
+        max_derivative_order : int
+        additional_data : object or None
+        descriptor : str
+
+        Returns
+        -------
+        ChebyshevTT
+            Function-less interpolant (``function=None``).  Equivalent to a
+            :meth:`build` (``method='svd'``) round-trip up to TT-SVD
+            precision.
+
+        Raises
+        ------
+        ValueError
+            If ``tensor_values`` has the wrong shape or contains non-finite
+            values.
+        """
+        from pychebyshev import Domain, Ns
+
+        if isinstance(domain, Domain):
+            domain = list(domain.bounds)
+        if isinstance(n_nodes, Ns):
+            n_nodes = list(n_nodes.counts)
+
+        arr = np.asarray(tensor_values, dtype=np.float64)
+        expected_shape = tuple(n_nodes)
+        if arr.shape != expected_shape:
+            raise ValueError(
+                f"tensor_values shape {arr.shape} does not match expected "
+                f"{expected_shape}"
+            )
+        if not np.isfinite(arr).all():
+            raise ValueError(
+                "tensor_values contains NaN or Inf — all values must be finite"
+            )
+
+        if max_rank is None:
+            max_rank = max(n_nodes)
+
+        # TT-SVD on the value-space tensor
+        value_cores = _tt_svd_from_tensor(arr, max_rank=max_rank, tol=tolerance)
+        # Convert each value-core to coefficient-core (DCT-II)
+        coeff_cores = [_value_core_to_coeff_core(c) for c in value_cores]
+        tt_ranks = [c.shape[0] for c in coeff_cores] + [coeff_cores[-1].shape[2]]
+
+        # Factory bypass — skip __init__ / build()
+        obj = cls.__new__(cls)
+        obj.function = None
+        obj.num_dimensions = num_dimensions
+        obj.domain = list(domain)
+        obj.n_nodes = list(n_nodes)
+        obj.max_rank = max_rank
+        obj.tolerance = tolerance
+        obj.max_sweeps = 10
+        obj.max_derivative_order = max_derivative_order
+        obj.additional_data = additional_data
+        obj.descriptor = descriptor
+        obj.method = "svd"
+        obj._coeff_cores = coeff_cores
+        obj._tt_ranks = tt_ranks
+        obj._built = True
+        obj._build_time = 0.0
+        obj._total_build_evals = 0
+        obj._cached_error_estimate = None
+        return obj
 
     @staticmethod
     def nodes(num_dimensions, domain, n_nodes):

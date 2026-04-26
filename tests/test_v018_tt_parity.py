@@ -48,3 +48,80 @@ class TestTTNodes:
             np.testing.assert_array_equal(
                 tt_result["nodes_per_dim"][d], cheb_result["nodes_per_dim"][d]
             )
+
+
+# ============================================================================
+# T2: TT from_values() classmethod
+# ============================================================================
+
+class TestTTFromValues:
+    def test_round_trip_via_explicit_tensor(self):
+        n = 8
+        nodes_x = ChebyshevTT.nodes(2, [[-1, 1], [-1, 1]], [n, n])["nodes_per_dim"][0]
+        nodes_y = nodes_x.copy()
+        X, Y = np.meshgrid(nodes_x, nodes_y, indexing="ij")
+        dense = np.sin(X) * np.cos(Y)
+
+        tt_from = ChebyshevTT.from_values(dense, 2, [[-1, 1], [-1, 1]], [n, n])
+        assert isinstance(tt_from, ChebyshevTT)
+        assert tt_from.num_dimensions == 2
+        # Eval at a node should match dense entry
+        assert tt_from.eval([float(nodes_x[2]), float(nodes_y[3])]) == pytest.approx(
+            dense[2, 3], abs=1e-10
+        )
+
+    def test_constant_function_recovers_to_machine_precision(self):
+        dense = np.full((5, 5), 7.0)
+        tt = ChebyshevTT.from_values(dense, 2, [[0, 1], [0, 1]], [5, 5])
+        assert tt.eval([0.3, 0.4]) == pytest.approx(7.0, abs=1e-10)
+
+    def test_eval_after_from_values(self):
+        # Build a known TT via dense tensor
+        n = 8
+        nodes_x = ChebyshevTT.nodes(2, [[-1, 1], [-1, 1]], [n, n])["nodes_per_dim"][0]
+        nodes_y = nodes_x.copy()
+        X, Y = np.meshgrid(nodes_x, nodes_y, indexing="ij")
+        dense = np.sin(X) + np.cos(Y)
+
+        tt = ChebyshevTT.from_values(dense, 2, [[-1, 1], [-1, 1]], [n, n])
+        # Check eval at a node matches the dense tensor entry
+        assert tt.eval([float(nodes_x[2]), float(nodes_y[3])]) == pytest.approx(
+            dense[2, 3], abs=1e-10
+        )
+
+    def test_validates_tensor_shape(self):
+        bad = np.zeros((4, 5))
+        with pytest.raises(ValueError, match="shape"):
+            ChebyshevTT.from_values(bad, 2, [[-1, 1], [-1, 1]], [5, 5])
+
+    def test_validates_nan_inf(self):
+        bad = np.zeros((5, 5))
+        bad[0, 0] = float("nan")
+        with pytest.raises(ValueError, match="NaN|Inf|finite"):
+            ChebyshevTT.from_values(bad, 2, [[-1, 1], [-1, 1]], [5, 5])
+
+    def test_max_rank_caps_rank(self):
+        rng = np.random.default_rng(42)
+        dense = rng.standard_normal((6, 6, 6))
+        tt = ChebyshevTT.from_values(
+            dense, 3, [[-1, 1]] * 3, [6, 6, 6], max_rank=3
+        )
+        assert all(r <= 3 for r in tt.tt_ranks)
+
+    def test_descriptor_default_empty(self):
+        dense = np.zeros((4, 4))
+        tt = ChebyshevTT.from_values(dense, 2, [[-1, 1], [-1, 1]], [4, 4])
+        assert tt.get_descriptor() == ""
+
+    def test_additional_data_kwarg_threaded(self):
+        sentinel = {"x": 1}
+        dense = np.zeros((4, 4))
+        tt = ChebyshevTT.from_values(
+            dense, 2, [[-1, 1], [-1, 1]], [4, 4], additional_data=sentinel
+        )
+        assert tt.additional_data == sentinel
+
+    def test_function_is_none_after_from_values(self):
+        dense = np.zeros((4, 4))
+        tt = ChebyshevTT.from_values(dense, 2, [[-1, 1], [-1, 1]], [4, 4])
+        assert tt.function is None
