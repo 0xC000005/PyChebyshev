@@ -1577,6 +1577,39 @@
   
 </li>
       
+        <li class="md-nav__item">
+  <a href="#pychebyshev.tensor_train.ChebyshevTT.plot_1d" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        plot_1d
+      
+    </span>
+  </a>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#pychebyshev.tensor_train.ChebyshevTT.plot_2d_surface" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        plot_2d_surface
+      
+    </span>
+  </a>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#pychebyshev.tensor_train.ChebyshevTT.plot_2d_contour" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        plot_2d_contour
+      
+    </span>
+  </a>
+  
+</li>
+      
     </ul>
   
 </nav>
@@ -1825,6 +1858,34 @@
     
   
     Ergonomics
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../build-diagnostics/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Build & Diagnostics
   
 
     
@@ -2912,6 +2973,39 @@
     <span class="md-ellipsis">
       
         __itruediv__
+      
+    </span>
+  </a>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#pychebyshev.tensor_train.ChebyshevTT.plot_1d" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        plot_1d
+      
+    </span>
+  </a>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#pychebyshev.tensor_train.ChebyshevTT.plot_2d_surface" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        plot_2d_surface
+      
+    </span>
+  </a>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#pychebyshev.tensor_train.ChebyshevTT.plot_2d_contour" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        plot_2d_contour
       
     </span>
   </a>
@@ -4060,11 +4154,13 @@ Default is 10.</p>
                 <code>verbose</code>
             </td>
             <td>
-                  <code><span title="bool">bool</span></code>
+                  <code><span title="bool">bool</span> or <span title="int">int</span></code>
             </td>
             <td>
               <div class="doc-md-description">
-                <p>If True, print build progress. Default is True.</p>
+                <p>If True or 1, print build progress. If 2, also show a tqdm
+progress bar on the sweep loop (requires <code>pychebyshev[viz]</code>).
+Default is True.</p>
               </div>
             </td>
             <td>
@@ -6384,6 +6480,147 @@ using <code>self.tolerance</code> as the relative singular-value cutoff.</p>
     <div class="doc doc-contents ">
 
         <p>In-place scalar division: <code>tt /= scalar</code> (returns new object).</p>
+
+
+    </div>
+
+</div>
+
+<div class="doc doc-object doc-function">
+
+
+<h2 id="pychebyshev.tensor_train.ChebyshevTT.plot_1d" class="doc doc-heading">
+            <code class="highlight language-python"><span class="n">plot_1d</span><span class="p">(</span><span class="n">ax</span><span class="o">=</span><span class="kc">None</span><span class="p">,</span> <span class="n">n_points</span><span class="o">=</span><span class="mi">200</span><span class="p">,</span> <span class="n">fixed</span><span class="o">=</span><span class="kc">None</span><span class="p">)</span></code>
+
+<a href="#pychebyshev.tensor_train.ChebyshevTT.plot_1d" class="headerlink" title="Permanent link">&para;</a></h2>
+
+
+    <div class="doc doc-contents ">
+
+        <p>Plot the 1-D slice of this interpolant.</p>
+<p>Requires the optional <code>pychebyshev[viz]</code> dependency group.</p>
+
+
+<p><span class="doc-section-title">Parameters:</span></p>
+    <table>
+      <thead>
+        <tr>
+          <th>Name</th>
+          <th>Type</th>
+          <th>Description</th>
+          <th>Default</th>
+        </tr>
+      </thead>
+      <tbody>
+          <tr class="doc-section-item">
+            <td>
+                <code>ax</code>
+            </td>
+            <td>
+                  <code><span title="matplotlib.axes.Axes">Axes</span> | None</code>
+            </td>
+            <td>
+              <div class="doc-md-description">
+                <p>Pre-existing axes (creates a new figure if None).</p>
+              </div>
+            </td>
+            <td>
+                  <code>None</code>
+            </td>
+          </tr>
+          <tr class="doc-section-item">
+            <td>
+                <code>n_points</code>
+            </td>
+            <td>
+                  <code><span title="int">int</span></code>
+            </td>
+            <td>
+              <div class="doc-md-description">
+                <p>Number of sample points along the free dim.</p>
+              </div>
+            </td>
+            <td>
+                  <code>200</code>
+            </td>
+          </tr>
+          <tr class="doc-section-item">
+            <td>
+                <code>fixed</code>
+            </td>
+            <td>
+                  <code><span title="dict">dict</span>[<span title="int">int</span>, <span title="float">float</span>] | None</code>
+            </td>
+            <td>
+              <div class="doc-md-description">
+                <p>Map of dim → value to constrain other dims, leaving exactly one free.</p>
+              </div>
+            </td>
+            <td>
+                  <code>None</code>
+            </td>
+          </tr>
+      </tbody>
+    </table>
+
+
+    <p><span class="doc-section-title">Returns:</span></p>
+    <table>
+      <thead>
+        <tr>
+          <th>Type</th>
+          <th>Description</th>
+        </tr>
+      </thead>
+      <tbody>
+          <tr class="doc-section-item">
+            <td>
+                  <code><span title="matplotlib.axes.Axes">Axes</span></code>
+            </td>
+            <td>
+              <div class="doc-md-description">
+                
+              </div>
+            </td>
+          </tr>
+      </tbody>
+    </table>
+
+
+    </div>
+
+</div>
+
+<div class="doc doc-object doc-function">
+
+
+<h2 id="pychebyshev.tensor_train.ChebyshevTT.plot_2d_surface" class="doc doc-heading">
+            <code class="highlight language-python"><span class="n">plot_2d_surface</span><span class="p">(</span><span class="n">ax</span><span class="o">=</span><span class="kc">None</span><span class="p">,</span> <span class="n">n_points</span><span class="o">=</span><span class="mi">50</span><span class="p">,</span> <span class="n">fixed</span><span class="o">=</span><span class="kc">None</span><span class="p">)</span></code>
+
+<a href="#pychebyshev.tensor_train.ChebyshevTT.plot_2d_surface" class="headerlink" title="Permanent link">&para;</a></h2>
+
+
+    <div class="doc doc-contents ">
+
+        <p>Plot a 3-D surface for the 2-D slice. Requires matplotlib.</p>
+
+
+    </div>
+
+</div>
+
+<div class="doc doc-object doc-function">
+
+
+<h2 id="pychebyshev.tensor_train.ChebyshevTT.plot_2d_contour" class="doc doc-heading">
+            <code class="highlight language-python"><span class="n">plot_2d_contour</span><span class="p">(</span><span class="n">ax</span><span class="o">=</span><span class="kc">None</span><span class="p">,</span> <span class="n">n_points</span><span class="o">=</span><span class="mi">50</span><span class="p">,</span> <span class="n">n_levels</span><span class="o">=</span><span class="mi">20</span><span class="p">,</span> <span class="n">fixed</span><span class="o">=</span><span class="kc">None</span><span class="p">)</span></code>
+
+<a href="#pychebyshev.tensor_train.ChebyshevTT.plot_2d_contour" class="headerlink" title="Permanent link">&para;</a></h2>
+
+
+    <div class="doc doc-contents ">
+
+        <p>Plot a filled-contour 2-D slice. Requires matplotlib.</p>
 
 
     </div>
