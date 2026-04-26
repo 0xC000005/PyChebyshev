@@ -367,3 +367,86 @@ class TestPlot2DContour:
         cheb.build(verbose=False)
         ax = cheb.plot_2d_contour(n_points=15, n_levels=5)
         assert ax is not None
+
+
+# ============================================================================
+# T8: Cross-feature tests
+# ============================================================================
+
+def _t8_f(x, _):
+    return math.sin(x[0])
+
+
+def _t8_f_2d(x, _):
+    return x[0] + x[1]
+
+
+class TestCrossFeatures:
+    @pytest.fixture
+    def matplotlib_or_skip(self):
+        try:
+            import matplotlib
+            matplotlib.use("Agg")
+            return matplotlib
+        except ImportError:
+            pytest.skip("matplotlib not installed")
+
+    def test_plot_after_algebra(self, matplotlib_or_skip):
+        """v0.19 viz works on algebra-result interpolants (function=None)."""
+        a = ChebyshevApproximation(_t8_f, 1, [[-1, 1]], [4])
+        a.build(verbose=False)
+        b = ChebyshevApproximation(_t8_f, 1, [[-1, 1]], [4])
+        b.build(verbose=False)
+        sum_obj = a + b
+        ax = sum_obj.plot_1d()
+        assert ax is not None
+
+    def test_plot_after_clone(self, matplotlib_or_skip):
+        """v0.16 clone() result supports v0.19 plotting."""
+        cheb = ChebyshevApproximation(_t8_f, 1, [[-1, 1]], [8])
+        cheb.build(verbose=False)
+        ax = cheb.clone().plot_1d()
+        assert ax is not None
+
+    def test_plot_after_tt_extrude(self, matplotlib_or_skip):
+        """v0.18 TT extrude() result supports v0.19 plotting."""
+        tt = ChebyshevTT(_t8_f, 1, [[-1, 1]], [6])
+        tt.build(verbose=False)
+        extruded = tt.extrude((1, (0, 1), 4))
+        ax = extruded.plot_1d(fixed={1: 0.5})
+        assert ax is not None
+
+    def test_plot_convergence_after_algebra_raises(self, matplotlib_or_skip):
+        """plot_convergence requires function-bound; algebra result has function=None."""
+        a = ChebyshevApproximation(_t8_f, 1, [[-1, 1]], [4])
+        a.build(verbose=False)
+        b = ChebyshevApproximation(_t8_f, 1, [[-1, 1]], [4])
+        b.build(verbose=False)
+        sum_obj = a + b
+        with pytest.raises(RuntimeError, match="function"):
+            sum_obj.plot_convergence()
+
+    def test_n_workers_with_descriptor_and_additional_data(self):
+        """Parallel build threads through additional_data; descriptor preserved."""
+        sentinel = {"k": 5}
+        cheb = ChebyshevApproximation(
+            _t8_f_with_ad, 1, [[-1, 1]], [4],
+            additional_data=sentinel, n_workers=2,
+        )
+        cheb.set_descriptor("source")
+        cheb.build(verbose=False)
+        assert cheb.get_descriptor() == "source"
+        assert cheb.eval([0.5], [0]) == pytest.approx(2.5, abs=1e-10)
+
+    def test_save_load_with_n_workers(self, tmp_path):
+        """Save/load preserves the interpolant; n_workers default after load is None."""
+        cheb = ChebyshevApproximation(_t8_f, 1, [[-1, 1]], [6], n_workers=2)
+        cheb.build(verbose=False)
+        path = tmp_path / "cheb.pkl"
+        cheb.save(str(path))
+        loaded = ChebyshevApproximation.load(str(path))
+        assert loaded.eval([0.3], [0]) == pytest.approx(cheb.eval([0.3], [0]), abs=1e-10)
+
+
+def _t8_f_with_ad(x, ad):
+    return ad["k"] * x[0]
