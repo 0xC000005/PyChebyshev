@@ -1316,6 +1316,60 @@ class ChebyshevApproximation:
         import copy
         return copy.deepcopy(self)
 
+    def plot_convergence(self, target_error=None, max_n=64, ax=None):
+        """Plot convergence: builds at increasing N, plots error decay.
+
+        Requires the optional ``pychebyshev[viz]`` dependency group.
+
+        Parameters
+        ----------
+        target_error : float | None
+            If provided, draws a horizontal dashed line at this level.
+        max_n : int
+            Largest N to try in the doubling sweep.
+        ax : matplotlib.axes.Axes | None
+            Pre-existing axes to plot into. Creates a new figure if None.
+
+        Returns
+        -------
+        matplotlib.axes.Axes
+        """
+        try:
+            import matplotlib.pyplot as plt
+        except ImportError:
+            raise ImportError(
+                "plot_convergence requires matplotlib; install with "
+                "`pip install pychebyshev[viz]`"
+            )
+
+        if self.function is None:
+            raise RuntimeError(
+                "plot_convergence requires a function-bound interpolant "
+                "(this object has function=None — built via from_values, algebra, or load)"
+            )
+
+        ns = list(range(4, max_n + 1, 2))
+        errors = []
+        for n in ns:
+            cheb = ChebyshevApproximation(
+                self.function, self.num_dimensions, self.domain,
+                n_nodes=[n] * self.num_dimensions,
+                additional_data=self.additional_data,
+            )
+            cheb.build(verbose=False)
+            errors.append(cheb.error_estimate())
+
+        if ax is None:
+            _, ax = plt.subplots()
+        ax.semilogy(ns, errors, marker="o")
+        ax.set_xlabel("Number of nodes per dimension (N)")
+        ax.set_ylabel("Error estimate (log scale)")
+        ax.set_title(f"Convergence — {self.num_dimensions}-D Chebyshev")
+        if target_error is not None:
+            ax.axhline(target_error, linestyle="--", color="red", label=f"target={target_error}")
+            ax.legend()
+        return ax
+
     # ------------------------------------------------------------------
     # Serialization
     # ------------------------------------------------------------------

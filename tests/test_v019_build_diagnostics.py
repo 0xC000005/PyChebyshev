@@ -193,3 +193,58 @@ class TestProgressBars:
         cheb = ChebyshevApproximation(_t5_f_simple, 1, [[-1, 1]], [4])
         cheb.build(verbose=True)
         assert cheb.is_construction_finished()
+
+
+# ============================================================================
+# T6: plot_convergence on ChebyshevApproximation
+# ============================================================================
+
+def _t6_f_sin(x, _):
+    return math.sin(x[0])
+
+
+def _t6_f_x(x, _):
+    return x[0]
+
+
+class TestPlotConvergence:
+    @pytest.fixture
+    def matplotlib_or_skip(self):
+        try:
+            import matplotlib
+            matplotlib.use("Agg")
+            return matplotlib
+        except ImportError:
+            pytest.skip("matplotlib not installed")
+
+    def test_returns_axes(self, matplotlib_or_skip):
+        cheb = ChebyshevApproximation(_t6_f_sin, 1, [[-1, 1]], [8])
+        cheb.build(verbose=False)
+        ax = cheb.plot_convergence(target_error=1e-6, max_n=20)
+        assert ax is not None
+
+    def test_requires_function(self, matplotlib_or_skip):
+        ref = ChebyshevApproximation(_t6_f_x, 1, [[-1, 1]], [4])
+        ref.build(verbose=False)
+        function_less = ChebyshevApproximation.from_values(
+            ref.tensor_values, 1, [[-1, 1]], [4]
+        )
+        with pytest.raises(RuntimeError, match="function"):
+            function_less.plot_convergence()
+
+    def test_target_error_line_drawn(self, matplotlib_or_skip):
+        cheb = ChebyshevApproximation(_t6_f_sin, 1, [[-1, 1]], [8])
+        cheb.build(verbose=False)
+        ax = cheb.plot_convergence(target_error=1e-6, max_n=12)
+        # Verify horizontal line was drawn (axhline adds a Line2D to ax.lines)
+        assert any(
+            line.get_linestyle() == "--" for line in ax.lines
+        )
+
+    def test_max_n_caps_iterations(self, matplotlib_or_skip):
+        cheb = ChebyshevApproximation(_t6_f_sin, 1, [[-1, 1]], [4])
+        cheb.build(verbose=False)
+        ax = cheb.plot_convergence(max_n=8)
+        # Plot should have a single line; xdata should not exceed max_n
+        line = ax.lines[0]
+        assert max(line.get_xdata()) <= 8
