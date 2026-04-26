@@ -5,6 +5,19 @@ All notable changes to PyChebyshev will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [0.19.0] - 2026-04-26
+
+### Added — Build & Diagnostics
+
+- `n_workers=` keyword-only constructor kwarg on `ChebyshevApproximation` and `ChebyshevSpline` for parallel function evaluation at build time via `concurrent.futures.ProcessPoolExecutor`. `None` (default) = sequential, `-1` = `os.cpu_count()`, positive int = pool size. Function and `additional_data` must be picklable.
+- `verbose=2` opt-in tqdm progress bars on `ChebyshevSpline.build()`, `ChebyshevSlider.build()`, and `ChebyshevTT.build()` (TT-Cross sweeps). Existing `verbose=True/False` behavior unchanged.
+- `ChebyshevApproximation.plot_convergence(target_error=None, max_n=64, ax=None)` — builds at increasing N, plots error decay on log-y axis with optional target line.
+- `plot_1d(ax=None, n_points=200, fixed=None)`, `plot_2d_surface(...)`, `plot_2d_contour(...)` instance methods on all four classes. Use `fixed=` to constrain dimensions when the source has more dims than the plot needs.
+- New optional dependency group `pychebyshev[viz]` (matplotlib + tqdm). Plot methods raise `ImportError` with install hint when used without the group; tqdm fallback emits a warning.
+- New private helpers: `_progress.py`, `_parallel.py`, `_viz.py`.
+
+**Beyond MoCaX:** MoCaX has neither parallel build nor visualization helpers.
+
 ## [0.18.0] - 2026-04-26
 
 ### Added — TT Feature Parity
