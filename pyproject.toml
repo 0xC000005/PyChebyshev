@@ -34,6 +34,7 @@ dependencies = [
 ]
 
 [project.optional-dependencies]
+viz = ["matplotlib>=3.5", "tqdm>=4.60"]
 jit = ["numba>=0.60"]  # Deprecated: vectorized_eval() via BLAS is ~150x faster than JIT fast_eval()
 dev = [
     "blackscholes>=0.2.0",
