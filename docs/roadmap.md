@@ -132,7 +132,7 @@ breaking changes.
 
 **Closes MoCaX gaps:** the last cosmetic surface methods.
 
-## v0.17 — Integrate Everywhere :material-clock-outline:
+## v0.17 — Integrate Everywhere :material-check:
 
 Extend the v0.9 calculus toolkit so every class supports integration.
 

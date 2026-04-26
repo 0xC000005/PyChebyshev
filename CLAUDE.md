@@ -12,7 +12,7 @@ PyChebyshev is a pip-installable Python library for multi-dimensional Chebyshev 
 # Setup
 uv sync
 
-# Run tests (~838 tests, ~110s due to 5D Black-Scholes builds)
+# Run tests (~890 tests, ~110s due to 5D Black-Scholes builds)
 uv run pytest tests/ -v
 
 # Run a single test
@@ -59,6 +59,9 @@ The installable package. Public classes: `ChebyshevApproximation`, `ChebyshevSpl
   `is_dimensionality_allowed()` static, `defer_build=True` +
   `set_original_function_values()`, and optional `Domain`/`Ns`/`SpecialPoints`
   typed helpers (constructors accept both forms).
+- v0.17 adds `integrate()` on `ChebyshevSlider` and `ChebyshevTT` (full +
+  partial integration). After v0.17, every PyChebyshev class supports
+  integration. Roots/min/max on Slider/TT remain deferred to v0.21.
 
 ### Benchmark Scripts (project root)
 
@@ -77,6 +80,7 @@ Not part of the library. Compare Chebyshev barycentric against alternative metho
 - `compare_from_values.py` — PyChebyshev nodes()/from_values() vs MoCaX Extend comparison (requires `mocaxextend_lib/`)
 - `compare_special_points.py` — PyChebyshev special_points vs MoCaX MocaxSpecialPoints + MocaxNs comparison (requires `mocax_lib/`)
 - `compare_v016_polish.py` — PyChebyshev v0.16 polish surface vs MoCaX 4.3.1 cosmetic API (requires `mocaxpy`; gracefully skips MoCaX side if not installed)
+- `compare_calculus_completion.py` — PyChebyshev v0.17 Slider/TT integrate vs MoCaX 4.3.1 (no equivalent — beyond-MoCaX feature)
 
 ### Tests (`tests/`)
 
@@ -101,6 +105,9 @@ Not part of the library. Compare Chebyshev barycentric against alternative metho
   `get_evaluation_points`, `get_num_evaluation_points`), `peek_format_version`,
   `is_dimensionality_allowed`, `defer_build` + `set_original_function_values`,
   `Domain`/`Ns`/`SpecialPoints` typed helpers.
+- `test_calculus_completion.py` — ~37 tests: `ChebyshevSlider.integrate()` (full
+  and partial), `ChebyshevTT.integrate()` (full and partial), cross-class
+  consistency checks, bounds validation.
 
 ### CI/CD (`.github/workflows/`)
 
