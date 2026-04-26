@@ -2069,6 +2069,42 @@ class ChebyshevTT:
         return copy.deepcopy(self)
 
     @staticmethod
+    def nodes(num_dimensions, domain, n_nodes):
+        """Return the Chebyshev grid for the given configuration without
+        evaluating any function.
+
+        Parameters
+        ----------
+        num_dimensions : int
+        domain : list[tuple[float, float]] | Domain
+        n_nodes : list[int] | Ns
+
+        Returns
+        -------
+        dict
+            ``{"nodes_per_dim": [np.ndarray of shape (n_d,) for each dim d]}``.
+            Identical layout to :meth:`ChebyshevApproximation.nodes`.
+        """
+        from pychebyshev import Domain, Ns
+        from pychebyshev._extrude_slice import _make_nodes_for_dim
+
+        if isinstance(domain, Domain):
+            domain = list(domain.bounds)
+        if isinstance(n_nodes, Ns):
+            n_nodes = list(n_nodes.counts)
+
+        if len(domain) != num_dimensions or len(n_nodes) != num_dimensions:
+            raise ValueError(
+                f"domain and n_nodes must have length {num_dimensions}"
+            )
+
+        nodes_per_dim = [
+            _make_nodes_for_dim(domain[d][0], domain[d][1], n_nodes[d])
+            for d in range(num_dimensions)
+        ]
+        return {"nodes_per_dim": nodes_per_dim}
+
+    @staticmethod
     def is_dimensionality_allowed(num_dimensions: int) -> bool:
         """Return whether this interpolant class supports the given number of
         dimensions. Returns True for any ``num_dimensions >= 1``. Provided as
