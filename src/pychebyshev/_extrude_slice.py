@@ -90,3 +90,56 @@ def _slice_tensor(tensor, axis, nodes, weights, value):
     w_over_diff = weights / diff
     w_norm = w_over_diff / np.sum(w_over_diff)
     return np.tensordot(tensor, w_norm, axes=([axis], [0]))
+
+
+def _extrude_tt_core(coeff_cores, dim_idx, lo, hi, n_new):
+    """Insert a constant rank-preserving core at position ``dim_idx`` into a TT.
+
+    The new core encodes the constant function 1 over the new dim. In DCT-II
+    coefficient space (PyChebyshev TT convention), the constant 1 has only
+    c_0 = 1 (the halved-c_0 convention means the stored coefficient is 1.0).
+    The core is rank-preserving: ``core[i, 0, i] = 1`` for all i.
+
+    Parameters
+    ----------
+    coeff_cores : list[np.ndarray]
+        Existing TT coefficient cores.
+    dim_idx : int
+        Position to insert the new core (0 <= dim_idx <= len(coeff_cores)).
+    lo, hi : float
+        Domain of the new dim (for validation only).
+    n_new : int
+        Number of nodes for the new dim.
+
+    Returns
+    -------
+    list[np.ndarray]
+        New cores list with the constant core inserted at position dim_idx.
+    """
+    if dim_idx < 0 or dim_idx > len(coeff_cores):
+        raise ValueError(
+            f"dim_idx={dim_idx} out of range [0, {len(coeff_cores)}]"
+        )
+    if lo >= hi:
+        raise ValueError(f"lo ({lo}) must be < hi ({hi})")
+    if n_new < 1:
+        raise ValueError(f"n_new must be >= 1, got {n_new}")
+
+    # Determine the rank at the insertion point.
+    # At boundary positions (0 or end), rank stays 1.
+    # At interior positions, use the right rank of core dim_idx - 1.
+    if dim_idx == 0:
+        r_at = 1
+    elif dim_idx == len(coeff_cores):
+        r_at = 1
+    else:
+        r_at = coeff_cores[dim_idx - 1].shape[2]
+
+    # Construct rank-preserving core: shape (r_at, n_new, r_at).
+    # core[i, 0, i] = 1.0: c_0 coefficient of constant function 1.
+    # All other slots (j > 0 or i != l) remain 0.
+    new_core = np.zeros((r_at, n_new, r_at))
+    for i in range(r_at):
+        new_core[i, 0, i] = 1.0
+
+    return coeff_cores[:dim_idx] + [new_core] + coeff_cores[dim_idx:]

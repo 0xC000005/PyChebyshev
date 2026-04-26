@@ -186,3 +186,76 @@ class TestTTToDense:
         tt.build(verbose=False)
         dense = tt.to_dense()
         np.testing.assert_allclose(dense, 3.0, atol=1e-10)
+
+
+# ============================================================================
+# T4: TT extrude(params)
+# ============================================================================
+
+class TestTTExtrude:
+    def test_single_dim_extrude_returns_tt(self):
+        def f(x, _):
+            return x[0] ** 2
+
+        tt = ChebyshevTT(f, 1, [[-1, 1]], [5])
+        tt.build(verbose=False)
+        result = tt.extrude((1, (0.0, 1.0), 4))
+        assert isinstance(result, ChebyshevTT)
+        assert result.num_dimensions == 2
+
+    def test_extrude_preserves_eval_at_existing_dims(self):
+        def f(x, _):
+            return math.sin(x[0])
+
+        tt = ChebyshevTT(f, 1, [[-1, 1]], [10])
+        tt.build(verbose=False)
+        result = tt.extrude((1, (0.0, 1.0), 5))
+        # f(x) was sin(x); extruded to dim 1 with constant 1: result(x, y) = sin(x)
+        for x_test in [-0.5, 0.0, 0.3]:
+            for y_test in [0.1, 0.5, 0.9]:
+                assert result.eval([x_test, y_test]) == pytest.approx(
+                    math.sin(x_test), abs=1e-6
+                )
+
+    def test_extrude_constant_value_in_new_dim(self):
+        def f(x, _):
+            return 7.0
+
+        tt = ChebyshevTT(f, 1, [[-1, 1]], [4])
+        tt.build(verbose=False)
+        result = tt.extrude((1, (0.0, 5.0), 4))
+        # Result should still be 7.0 everywhere
+        assert result.eval([0.5, 2.5]) == pytest.approx(7.0, abs=1e-10)
+
+    def test_extrude_validates_dim_idx_in_range(self):
+        def f(x, _):
+            return x[0]
+
+        tt = ChebyshevTT(f, 1, [[-1, 1]], [4])
+        tt.build(verbose=False)
+        with pytest.raises(ValueError):
+            tt.extrude((5, (0, 1), 4))  # dim_idx 5 is way out of range
+
+    def test_extrude_descriptor_preserved(self):
+        def f(x, _):
+            return x[0]
+
+        tt = ChebyshevTT(f, 1, [[-1, 1]], [4])
+        tt.build(verbose=False)
+        tt.set_descriptor("source")
+        result = tt.extrude((1, (0, 1), 4))
+        assert result.get_descriptor() == "source"
+
+    def test_extrude_then_integrate_consistency(self):
+        """Extrude over [0, 1] (vol=1) then integrate over the new dim → original × 1 = original."""
+        def f(x, _):
+            return math.sin(x[0])
+
+        tt = ChebyshevTT(f, 1, [[-1, 1]], [10])
+        tt.build(verbose=False)
+        extruded = tt.extrude((1, (0.0, 1.0), 5))
+        integrated = extruded.integrate(dims=[1])  # integrate over new dim
+        # ∫_0^1 sin(x) dy = sin(x) * 1 = sin(x), so integrated(x) ≈ sin(x)
+        assert integrated.eval([0.3]) == pytest.approx(
+            math.sin(0.3), abs=1e-6
+        )

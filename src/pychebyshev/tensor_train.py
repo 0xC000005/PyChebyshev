@@ -1668,6 +1668,74 @@ class ChebyshevTT:
         result = result.reshape(tuple(self.n_nodes))
         return result
 
+    def extrude(self, params):
+        """Add one or more dimensions where the function is constant.
+
+        Inserts a rank-preserving TT core encoding the constant function 1
+        at the specified position(s). The extruded TT evaluates identically
+        to the original over the existing dimensions, regardless of the new
+        dimension's coordinate.
+
+        Parameters
+        ----------
+        params : tuple | list[tuple]
+            Either a single tuple ``(dim_idx, (lo, hi), n_nodes_new)`` or a
+            list of such tuples. ``dim_idx`` is the insertion index (0-based)
+            in the result's dimensions.
+
+        Returns
+        -------
+        ChebyshevTT
+            TT over ``(num_dimensions + len(params))`` dims; the function is
+            constant (equal to the original) over each newly added dim.
+
+        Notes
+        -----
+        The new core has shape ``(r_at, n_new, r_at)`` where ``r_at`` is the
+        rank at the insertion boundary. Only the ``c_0`` coefficient slot is
+        nonzero (set to 1.0), encoding the constant function 1 in DCT-II
+        Chebyshev coefficient space.
+        """
+        self._check_built()
+
+        from pychebyshev._extrude_slice import (
+            _normalize_extrusion_params,
+            _extrude_tt_core,
+        )
+
+        norm_params = _normalize_extrusion_params(params, self.num_dimensions)
+
+        new_cores = list(self._coeff_cores)
+        new_domain = list(self.domain)
+        new_n_nodes = list(self.n_nodes)
+        # Sort by dim_idx ascending so insertions don't shift later indices
+        for dim_idx, (lo, hi), n_new in sorted(norm_params, key=lambda p: p[0]):
+            new_cores = _extrude_tt_core(new_cores, dim_idx, lo, hi, n_new)
+            new_domain.insert(dim_idx, [lo, hi])
+            new_n_nodes.insert(dim_idx, n_new)
+
+        new_tt_ranks = [c.shape[0] for c in new_cores] + [new_cores[-1].shape[2]]
+
+        obj = self.__class__.__new__(self.__class__)
+        obj.function = None
+        obj.num_dimensions = len(new_n_nodes)
+        obj.domain = new_domain
+        obj.n_nodes = new_n_nodes
+        obj.max_rank = self.max_rank
+        obj.tolerance = self.tolerance
+        obj.max_sweeps = self.max_sweeps
+        obj.max_derivative_order = self.max_derivative_order
+        obj.additional_data = self.additional_data
+        obj.descriptor = self.descriptor
+        obj.method = self.method
+        obj._coeff_cores = new_cores
+        obj._tt_ranks = new_tt_ranks
+        obj._built = True
+        obj._build_time = 0.0
+        obj._total_build_evals = 0
+        obj._cached_error_estimate = None
+        return obj
+
     def eval(self, point: List[float]) -> float:
         """Evaluate at a single point via TT inner product.
 
