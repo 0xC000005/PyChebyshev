@@ -248,3 +248,122 @@ class TestPlotConvergence:
         # Plot should have a single line; xdata should not exceed max_n
         line = ax.lines[0]
         assert max(line.get_xdata()) <= 8
+
+
+# ============================================================================
+# T7: plot_1d / plot_2d_surface / plot_2d_contour on all 4 classes
+# ============================================================================
+
+def _t7_f_1d(x, _):
+    return math.sin(x[0])
+
+
+def _t7_f_2d(x, _):
+    return math.sin(x[0]) + math.cos(x[1])
+
+
+def _t7_f_3d(x, _):
+    return x[0] + x[1] + x[2]
+
+
+class TestPlot1D:
+    @pytest.fixture
+    def matplotlib_or_skip(self):
+        try:
+            import matplotlib
+            matplotlib.use("Agg")
+            return matplotlib
+        except ImportError:
+            pytest.skip("matplotlib not installed")
+
+    def test_plot_1d_approximation(self, matplotlib_or_skip):
+        cheb = ChebyshevApproximation(_t7_f_1d, 1, [[-1, 1]], [8])
+        cheb.build(verbose=False)
+        ax = cheb.plot_1d()
+        assert ax is not None
+
+    def test_plot_1d_spline(self, matplotlib_or_skip):
+        spl = ChebyshevSpline(_t7_f_1d, 1, [[-1, 1]], knots=[[0.0]], n_nodes=[6])
+        spl.build(verbose=False)
+        ax = spl.plot_1d()
+        assert ax is not None
+
+    def test_plot_1d_slider_with_fixed(self, matplotlib_or_skip):
+        slider = ChebyshevSlider(
+            _t7_f_2d, 2, [[-1, 1], [-1, 1]], [6, 6],
+            partition=[[0], [1]], pivot_point=[0.0, 0.0],
+        )
+        slider.build(verbose=False)
+        ax = slider.plot_1d(fixed={1: 0.5})
+        assert ax is not None
+
+    def test_plot_1d_tt_with_fixed(self, matplotlib_or_skip):
+        tt = ChebyshevTT(_t7_f_2d, 2, [[-1, 1], [-1, 1]], [6, 6])
+        tt.build(verbose=False)
+        ax = tt.plot_1d(fixed={1: 0.5})
+        assert ax is not None
+
+    def test_plot_1d_too_many_free_dims_raises(self, matplotlib_or_skip):
+        cheb = ChebyshevApproximation(_t7_f_2d, 2, [[-1, 1], [-1, 1]], [4, 4])
+        cheb.build(verbose=False)
+        with pytest.raises(ValueError, match="1 free"):
+            cheb.plot_1d()
+
+    def test_plot_1d_n_points_kwarg(self, matplotlib_or_skip):
+        cheb = ChebyshevApproximation(_t7_f_1d, 1, [[-1, 1]], [8])
+        cheb.build(verbose=False)
+        ax = cheb.plot_1d(n_points=50)
+        # Verify the line has 50 points
+        assert len(ax.lines[0].get_xdata()) == 50
+
+
+class TestPlot2DSurface:
+    @pytest.fixture
+    def matplotlib_or_skip(self):
+        try:
+            import matplotlib
+            matplotlib.use("Agg")
+            return matplotlib
+        except ImportError:
+            pytest.skip("matplotlib not installed")
+
+    def test_plot_2d_surface_approximation(self, matplotlib_or_skip):
+        cheb = ChebyshevApproximation(_t7_f_2d, 2, [[-1, 1], [-1, 1]], [8, 8])
+        cheb.build(verbose=False)
+        ax = cheb.plot_2d_surface(n_points=20)
+        assert ax is not None
+
+    def test_plot_2d_surface_requires_2_free_dims(self, matplotlib_or_skip):
+        cheb = ChebyshevApproximation(_t7_f_1d, 1, [[-1, 1]], [4])
+        cheb.build(verbose=False)
+        with pytest.raises(ValueError, match="2 free"):
+            cheb.plot_2d_surface()
+
+    def test_plot_2d_surface_with_fixed(self, matplotlib_or_skip):
+        cheb = ChebyshevApproximation(_t7_f_3d, 3, [[-1, 1]] * 3, [4, 4, 4])
+        cheb.build(verbose=False)
+        ax = cheb.plot_2d_surface(fixed={2: 0.5}, n_points=10)
+        assert ax is not None
+
+
+class TestPlot2DContour:
+    @pytest.fixture
+    def matplotlib_or_skip(self):
+        try:
+            import matplotlib
+            matplotlib.use("Agg")
+            return matplotlib
+        except ImportError:
+            pytest.skip("matplotlib not installed")
+
+    def test_plot_2d_contour_approximation(self, matplotlib_or_skip):
+        cheb = ChebyshevApproximation(_t7_f_2d, 2, [[-1, 1], [-1, 1]], [8, 8])
+        cheb.build(verbose=False)
+        ax = cheb.plot_2d_contour(n_points=20, n_levels=10)
+        assert ax is not None
+
+    def test_plot_2d_contour_n_levels_kwarg(self, matplotlib_or_skip):
+        cheb = ChebyshevApproximation(_t7_f_2d, 2, [[-1, 1], [-1, 1]], [8, 8])
+        cheb.build(verbose=False)
+        ax = cheb.plot_2d_contour(n_points=15, n_levels=5)
+        assert ax is not None

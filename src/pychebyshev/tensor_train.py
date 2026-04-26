@@ -2730,3 +2730,36 @@ class ChebyshevTT:
     def __itruediv__(self, scalar) -> "ChebyshevTT":
         """In-place scalar division: ``tt /= scalar`` (returns new object)."""
         return self / scalar
+
+    def plot_1d(self, ax=None, n_points=200, fixed=None):
+        """Plot the 1-D slice of this interpolant.
+
+        Requires the optional ``pychebyshev[viz]`` dependency group.
+
+        Parameters
+        ----------
+        ax : matplotlib.axes.Axes | None
+            Pre-existing axes (creates a new figure if None).
+        n_points : int
+            Number of sample points along the free dim.
+        fixed : dict[int, float] | None
+            Map of dim → value to constrain other dims, leaving exactly one free.
+
+        Returns
+        -------
+        matplotlib.axes.Axes
+        """
+        from pychebyshev._viz import _plot_1d_impl
+        return _plot_1d_impl(self, ax=ax, n_points=n_points, fixed=fixed)
+
+    def plot_2d_surface(self, ax=None, n_points=50, fixed=None):
+        """Plot a 3-D surface for the 2-D slice. Requires matplotlib."""
+        from pychebyshev._viz import _plot_2d_surface_impl
+        return _plot_2d_surface_impl(self, ax=ax, n_points=n_points, fixed=fixed)
+
+    def plot_2d_contour(self, ax=None, n_points=50, n_levels=20, fixed=None):
+        """Plot a filled-contour 2-D slice. Requires matplotlib."""
+        from pychebyshev._viz import _plot_2d_contour_impl
+        return _plot_2d_contour_impl(
+            self, ax=ax, n_points=n_points, n_levels=n_levels, fixed=fixed
+        )
