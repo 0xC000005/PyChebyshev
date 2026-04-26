@@ -24,14 +24,20 @@ all from a single pre-built proxy, without calling the pricing engine again.
     See [Chebyshev Algebra](algebra.md) for combining interpolants and
     [Extrusion & Slicing](extrude-slice.md) for dimension manipulation.
 
+!!! info "v0.17"
+    `integrate()` now works on all four classes.  `ChebyshevSlider` and
+    `ChebyshevTT` support full and partial integration (see
+    [Slider integration](#slider-integration-v017) and
+    [TT integration](#tt-integration-v017)).
+
 ## Supported Classes
 
 | Class | `integrate()` | `roots()` | `minimize()` / `maximize()` |
 |-------|:---:|:---:|:---:|
 | `ChebyshevApproximation` | Yes | Yes | Yes |
 | `ChebyshevSpline` | Yes | Yes | Yes |
-| `ChebyshevSlider` | No | No | No |
-| `ChebyshevTT` | No | No | No |
+| `ChebyshevSlider` | Yes (v0.17) | No | No |
+| `ChebyshevTT` | Yes (v0.17) | No | No |
 
 ## Integration
 
@@ -200,6 +206,83 @@ cheb_2d.build()
 result = cheb_2d.integrate(dims=[0, 1], bounds=[(0.0, 1.0), None])
 ```
 
+### Slider Integration (v0.17)
+
+`ChebyshevSlider` uses the closed-form structure of the sliding decomposition.
+For a slider with pivot value $pv$ and slides $s_i$ over groups $G_i$:
+
+$$
+f(x) \approx pv + \sum_i \bigl[s_i(x_{G_i}) - pv\bigr]
+$$
+
+Integrating over a region $T = \prod_d [a'_d, b'_d]$ gives:
+
+$$
+\int_T f \, dx = pv \cdot \mathrm{vol}(T) \cdot (1 - k)
+  + \sum_i \mathrm{vol}(T \setminus G_i) \cdot \int_{T \cap G_i} s_i
+$$
+
+where $k$ is the number of slides.  Each slide integral is delegated to
+`ChebyshevApproximation.integrate()`.
+
+Full integration returns a scalar.  Partial integration (some dims surviving)
+returns a new `ChebyshevSlider` over the surviving dimensions.  Slides whose
+groups are fully integrated out are absorbed into an updated pivot value;
+slides with partially surviving groups are reduced by integrating the consumed
+dimensions of their underlying approximation.
+
+```python
+from pychebyshev import ChebyshevSlider
+import math
+
+slider = ChebyshevSlider(
+    lambda x, _: math.sin(x[0]) + math.cos(x[1]),
+    2, [[-1.0, 1.0], [-1.0, 1.0]], [12, 12],
+    partition=[[0], [1]], pivot_point=[0.0, 0.0],
+)
+slider.build()
+
+total = slider.integrate()                        # → scalar
+reduced = slider.integrate(dims=[0])              # → 1-D ChebyshevSlider
+```
+
+Sub-interval bounds work the same as for `ChebyshevApproximation`:
+
+```python
+# Integrate dim 0 over [0, 1], return 1-D slider in dim 1
+partial = slider.integrate(dims=[0], bounds=[(0.0, 1.0)])
+```
+
+### TT Integration (v0.17)
+
+`ChebyshevTT` cores are stored in Chebyshev coefficient space.  For each
+integrated dimension $d$, the algorithm:
+
+1. Converts core $d$ from coefficient to value space (type-I DCT).
+2. Contracts the Fejér-1 quadrature weights (or sub-interval weights for
+   bounded integration) into the node axis, producing a rank-2 matrix.
+3. Absorbs that matrix into the nearest surviving core to maintain the TT chain.
+
+Full integration contracts all cores to a scalar.  Partial integration
+returns a new `ChebyshevTT` over the surviving dimensions.  The method works
+for TT objects built with any build strategy (`'cross'`, `'svd'`, `'als'`).
+
+```python
+from pychebyshev import ChebyshevTT
+import math
+
+tt = ChebyshevTT(
+    lambda x, _: math.sin(x[0]) + math.cos(x[1]),
+    2, [[-1.0, 1.0], [-1.0, 1.0]], [12, 12],
+)
+tt.build()
+
+total = tt.integrate()                            # → scalar
+reduced = tt.integrate(dims=[0])                  # → 1-D ChebyshevTT
+```
+
+Sub-interval bounds are supported identically to `ChebyshevApproximation`.
+
 ### `integrate()` API
 
 | Parameter | Type | Description |
@@ -208,8 +291,8 @@ result = cheb_2d.integrate(dims=[0, 1], bounds=[(0.0, 1.0), None])
 | `bounds` | `tuple`, `list[tuple/None]`, or `None` | Sub-interval bounds. `None` = full domain. Single `(lo, hi)` for one dim, or list with positional correspondence to `dims`. |
 
 **Returns**: `float` if all dimensions are integrated; otherwise a
-lower-dimensional interpolant of the same type (`ChebyshevApproximation` or
-`ChebyshevSpline`).
+lower-dimensional interpolant of the **same type** (`ChebyshevApproximation`,
+`ChebyshevSpline`, `ChebyshevSlider`, or `ChebyshevTT`).
 
 **Errors**:
 
@@ -357,9 +440,10 @@ Partial integration on a spline returns a lower-dimensional `ChebyshevSpline`.
 
 ## Derivatives, Error Estimation, and Serialization
 
-**Partial integration** returns a fully functional interpolant (either
-`ChebyshevApproximation` or `ChebyshevSpline`).  All existing features
-work on the result:
+**Partial integration** returns a fully functional interpolant of the same
+type (`ChebyshevApproximation`, `ChebyshevSpline`, `ChebyshevSlider`, or
+`ChebyshevTT`).  For `ChebyshevApproximation` and `ChebyshevSpline`, all
+existing features work on the result:
 
 - **Derivatives**: `vectorized_eval(point, [1])` computes derivatives in
   the surviving dimensions via the spectral differentiation matrices.
@@ -400,10 +484,10 @@ matrices, and barycentric evaluation.
 
 ## Limitations
 
-- **Not yet supported on `ChebyshevSlider` or `ChebyshevTT`.**
-  Calculus on Tensor Train interpolants would require TT-specific
-  coefficient extraction; slider calculus would need per-slide integration
-  with additive recombination.
+- **`roots()`, `minimize()`, and `maximize()` are not yet supported on
+  `ChebyshevSlider` or `ChebyshevTT`.**  These operations require
+  1-D polynomial coefficient extraction; generalising to the sliding
+  decomposition or TT format is deferred.
 - **Multi-D rootfinding** (2D Bezout resultants) is not implemented. Only
   1-D slices are supported via the `dim` + `fixed` interface.
 - **Result has `function=None`** -- partial integration results cannot call
