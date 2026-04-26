@@ -380,3 +380,72 @@ class TestSliderFullIntegrate:
 
         scipy_result, _ = nquad(f_nquad, domain)
         assert cheb_result == pytest.approx(scipy_result, abs=1e-6)
+
+
+# ============================================================================
+# T7: Slider partial integration (returns ChebyshevSlider)
+# ============================================================================
+
+class TestSliderPartialIntegrate:
+    def test_returns_slider(self):
+        def f(x, _):
+            return math.sin(x[0]) + math.cos(x[1]) + x[2]
+
+        slider = ChebyshevSlider(
+            f, 3, [[-1, 1]] * 3, [8, 8, 8],
+            partition=[[0], [1], [2]], pivot_point=[0.0] * 3,
+        )
+        slider.build(verbose=False)
+        result = slider.integrate(dims=[1])
+        assert isinstance(result, ChebyshevSlider)
+        assert result.num_dimensions == 2
+
+    def test_partial_disjoint_slide_passes_through(self):
+        """A slide whose group is disjoint from integrate dims must pass through."""
+        def f(x, _):
+            return math.sin(x[0]) + x[1] ** 2
+
+        slider = ChebyshevSlider(
+            f, 2, [[-1, 1]] * 2, [8, 8],
+            partition=[[0], [1]], pivot_point=[0.0] * 2,
+        )
+        slider.build(verbose=False)
+        # Integrate over dim 1; slide 0 (group [0]) is disjoint
+        result = slider.integrate(dims=[1])
+        # Result should reflect ∫(sin(x) + y^2 - pv) dy + pv*vol(y) for slide 1
+        # Specifically: at x=0, ∫_{-1}^{1} (sin(0) + y^2) dy = 0 + 2/3 = 2/3
+        np.testing.assert_allclose(result.eval([0.0], [0]), 2.0 / 3.0, atol=1e-3)
+
+    def test_full_partial_consistency(self):
+        """integrate(dims=[0,1,2]) == integrate(dims=[0,1]).integrate(dims=[0])."""
+        def f(x, _):
+            return math.sin(x[0]) + math.cos(x[1]) + x[2] ** 2
+
+        slider = ChebyshevSlider(
+            f, 3, [[-1, 1]] * 3, [10, 10, 10],
+            partition=[[0], [1], [2]], pivot_point=[0.0] * 3,
+        )
+        slider.build(verbose=False)
+        joint = slider.integrate(dims=[0, 1, 2])
+        # build a fresh one for chaining
+        slider2 = ChebyshevSlider(
+            f, 3, [[-1, 1]] * 3, [10, 10, 10],
+            partition=[[0], [1], [2]], pivot_point=[0.0] * 3,
+        )
+        slider2.build(verbose=False)
+        step1 = slider2.integrate(dims=[0, 1])  # Slider over original dim 2 only
+        step2 = step1.integrate(dims=[0])  # scalar
+        assert step2 == pytest.approx(joint, abs=1e-6)
+
+    def test_descriptor_preserved(self):
+        def f(x, _):
+            return x[0] + x[1]
+
+        slider = ChebyshevSlider(
+            f, 2, [[-1, 1]] * 2, [4, 4],
+            partition=[[0], [1]], pivot_point=[0.0] * 2,
+        )
+        slider.build(verbose=False)
+        slider.set_descriptor("source")
+        result = slider.integrate(dims=[0])
+        assert result.get_descriptor() == "source"
