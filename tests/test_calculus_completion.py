@@ -137,3 +137,88 @@ class TestTTFullIntegrate:
 
         scipy_result, _ = nquad(f_nquad, domain)
         assert cheb_result == pytest.approx(scipy_result, rel=1e-4)
+
+
+# ============================================================================
+# T4: TT partial integration (returns ChebyshevTT)
+# ============================================================================
+
+class TestTTPartialIntegrate:
+    def test_returns_tt_with_correct_dim(self):
+        def f(x, _):
+            return x[0] + x[1] + x[2]
+
+        tt = ChebyshevTT(f, 3, [[-1, 1]] * 3, [6, 6, 6])
+        tt.build(verbose=False)
+        result = tt.integrate(dims=[1])
+        assert isinstance(result, ChebyshevTT)
+        assert result.num_dimensions == 2
+        assert result.n_nodes == [6, 6]
+
+    def test_partial_consistent_with_consecutive(self):
+        """integrate([0, 1]) should equal integrate([1]).integrate([0])."""
+        def f(x, _):
+            return math.sin(x[0]) * math.cos(x[1]) * (1 + x[2] ** 2)
+
+        tt1 = ChebyshevTT(f, 3, [[-1, 1]] * 3, [10, 10, 10])
+        tt1.build(verbose=False)
+        tt2 = ChebyshevTT(f, 3, [[-1, 1]] * 3, [10, 10, 10])
+        tt2.build(verbose=False)
+
+        # Two-shot
+        joint = tt1.integrate(dims=[0, 1])
+        # One-at-a-time (note dim re-indexing after first integrate)
+        step1 = tt2.integrate(dims=[1])  # surviving dims = [0, 2]; new dim 1 was original dim 2
+        step2 = step1.integrate(dims=[0])  # integrate over original dim 0
+
+        # joint and step2 should both be functions of original dim 2
+        x_test = 0.3
+        np.testing.assert_allclose(
+            joint.eval([x_test]),
+            step2.eval([x_test]),
+            atol=1e-8,
+        )
+
+    def test_endpoint_dim_left(self):
+        """Integrate over dim 0 (no left neighbor)."""
+        def f(x, _):
+            return x[0] * x[1]
+
+        tt = ChebyshevTT(f, 2, [[-1, 1]] * 2, [4, 6])
+        tt.build(verbose=False)
+        result = tt.integrate(dims=[0])
+        assert isinstance(result, ChebyshevTT)
+        # ∫_{-1}^{1} x dx = 0, so result(y) ≈ 0 for all y
+        assert result.eval([0.5]) == pytest.approx(0.0, abs=1e-10)
+
+    def test_endpoint_dim_right(self):
+        """Integrate over last dim (no right neighbor)."""
+        def f(x, _):
+            return x[0] * x[1]
+
+        tt = ChebyshevTT(f, 2, [[-1, 1]] * 2, [6, 4])
+        tt.build(verbose=False)
+        result = tt.integrate(dims=[1])
+        # ∫_{-1}^{1} y dy = 0, so result(x) ≈ 0
+        assert result.eval([0.5]) == pytest.approx(0.0, abs=1e-10)
+
+    def test_descriptor_preserved(self):
+        def f(x, _):
+            return x[0] * x[1]
+
+        tt = ChebyshevTT(f, 2, [[-1, 1]] * 2, [4, 4])
+        tt.build(verbose=False)
+        tt.set_descriptor("source")
+        result = tt.integrate(dims=[0])
+        assert result.get_descriptor() == "source"
+
+    def test_additional_data_preserved(self):
+        sentinel = {"k": 42}
+
+        def f(x, ad):
+            return ad["k"] * x[0]
+
+        tt = ChebyshevTT(f, 2, [[-1, 1]] * 2, [4, 4], additional_data=sentinel)
+        tt.build(verbose=False)
+        result = tt.integrate(dims=[0])
+        assert result.additional_data == sentinel
