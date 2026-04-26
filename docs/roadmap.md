@@ -112,7 +112,7 @@ All additive, no breaking changes.
 **Closes MoCaX gaps:** `additional_data`, `get_derivative_id`, descriptor,
 introspection.
 
-## v0.16 — Polish Bundle :material-clock-outline:
+## v0.16 — Polish Bundle :material-check:
 
 Final cosmetic mirror of the MoCaX 4.3.1 surface. Strictly additive, no
 breaking changes.
