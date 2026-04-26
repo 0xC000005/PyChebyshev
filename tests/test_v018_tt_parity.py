@@ -518,3 +518,87 @@ class TestTTScalarMul:
         tt.build(verbose=False)
         tt *= 2.0
         assert tt.eval([0.3]) == pytest.approx(0.6, abs=1e-10)
+
+
+# ============================================================================
+# T8: Cross-feature tests (algebra + integrate, extrude/slice + v0.16/v0.17)
+# ============================================================================
+
+class TestTTCrossFeatures:
+    def test_algebra_then_integrate(self):
+        """(tt_a + tt_b).integrate() == tt_a.integrate() + tt_b.integrate()."""
+        def f(x, _):
+            return math.sin(x[0])
+
+        def g(x, _):
+            return math.cos(x[0])
+
+        tt_a = ChebyshevTT(f, 1, [[-1, 1]], [10])
+        tt_a.build(verbose=False)
+        tt_b = ChebyshevTT(g, 1, [[-1, 1]], [10])
+        tt_b.build(verbose=False)
+        sum_int = (tt_a + tt_b).integrate()
+        a_int = tt_a.integrate()
+        b_int = tt_b.integrate()
+        assert sum_int == pytest.approx(a_int + b_int, abs=1e-6)
+
+    def test_clone_after_algebra(self):
+        """v0.16 clone() works on algebra results."""
+        def f(x, _):
+            return x[0]
+
+        tt_a = ChebyshevTT(f, 1, [[-1, 1]], [4])
+        tt_a.build(verbose=False)
+        tt_b = ChebyshevTT(f, 1, [[-1, 1]], [4])
+        tt_b.build(verbose=False)
+        result = tt_a + tt_b
+        clone = result.clone()
+        assert clone is not result
+        assert clone.eval([0.3]) == pytest.approx(result.eval([0.3]), abs=1e-10)
+
+    def test_extrude_then_get_evaluation_points(self):
+        """v0.16 get_evaluation_points() works on extruded TT."""
+        def f(x, _):
+            return x[0]
+
+        tt = ChebyshevTT(f, 1, [[-1, 1]], [4])
+        tt.build(verbose=False)
+        extruded = tt.extrude((1, (0, 1), 5))
+        pts = extruded.get_evaluation_points()
+        assert pts.shape == (4 * 5, 2)
+
+    def test_slice_then_to_dense(self):
+        def f(x, _):
+            return x[0] * x[1]
+
+        tt = ChebyshevTT(f, 2, [[-1, 1], [-1, 1]], [5, 5])
+        tt.build(verbose=False)
+        sliced = tt.slice((0, 0.5))
+        dense = sliced.to_dense()
+        assert dense.shape == (5,)
+
+    def test_from_values_then_eval(self):
+        n = 5
+        nodes = ChebyshevTT.nodes(2, [[-1, 1], [-1, 1]], [n, n])["nodes_per_dim"]
+        X, Y = np.meshgrid(nodes[0], nodes[1], indexing="ij")
+        dense = X ** 2 + Y ** 2
+
+        tt = ChebyshevTT.from_values(dense, 2, [[-1, 1], [-1, 1]], [n, n])
+        # Eval at a grid point should match dense entry
+        assert tt.eval([float(nodes[0][2]), float(nodes[1][3])]) == pytest.approx(
+            dense[2, 3], abs=1e-8
+        )
+
+    def test_serialization_round_trip_algebra(self, tmp_path):
+        def f(x, _):
+            return x[0]
+
+        tt_a = ChebyshevTT(f, 1, [[-1, 1]], [4])
+        tt_a.build(verbose=False)
+        tt_b = ChebyshevTT(f, 1, [[-1, 1]], [4])
+        tt_b.build(verbose=False)
+        result = tt_a + tt_b
+        path = tmp_path / "result.pkl"
+        result.save(str(path))
+        loaded = ChebyshevTT.load(str(path))
+        assert loaded.eval([0.5]) == pytest.approx(result.eval([0.5]), abs=1e-10)
