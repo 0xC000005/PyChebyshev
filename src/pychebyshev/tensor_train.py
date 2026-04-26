@@ -1634,6 +1634,40 @@ class ChebyshevTT:
         result_tt.method = self.method
         return result_tt
 
+    def to_dense(self) -> np.ndarray:
+        """Materialize the TT chain into a full N-D tensor of values.
+
+        Returns
+        -------
+        np.ndarray
+            Shape ``tuple(n_nodes)``. ``dense[i_0, i_1, ..., i_{d-1}]`` equals
+            ``self.eval([nodes_0[i_0], ..., nodes_{d-1}[i_{d-1}]])`` to machine
+            precision.
+
+        Notes
+        -----
+        Use sparingly: storage is ``prod(n_nodes)`` floats. Useful for
+        inspection, conversion, or piping through
+        :meth:`ChebyshevApproximation.from_values` to convert TT → barycentric.
+        """
+        self._check_built()
+
+        # Convert all coefficient cores to value cores
+        value_cores = [_coeff_core_to_value_core(c) for c in self._coeff_cores]
+
+        # Einsum chain: G_1[1, j_0, a_0] G_2[a_0, j_1, a_1] ... G_d[a_{d-1}, j_{d-1}, 1]
+        # Result shape: (1, n_0, n_1, ..., n_{d-1}, 1)
+        result = value_cores[0]  # shape (1, n_0, r_0)
+        for k in range(1, self.num_dimensions):
+            # result has shape (1, n_0, ..., n_{k-1}, r_{k-1})
+            # multiply by value_cores[k] of shape (r_{k-1}, n_k, r_k)
+            # → (1, n_0, ..., n_{k-1}, n_k, r_k)
+            result = np.einsum("...r,rjs->...js", result, value_cores[k])
+
+        # Squeeze the rank-1 boundary dimensions and reshape to n_nodes
+        result = result.reshape(tuple(self.n_nodes))
+        return result
+
     def eval(self, point: List[float]) -> float:
         """Evaluate at a single point via TT inner product.
 

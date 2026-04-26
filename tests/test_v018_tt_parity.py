@@ -125,3 +125,64 @@ class TestTTFromValues:
         dense = np.zeros((4, 4))
         tt = ChebyshevTT.from_values(dense, 2, [[-1, 1], [-1, 1]], [4, 4])
         assert tt.function is None
+
+
+# ============================================================================
+# T3: TT to_dense() instance method
+# ============================================================================
+
+class TestTTToDense:
+    def test_returns_ndarray(self):
+        def f(x, _):
+            return x[0] * x[1]
+
+        tt = ChebyshevTT(f, 2, [[-1, 1], [-1, 1]], [4, 4])
+        tt.build(verbose=False)
+        dense = tt.to_dense()
+        assert isinstance(dense, np.ndarray)
+
+    def test_to_dense_shape_matches_n_nodes(self):
+        def f(x, _):
+            return x[0] + x[1] + x[2]
+
+        tt = ChebyshevTT(f, 3, [[-1, 1]] * 3, [4, 5, 6])
+        tt.build(verbose=False)
+        dense = tt.to_dense()
+        assert dense.shape == (4, 5, 6)
+
+    def test_to_dense_values_match_eval_at_nodes(self):
+        def f(x, _):
+            return math.sin(x[0]) + math.cos(x[1])
+
+        n = 5
+        tt = ChebyshevTT(f, 2, [[-1, 1], [-1, 1]], [n, n])
+        tt.build(verbose=False)
+        dense = tt.to_dense()
+        nodes_x = ChebyshevTT.nodes(2, [[-1, 1], [-1, 1]], [n, n])["nodes_per_dim"][0]
+        nodes_y = nodes_x.copy()
+        for i in range(n):
+            for j in range(n):
+                expected = tt.eval([float(nodes_x[i]), float(nodes_y[j])])
+                np.testing.assert_allclose(dense[i, j], expected, atol=1e-10)
+
+    def test_to_dense_round_trip_via_from_values(self):
+        def f(x, _):
+            return x[0] * math.sin(x[1])
+
+        tt_a = ChebyshevTT(f, 2, [[-1, 1], [-1, 1]], [8, 8])
+        tt_a.build(verbose=False)
+        tt_b = ChebyshevTT.from_values(
+            tt_a.to_dense(), 2, [[-1, 1], [-1, 1]], [8, 8]
+        )
+        # Eval should match to TT-SVD truncation precision
+        x_test = [0.3, -0.4]
+        assert tt_a.eval(x_test) == pytest.approx(tt_b.eval(x_test), abs=1e-8)
+
+    def test_to_dense_constant_function(self):
+        def f(x, _):
+            return 3.0
+
+        tt = ChebyshevTT(f, 2, [[0, 1], [0, 1]], [4, 4])
+        tt.build(verbose=False)
+        dense = tt.to_dense()
+        np.testing.assert_allclose(dense, 3.0, atol=1e-10)
