@@ -452,3 +452,69 @@ class TestTTAddition:
         result = make_tt(1.0) + make_tt(2.0) + make_tt(3.0)
         assert all(r <= 4 for r in result.tt_ranks), \
             f"max_rank=4 violated: ranks={result.tt_ranks}"
+
+
+# ============================================================================
+# T7: TT scalar __mul__ + in-place operators
+# ============================================================================
+
+class TestTTScalarMul:
+    def test_scalar_mul_returns_tt(self):
+        def f(x, _):
+            return x[0]
+
+        tt = ChebyshevTT(f, 1, [[-1, 1]], [4])
+        tt.build(verbose=False)
+        result = tt * 2.5
+        assert isinstance(result, ChebyshevTT)
+
+    def test_scalar_mul_eval_scales(self):
+        def f(x, _):
+            return math.sin(x[0])
+
+        tt = ChebyshevTT(f, 1, [[-1, 1]], [10])
+        tt.build(verbose=False)
+        result = tt * 3.0
+        for x_test in [-0.5, 0.0, 0.5]:
+            assert result.eval([x_test]) == pytest.approx(
+                3.0 * tt.eval([x_test]), abs=1e-10
+            )
+
+    def test_rmul_works(self):
+        def f(x, _):
+            return x[0]
+
+        tt = ChebyshevTT(f, 1, [[-1, 1]], [4])
+        tt.build(verbose=False)
+        result = 2.5 * tt
+        assert isinstance(result, ChebyshevTT)
+
+    def test_truediv_scalar(self):
+        def f(x, _):
+            return x[0]
+
+        tt = ChebyshevTT(f, 1, [[-1, 1]], [4])
+        tt.build(verbose=False)
+        result = tt / 2.0
+        assert result.eval([0.4]) == pytest.approx(0.2, abs=1e-10)
+
+    def test_iadd_in_place(self):
+        def f(x, _):
+            return x[0]
+
+        tt_a = ChebyshevTT(f, 1, [[-1, 1]], [6])
+        tt_a.build(verbose=False)
+        tt_b = ChebyshevTT(f, 1, [[-1, 1]], [6])
+        tt_b.build(verbose=False)
+        tt_a += tt_b
+        # __iadd__ may return new object; just verify eval is sum
+        assert tt_a.eval([0.5]) == pytest.approx(1.0, abs=1e-6)
+
+    def test_imul_scalar_in_place(self):
+        def f(x, _):
+            return x[0]
+
+        tt = ChebyshevTT(f, 1, [[-1, 1]], [4])
+        tt.build(verbose=False)
+        tt *= 2.0
+        assert tt.eval([0.3]) == pytest.approx(0.6, abs=1e-10)

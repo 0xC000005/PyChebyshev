@@ -2660,3 +2660,69 @@ class ChebyshevTT:
     def __sub__(self, other: "ChebyshevTT") -> "ChebyshevTT":
         """Difference of two TTs: ``self + (-other)``."""
         return self + (-other)
+
+    def __mul__(self, scalar) -> "ChebyshevTT":
+        """Scale this TT by a scalar (leftmost core is multiplied)."""
+        from pychebyshev._algebra import _is_scalar
+
+        if not _is_scalar(scalar):
+            raise TypeError(
+                f"ChebyshevTT * {type(scalar).__name__} is not supported "
+                "(only scalar multiplication is defined for TT)"
+            )
+        self._check_built()
+        s = float(scalar)
+        new_cores = [c.copy() for c in self._coeff_cores]
+        new_cores[0] = new_cores[0] * s
+
+        obj = self.__class__.__new__(self.__class__)
+        obj.function = None
+        obj.num_dimensions = self.num_dimensions
+        obj.domain = list(self.domain)
+        obj.n_nodes = list(self.n_nodes)
+        obj.max_rank = self.max_rank
+        obj.tolerance = self.tolerance
+        obj.max_sweeps = self.max_sweeps
+        obj.max_derivative_order = self.max_derivative_order
+        obj.additional_data = self.additional_data
+        obj.descriptor = self.descriptor
+        obj.method = self.method
+        obj._coeff_cores = new_cores
+        obj._tt_ranks = list(self._tt_ranks)
+        obj._built = True
+        obj._build_time = 0.0
+        obj._total_build_evals = 0
+        obj._cached_error_estimate = None
+        return obj
+
+    def __rmul__(self, scalar) -> "ChebyshevTT":
+        """Support ``scalar * tt`` (commutative scalar multiplication)."""
+        return self.__mul__(scalar)
+
+    def __truediv__(self, scalar) -> "ChebyshevTT":
+        """Divide this TT by a scalar: equivalent to ``self * (1/scalar)``."""
+        from pychebyshev._algebra import _is_scalar
+
+        if not _is_scalar(scalar):
+            raise TypeError(
+                f"ChebyshevTT / {type(scalar).__name__} is not supported"
+            )
+        if float(scalar) == 0.0:
+            raise ZeroDivisionError("division by zero")
+        return self.__mul__(1.0 / float(scalar))
+
+    def __iadd__(self, other) -> "ChebyshevTT":
+        """In-place addition: ``tt += other`` (returns new object)."""
+        return self + other
+
+    def __isub__(self, other) -> "ChebyshevTT":
+        """In-place subtraction: ``tt -= other`` (returns new object)."""
+        return self - other
+
+    def __imul__(self, scalar) -> "ChebyshevTT":
+        """In-place scalar multiplication: ``tt *= scalar`` (returns new object)."""
+        return self * scalar
+
+    def __itruediv__(self, scalar) -> "ChebyshevTT":
+        """In-place scalar division: ``tt /= scalar`` (returns new object)."""
+        return self / scalar
