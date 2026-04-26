@@ -870,6 +870,267 @@ class ChebyshevSlider:
         obj._derivative_id_to_orders = []
         return obj
 
+    # ------------------------------------------------------------------
+    # Integration
+    # ------------------------------------------------------------------
+
+    def integrate(self, dims=None, bounds=None):
+        """Integrate the slider approximation over one or more dimensions.
+
+        Uses the closed-form decomposition of the sliding sum
+        ``f(x) ≈ pv + Σ_i [s_i(x_{G_i}) - pv]``.  Each slide's integral
+        is computed via :meth:`ChebyshevApproximation.integrate`.
+
+        Full integration (``dims=None``) collapses every dimension and
+        returns a scalar.  Partial integration returns a new
+        :class:`ChebyshevSlider` over the surviving dimensions, with an
+        adjusted pivot value that absorbs the contributions of every
+        slide whose group is fully integrated.
+
+        Parameters
+        ----------
+        dims : int, list of int, or None
+            Dimensions to integrate out.  ``None`` integrates every
+            dimension and returns a scalar.
+        bounds : tuple, list of tuple/None, or None
+            Sub-interval bounds for integration.  ``None`` (default)
+            integrates over the full domain of each integrated dimension.
+            A list of tuples/``None`` provides per-dim bounds with
+            positional correspondence to *dims* (after sorting).
+
+        Returns
+        -------
+        float or ChebyshevSlider
+            Scalar if every dimension is integrated; otherwise a
+            lower-dimensional slider (already built, ``function=None``).
+
+        Raises
+        ------
+        RuntimeError
+            If ``build()`` has not been called.
+        ValueError
+            If any dimension index is out of range/duplicated, or if
+            bounds are outside the domain.
+        """
+        if not self._built:
+            raise RuntimeError("Call build() first")
+
+        from pychebyshev._calculus import (
+            _normalize_bounds,
+            _slider_partition_intersect,
+        )
+
+        # ------------------------------------------------------------------
+        # Normalize dims + bounds
+        # ------------------------------------------------------------------
+        if dims is None:
+            dims_sorted = list(range(self.num_dimensions))
+        elif isinstance(dims, int):
+            dims_sorted = [dims]
+        else:
+            dims_sorted = sorted(set(dims))
+
+        for d in dims_sorted:
+            if d < 0 or d >= self.num_dimensions:
+                raise ValueError(
+                    f"dim {d} out-of-range [0, {self.num_dimensions - 1}]"
+                )
+
+        per_dim_bounds = _normalize_bounds(dims_sorted, bounds, self.domain)
+
+        # Per-dim integration widths (b - a) for full-domain or sub-interval
+        # bounds. ``None`` in per_dim_bounds means full domain.
+        dim_to_idx = {d: i for i, d in enumerate(dims_sorted)}
+        widths = {}
+        bounds_for_dim = {}
+        for d in dims_sorted:
+            bd = per_dim_bounds[dim_to_idx[d]]
+            a, b = self.domain[d]
+            if bd is None:
+                widths[d] = b - a
+                bounds_for_dim[d] = None
+            else:
+                widths[d] = bd[1] - bd[0]
+                bounds_for_dim[d] = bd
+
+        vol_T = 1.0
+        for d in dims_sorted:
+            vol_T *= widths[d]
+
+        # ------------------------------------------------------------------
+        # Classify each slide and compute the new pivot constant
+        # (contributions from "full" slides).
+        # ------------------------------------------------------------------
+        # Per-slide classification: list of dicts.
+        slide_info = []
+        for slide_idx, group in enumerate(self.partition):
+            kind, kept = _slider_partition_intersect(
+                group_dims=list(group), integrate_dims=dims_sorted
+            )
+            slide_info.append({"kind": kind, "kept": kept, "group": list(group)})
+
+        # ``pv'`` accumulator. Start with pv * vol_T (the first term).
+        pv_new = self.pivot_value * vol_T
+
+        # For each "full" slide: integrate s_i over its full group with the
+        # appropriate sub-interval bounds, then compute the contribution.
+        # Contribution = vol(T \ G_i) * (I_i - pv * vol(G_i ∩ T))
+        # Because integrate_dims ⊇ G_i for "full" slides, vol(G_i ∩ T) is the
+        # product of widths over G_i.
+        slide_full_integrals = {}  # slide_idx -> I_i
+        for slide_idx, info in enumerate(slide_info):
+            if info["kind"] != "full":
+                continue
+            slide = self.slides[slide_idx]
+            group = info["group"]
+
+            # Build local-dim list (always all of slide's dims) with bounds.
+            local_dims = list(range(len(group)))
+            local_bounds = [bounds_for_dim[g] for g in group]
+
+            # If every entry is None, omit bounds for clarity (full domain).
+            if all(b is None for b in local_bounds):
+                I_i = slide.integrate(dims=local_dims)
+            else:
+                I_i = slide.integrate(dims=local_dims, bounds=local_bounds)
+            slide_full_integrals[slide_idx] = float(I_i)
+
+            # vol(T \ G_i) — widths over dims being integrated but NOT in G_i
+            vol_outside = 1.0
+            for d in dims_sorted:
+                if d not in group:
+                    vol_outside *= widths[d]
+
+            # vol(G_i ∩ T) for "full" slides equals product of widths over G_i
+            vol_group = 1.0
+            for d in group:
+                vol_group *= widths[d]
+
+            pv_new += vol_outside * (I_i - self.pivot_value * vol_group)
+
+        # ------------------------------------------------------------------
+        # Full integration: every group is "full", return scalar.
+        # ------------------------------------------------------------------
+        if len(dims_sorted) == self.num_dimensions:
+            return float(pv_new)
+
+        # ------------------------------------------------------------------
+        # Partial integration: build new slider over surviving dims.
+        # ------------------------------------------------------------------
+        # Surviving global dim indices, sorted.
+        survive = sorted(d for d in range(self.num_dimensions)
+                         if d not in dim_to_idx)
+        # global -> new index
+        old_to_new = {old: new for new, old in enumerate(survive)}
+
+        new_partition: list[list[int]] = []
+        new_slides: list[ChebyshevApproximation] = []
+
+        for slide_idx, info in enumerate(slide_info):
+            kind = info["kind"]
+            if kind == "full":
+                continue  # absorbed into pv_new
+
+            group = info["group"]
+            slide = self.slides[slide_idx]
+
+            if kind == "none":
+                # Slide passes through. Apply the partition-of-unity shift:
+                #   new_tensor = vol_T * tensor + (pv_new - pv * vol_T)
+                shift = pv_new - self.pivot_value * vol_T
+                new_tensor = vol_T * slide.tensor_values + shift
+                new_slide = ChebyshevApproximation._from_grid(slide, new_tensor)
+                new_group = [old_to_new[d] for d in group]
+            else:
+                # Partial: integrate the group's intersection with T.
+                # Build local indices (within slide) for dims to integrate.
+                local_dims = []
+                local_bounds = []
+                for local_i, gd in enumerate(group):
+                    if gd in dim_to_idx:
+                        local_dims.append(local_i)
+                        local_bounds.append(bounds_for_dim[gd])
+
+                if all(b is None for b in local_bounds):
+                    reduced = slide.integrate(dims=local_dims)
+                else:
+                    reduced = slide.integrate(
+                        dims=local_dims, bounds=local_bounds
+                    )
+
+                # Volume of integrated dims OUTSIDE this group (T \ G_i)
+                vol_outside = 1.0
+                for d in dims_sorted:
+                    if d not in group:
+                        vol_outside *= widths[d]
+
+                # Apply unified rule:
+                #   new_tensor = vol_outside * reduced.tensor + (pv_new - pv * vol_T)
+                shift = pv_new - self.pivot_value * vol_T
+                new_tensor = vol_outside * reduced.tensor_values + shift
+                new_slide = ChebyshevApproximation._from_grid(reduced, new_tensor)
+                new_group = [old_to_new[d] for d in info["kept"]]
+
+            new_partition.append(new_group)
+            new_slides.append(new_slide)
+
+        # ------------------------------------------------------------------
+        # Reconstruct slider metadata for surviving dims.
+        # ------------------------------------------------------------------
+        new_ndim = len(survive)
+        new_domain = [list(self.domain[d]) for d in survive]
+        new_n_nodes = [self.n_nodes[d] for d in survive]
+        new_pivot_point = [self.pivot_point[d] for d in survive]
+
+        # The decomposition is now:
+        #   g(y) = pv_new + Σ_j [tilde_s_j(y_{G'_j}) - pv_new]
+        # We constructed each tilde_s_j so that its barycentric tensor satisfies
+        # tilde_s_j(y) - pv_new = vol_T * (s_j(y) - pv) for "none" slides, or
+        # vol_outside * (reduced(y) - pv * vol(G_j ∩ T)) for "partial" slides
+        # — exactly what an integrated sliding sum needs (advisor-approved math).
+        # That means the slider's *new* pivot constant is pv_new and each new
+        # slide tensor evaluates to ``pv_new + (contribution)``.  The unified
+        # rule "new_tensor = scale * source_tensor + (pv_new - pv * vol_T)"
+        # produces a tensor whose value at any node y is
+        #   scale * source(y) + pv_new - pv * vol_T
+        # so subtracting pv_new gives scale * source(y) - pv * vol_T, the
+        # required contribution of the slide.
+
+        # k_new = number of surviving slides; if zero, this is a scalar
+        # (handled above) or a degenerate slider (no slides). The "no slides"
+        # case is impossible here because every surviving dim must belong to
+        # exactly one (none/partial) slide.
+        if not new_slides:
+            # Defensive: shouldn't happen given the partition invariant.
+            raise RuntimeError(
+                "internal error: partial integration produced 0 slides "
+                "with surviving dims"
+            )
+
+        dim_to_slide = {}
+        for si, group in enumerate(new_partition):
+            for d in group:
+                dim_to_slide[d] = si
+
+        obj = object.__new__(ChebyshevSlider)
+        obj.function = None
+        obj.num_dimensions = new_ndim
+        obj.domain = new_domain
+        obj.n_nodes = new_n_nodes
+        obj.max_derivative_order = self.max_derivative_order
+        obj.partition = new_partition
+        obj.pivot_point = new_pivot_point
+        obj.slides = new_slides
+        obj.pivot_value = pv_new
+        obj._dim_to_slide = dim_to_slide
+        obj._built = True
+        obj.descriptor = self.descriptor
+        obj.additional_data = self.additional_data
+        obj._cached_error_estimate = None
+        obj._derivative_id_registry = {}
+        obj._derivative_id_to_orders = []
+        return obj
+
     def _check_slider_compatible(self, other):
         """Validate that two sliders can be combined arithmetically."""
         from pychebyshev._algebra import _check_compatible

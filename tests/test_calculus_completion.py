@@ -310,3 +310,73 @@ class TestTTIntegrateBoundsAndValidation:
         result.save(str(path))
         loaded = ChebyshevTT.load(str(path))
         assert loaded.eval([0.5]) == pytest.approx(result.eval([0.5]), abs=1e-12)
+
+
+# ============================================================================
+# T6: Slider full integration (returns scalar)
+# ============================================================================
+
+class TestSliderFullIntegrate:
+    def test_pivot_only_function(self):
+        """f(x, y) = constant; integral = constant * vol(D)."""
+        def f(x, _):
+            return 5.0
+
+        slider = ChebyshevSlider(
+            f, 2, [[0, 2], [0, 3]], [4, 4], partition=[[0], [1]],
+            pivot_point=[1.0, 1.5],
+        )
+        slider.build(verbose=False)
+        result = slider.integrate()
+        # f = 5 everywhere, so integrate = 5 * 2 * 3 = 30
+        assert result == pytest.approx(30.0, abs=1e-10)
+
+    def test_additive_function_sum_of_x(self):
+        """f(x, y) = x + y over [-1, 1]^2 → ∫ = 0."""
+        def f(x, _):
+            return x[0] + x[1]
+
+        slider = ChebyshevSlider(
+            f, 2, [[-1, 1], [-1, 1]], [8, 8], partition=[[0], [1]],
+            pivot_point=[0.0, 0.0],
+        )
+        slider.build(verbose=False)
+        result = slider.integrate()
+        assert result == pytest.approx(0.0, abs=1e-10)
+
+    def test_separable_function_against_analytical(self):
+        """f(x, y) = sin(x) + cos(y) over [-1, 1]^2.
+        ∫∫ sin(x) dx dy = 0; ∫∫ cos(y) dx dy = 4 sin(1)."""
+        def f(x, _):
+            return math.sin(x[0]) + math.cos(x[1])
+
+        slider = ChebyshevSlider(
+            f, 2, [[-1, 1], [-1, 1]], [10, 10], partition=[[0], [1]],
+            pivot_point=[0.0, 0.0],
+        )
+        slider.build(verbose=False)
+        result = slider.integrate()
+        expected = 4.0 * math.sin(1.0)
+        assert result == pytest.approx(expected, abs=1e-6)
+
+    def test_5d_against_nquad(self):
+        """5-D additive function vs scipy nquad."""
+        from scipy.integrate import nquad
+
+        def f_scalar(x, _):
+            return sum(math.sin(xi) for xi in x)
+
+        domain = [[-1, 1]] * 5
+        slider = ChebyshevSlider(
+            f_scalar, 5, domain, [8] * 5,
+            partition=[[i] for i in range(5)],
+            pivot_point=[0.0] * 5,
+        )
+        slider.build(verbose=False)
+        cheb_result = slider.integrate()
+
+        def f_nquad(*args):
+            return sum(math.sin(a) for a in args)
+
+        scipy_result, _ = nquad(f_nquad, domain)
+        assert cheb_result == pytest.approx(scipy_result, abs=1e-6)
