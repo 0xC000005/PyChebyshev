@@ -1091,3 +1091,56 @@ class TestTTRoots:
         tt = ChebyshevTT(f, num_dimensions=1, domain=[(-1, 1)], n_nodes=[5])
         with pytest.raises(RuntimeError, match="build"):
             tt.roots()
+
+
+# ============================================================================
+# TestTTMinimize
+# ============================================================================
+
+class TestTTMinimize:
+    """Tests for ChebyshevTT.minimize()."""
+
+    def test_minimize_quadratic_1d(self):
+        def f(x, _): return (x[0] - 0.3) ** 2 + 1.0
+        tt = ChebyshevTT(f, num_dimensions=1, domain=[(-1, 1)], n_nodes=[10])
+        tt.build(verbose=False)
+        val, loc = tt.minimize()
+        assert abs(val - 1.0) < 1e-10
+        assert abs(loc - 0.3) < 1e-10
+
+    def test_minimize_constant(self):
+        def f(x, _): return 5.0
+        tt = ChebyshevTT(f, num_dimensions=1, domain=[(-2, 4)], n_nodes=[5])
+        tt.build(verbose=False)
+        val, _ = tt.minimize()
+        assert abs(val - 5.0) < 1e-10
+
+    def test_minimize_2d_fixed(self):
+        def f(x, _): return (x[0] - 0.5) ** 2 + x[1]
+        tt = ChebyshevTT(f, num_dimensions=2, domain=[(-1, 1), (-1, 1)], n_nodes=[8, 8])
+        tt.build(verbose=False)
+        val, loc = tt.minimize(dim=0, fixed={1: 0.0})
+        assert abs(val - 0.0) < 1e-9
+        assert abs(loc - 0.5) < 1e-9
+
+    def test_minimize_endpoint(self):
+        """Linear x on [0,1] — min at x=0."""
+        def f(x, _): return x[0]
+        tt = ChebyshevTT(f, num_dimensions=1, domain=[(0, 1)], n_nodes=[5])
+        tt.build(verbose=False)
+        val, loc = tt.minimize()
+        assert abs(val - 0.0) < 1e-9
+        assert abs(loc - 0.0) < 1e-9
+
+    def test_minimize_missing_fixed_raises(self):
+        def f(x, _): return x[0] + x[1]
+        tt = ChebyshevTT(f, num_dimensions=2, domain=[(-1, 1), (-1, 1)], n_nodes=[5, 5])
+        tt.build(verbose=False)
+        with pytest.raises(ValueError):
+            tt.minimize(dim=0)
+
+    def test_minimize_before_build_raises(self):
+        def f(x, _): return x[0]
+        tt = ChebyshevTT(f, num_dimensions=1, domain=[(-1, 1)], n_nodes=[5])
+        with pytest.raises(RuntimeError, match="build"):
+            tt.minimize()

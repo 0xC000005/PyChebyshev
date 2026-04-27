@@ -1763,6 +1763,88 @@ class ChebyshevTT:
         cheb_1d = self._to_1d_chebyshev(sliced)
         return cheb_1d.roots()
 
+    def minimize(self, dim=None, fixed=None):
+        """Find the minimum value of the TT along a dimension.
+
+        Reduces to a 1-D problem by slicing all other dimensions to
+        their fixed values, then delegates to
+        ``ChebyshevApproximation.minimize()``. See ``roots()`` for
+        parameter details.
+
+        Parameters
+        ----------
+        dim : int or None
+            User-frame dimension index. Defaults to 0 for 1-D.
+        fixed : dict or None
+            ``{dim_index: value}`` for all dimensions except *dim*.
+            User-frame indices.
+
+        Returns
+        -------
+        (value, location) : (float, float)
+            The minimum value and its location in the physical domain.
+
+        Raises
+        ------
+        RuntimeError
+            If ``build()`` has not been called.
+        ValueError
+            If validation fails or values are out of domain.
+        """
+        if not self._built:
+            raise RuntimeError("Call build() first")
+
+        from pychebyshev._calculus import _validate_calculus_args
+
+        dim, slice_params = _validate_calculus_args(
+            self.num_dimensions, dim, fixed, self.domain
+        )
+
+        sliced = self.slice(slice_params) if slice_params else self
+        cheb_1d = self._to_1d_chebyshev(sliced)
+        return cheb_1d.minimize()
+
+    def maximize(self, dim=None, fixed=None):
+        """Find the maximum value of the TT along a dimension.
+
+        Reduces to a 1-D problem by slicing all other dimensions to
+        their fixed values, then delegates to
+        ``ChebyshevApproximation.maximize()``. See ``minimize()`` for
+        parameter details.
+
+        Parameters
+        ----------
+        dim : int or None
+            User-frame dimension index. Defaults to 0 for 1-D.
+        fixed : dict or None
+            ``{dim_index: value}`` for all dimensions except *dim*.
+            User-frame indices.
+
+        Returns
+        -------
+        (value, location) : (float, float)
+            The maximum value and its location in the physical domain.
+
+        Raises
+        ------
+        RuntimeError
+            If ``build()`` has not been called.
+        ValueError
+            If validation fails or values are out of domain.
+        """
+        if not self._built:
+            raise RuntimeError("Call build() first")
+
+        from pychebyshev._calculus import _validate_calculus_args
+
+        dim, slice_params = _validate_calculus_args(
+            self.num_dimensions, dim, fixed, self.domain
+        )
+
+        sliced = self.slice(slice_params) if slice_params else self
+        cheb_1d = self._to_1d_chebyshev(sliced)
+        return cheb_1d.maximize()
+
     def to_dense(self) -> np.ndarray:
         """Materialize the TT chain into a full N-D tensor of values.
 
