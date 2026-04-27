@@ -332,28 +332,29 @@ class TestFixtures:
 class TestDimOrderGuards:
     """Tests that document the v0.20 limitation: with_auto_order's permuted
     _dim_order is only threaded through eval() and full integrate().
-    Other methods raise NotImplementedError (or ValueError for algebra
-    mismatch) until v0.20.1 fixes it."""
+    Other methods raise NotImplementedError until v0.20.1 fixes it."""
 
-    def _build_non_identity_tt(self, method="random"):
-        """Build a 2D TT with non-identity dim_order, or return None if identity."""
-        def f(x, _):
-            return math.sin(x[0]) + math.cos(x[1])
+    def _build_non_identity_tt(self):
+        """Build a 2-D TT with deterministic non-identity _dim_order.
 
-        tt = ChebyshevTT.with_auto_order(
-            f, 2, [[-1, 1], [-1, 1]], [6, 6],
-            max_rank=4, n_trials=3, method=method,
-        )
-        if tt.dim_order == [0, 1]:
-            return None
+        Constructs f(x0, x1) = sin(x0) + cos(x1) internally as perm_f
+        over the permuted coordinate (x1, x0), then stamps _dim_order=[1,0].
+        With _dim_order=[1,0], eval([a, b]) permutes to [b, a] before
+        contracting the cores, so the TT correctly evaluates f(a, b).
+        """
+        def perm_f(point, ad):
+            # point arrives in PERMUTED order [orig_dim_1, orig_dim_0]
+            return math.sin(point[1]) + math.cos(point[0])
+
+        tt = ChebyshevTT(perm_f, 2, [[-1, 1], [-1, 1]], [6, 6], max_rank=4)
+        tt.build(verbose=False)
+        tt._dim_order = [1, 0]  # orig dim 1 stored at TT position 0
         return tt
 
     def test_eval_multi_with_non_identity_dim_order_raises(self):
         tt = self._build_non_identity_tt()
-        if tt is None:
-            pytest.skip("random search picked identity; can't test guard")
         with pytest.raises(NotImplementedError, match="dim_order"):
-            tt.eval_multi([0.3, 0.4], [[1, 0]])
+            tt.eval_multi([[0.3, 0.4]], [[1, 0]])
 
     def test_eval_multi_identity_dim_order_works(self):
         """eval_multi should NOT raise when dim_order is identity."""
@@ -367,49 +368,51 @@ class TestDimOrderGuards:
         result = tt.eval_multi([0.3, 0.4], [[0, 0]])
         assert result[0] == pytest.approx(0.3 + 0.4, abs=1e-6)
 
-    def test_add_with_mismatched_dim_order_raises(self):
-        def f1(x, _):
-            return x[0] + x[1] * x[2] * x[3] * x[4]
-
-        def f2(x, _):
-            return x[0] * x[1] * x[2] * x[3] + x[4]
-
-        tt1 = ChebyshevTT.with_auto_order(
-            f1, 5, [[-1, 1]] * 5, [6] * 5, max_rank=4, n_trials=3,
-        )
-        tt2 = ChebyshevTT.with_auto_order(
-            f2, 5, [[-1, 1]] * 5, [6] * 5, max_rank=4, n_trials=3,
-        )
-        if tt1.dim_order == tt2.dim_order:
-            pytest.skip("both picked same order; can't test mismatch")
-        with pytest.raises(ValueError, match="_dim_order mismatch"):
+    def test_add_with_non_identity_dim_order_raises(self):
+        """tt + tt where BOTH have same non-identity order should raise NotImplementedError."""
+        tt1 = self._build_non_identity_tt()
+        tt2 = self._build_non_identity_tt()
+        with pytest.raises(NotImplementedError, match="dim_order"):
             _ = tt1 + tt2
+
+    def test_iadd_with_non_identity_dim_order_raises(self):
+        tt1 = self._build_non_identity_tt()
+        tt2 = self._build_non_identity_tt()
+        with pytest.raises(NotImplementedError, match="dim_order"):
+            tt1 += tt2
+
+    def test_neg_with_non_identity_dim_order_raises(self):
+        tt = self._build_non_identity_tt()
+        with pytest.raises(NotImplementedError, match="dim_order"):
+            _ = -tt
+
+    def test_mul_with_non_identity_dim_order_raises(self):
+        tt = self._build_non_identity_tt()
+        with pytest.raises(NotImplementedError, match="dim_order"):
+            _ = tt * 2.0
+
+    def test_truediv_with_non_identity_dim_order_raises(self):
+        tt = self._build_non_identity_tt()
+        with pytest.raises(NotImplementedError, match="dim_order"):
+            _ = tt / 2.0
 
     def test_slice_with_non_identity_dim_order_raises(self):
         tt = self._build_non_identity_tt()
-        if tt is None:
-            pytest.skip("random search picked identity; can't test guard")
         with pytest.raises(NotImplementedError, match="dim_order"):
             tt.slice([(0, 0.5)])
 
     def test_extrude_with_non_identity_dim_order_raises(self):
         tt = self._build_non_identity_tt()
-        if tt is None:
-            pytest.skip("random search picked identity; can't test guard")
         with pytest.raises(NotImplementedError, match="dim_order"):
             tt.extrude([(2, [-1, 1], 4)])
 
     def test_to_dense_with_non_identity_dim_order_raises(self):
         tt = self._build_non_identity_tt()
-        if tt is None:
-            pytest.skip("random search picked identity; can't test guard")
         with pytest.raises(NotImplementedError, match="dim_order"):
             tt.to_dense()
 
     def test_partial_integrate_with_non_identity_dim_order_raises(self):
         tt = self._build_non_identity_tt()
-        if tt is None:
-            pytest.skip("random search picked identity; can't test guard")
         with pytest.raises(NotImplementedError, match="dim_order"):
             tt.integrate(dims=0)
 

@@ -10,9 +10,9 @@ consume PyChebyshev models from non-Python production systems.
 - **Julia** (`readers/julia/`) — `PCBReader.jl` package
 
 Both parse the same `.pcb` files; both return a struct with the
-deserialized interpolant data (tensor values, weights, diff matrices,
-domain bounds, n_nodes per dimension). Neither implements *evaluation*
-— that's left to the consumer using the spec.
+deserialized interpolant data (tensor values, domain bounds, n_nodes per
+dimension). Neither implements *evaluation* — that's left to the consumer
+using the spec.
 
 ## Format spec
 
@@ -33,17 +33,17 @@ See [Binary Format](binary-format.md). The format is stable; pre-v0.20
 ## Rust example
 
 ```rust
-use pcb_reader::{read_pcb, ClassTag};
+use pcb_reader::{read_pcb, PcbInterpolant};
 
-let interp = read_pcb("model.pcb")?;
-match interp.tag {
-    ClassTag::ChebyshevApproximation => {
-        println!("{} dims, {} tensor entries",
-                 interp.num_dimensions, interp.tensor_values.len());
-    },
-    ClassTag::ChebyshevSpline => {
-        println!("Spline with {} pieces", interp.num_pieces);
-    },
+let interp = read_pcb("model.pcb").expect("read failed");
+match interp {
+    PcbInterpolant::Approximation(a) => {
+        println!("dims={} n_nodes={:?}", a.num_dimensions, a.n_nodes);
+        println!("first value={}", a.tensor_values[0]);
+    }
+    PcbInterpolant::Spline(s) => {
+        println!("dims={} pieces={}", s.num_dimensions, s.pieces.len());
+    }
 }
 ```
 
@@ -53,15 +53,21 @@ match interp.tag {
 using PCBReader
 
 interp = read_pcb("model.pcb")
-println("$(interp.num_dimensions) dims")
+if interp isa PCBReader.Approximation
+    println("$(interp.num_dimensions) dimensions, $(prod(interp.n_nodes)) grid points")
+elseif interp isa PCBReader.Spline
+    println("$(interp.num_dimensions) dimensions, $(length(interp.pieces)) pieces")
+end
 ```
 
 Evaluate using your own BLAS.jl backend or spectral methods in the Julia
-ecosystem:
+ecosystem. The `.pcb` format stores only `tensor_values` (not pre-computed
+barycentric weights), so you reconstruct weights from the node positions:
 
 ```julia
-# Custom barycentric evaluation in Julia
-f_eval(x) = barycentric_eval(x, interp.tensor_values, interp.barycentric_weights)
+# Barycentric weights are derived from n_nodes and domain — not stored in .pcb
+# Use the tensor_values with your own evaluation kernel
+f_eval(x) = barycentric_eval(x, interp.tensor_values, interp.n_nodes, interp.domain)
 ```
 
 ## Building & testing readers
@@ -78,7 +84,7 @@ cargo test
 
 ```julia
 # In Julia REPL
-] dev readers/julia/PCBReader.jl
+] dev readers/julia/
 # Precompile and run tests
 ] test PCBReader
 ```
@@ -89,10 +95,9 @@ Both readers are tested against golden `.pcb` files in `tests/fixtures/`:
 
 ```
 tests/fixtures/
-  ├── cheb_1d.pcb           # 1-D ChebyshevApproximation
-  ├── cheb_3d.pcb           # 3-D ChebyshevApproximation
-  ├── spline_1d.pcb         # 1-D ChebyshevSpline
-  └── spline_2d.pcb         # 2-D ChebyshevSpline with multiple pieces
+  ├── approx_2d_simple.pcb  # 2-D ChebyshevApproximation
+  ├── approx_5d_bs.pcb      # 5-D ChebyshevApproximation (Black-Scholes)
+  └── spline_1d_kink.pcb    # 1-D ChebyshevSpline with kink
 ```
 
 Regenerate golden fixtures to test compatibility across reader versions:
@@ -129,8 +134,8 @@ matching pychebyshev versions, making them forward-compatible with future format
 (as long as the header is stable).
 
 !!! tip "Version alignment"
-    Readers track the `.pcb` format version in their `READERS.md` documentation.
-    v0.20 uses format version 2 (stable since v0.14).
+    Readers track the `.pcb` format version in their `README.md` documentation.
+    v0.20 uses format major version 1 (stable since v0.14).
 
 ## Typical integration pattern
 

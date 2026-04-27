@@ -30,7 +30,7 @@ subtler kinks.
 
 - `max_knots_per_dim` — max interior knots per dimension (prevents over-segmentation)
 - `n_scan_points` — density of grid points to scan each dimension
-- `threshold_factor` — multiplier on the robust MAD-based threshold; default 5.0
+- `threshold_factor` — multiplier on the mean-based threshold (`mean(|d²f|)`); default 5.0
 
 Returns a `ChebyshevSpline` with auto-discovered knots and equal nodes per piece.
 
@@ -56,10 +56,10 @@ result = cheb.sobol_indices()
 - `total_order[i]` — fraction including all interactions involving dimension `i`
 - `variance` — global variance of the function over the domain
 
-Indices sum to 1 (first-order) and sum to ≤ 1 + (order × 1st-order) (total-order,
-with overlap for interaction terms). Available on `ChebyshevApproximation`,
-`ChebyshevSpline`, and `ChebyshevSlider`. See Saltelli et al. (2010) for the
-mathematical foundation.
+First-order indices sum to 1 only for purely additive models; the deficit
+`1 − Σ S_i` captures interactions. Total-order indices satisfy `Σ S_T_i ≥ 1`,
+with the excess attributable to interactions. Available on `ChebyshevApproximation`
+and `ChebyshevSpline`. See Saltelli et al. (2010) for the mathematical foundation.
 
 !!! note
     `ChebyshevTT` does not yet support Sobol; this is deferred to v0.21.
@@ -90,7 +90,9 @@ print(tt.dim_order)            # e.g. [4, 0, 2, 1, 3]
 
 Returns a `ChebyshevTT` with `dim_order` transparently applied, so user code
 stays in original dimension order. Internally, the TT is reordered; `eval()`
-and algebra auto-transpose.
+and full `integrate()` respect the permutation transparently. Algebra operators
+(`+`, `-`, `*`, `/`, unary `-`) raise `NotImplementedError` on TTs with a
+non-identity `dim_order` — rebuild with the canonical constructor for those use cases.
 
 Cost: `n_trials` × normal TT build time. Use only when TT rank is a bottleneck
 (typically d ≥ 5) or you're unsure of the best ordering.
