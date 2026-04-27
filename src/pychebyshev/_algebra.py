@@ -172,3 +172,71 @@ def _tt_round_cores(cores, max_rank, tolerance=1e-12):
         SV = S[:, None] * Vt
         cores[k + 1] = np.einsum("lr,rjs->ljs", SV, cores[k + 1])
     return cores
+
+
+def _tt_swap_adjacent(cores, i, max_rank, tolerance=1e-12):
+    """Swap adjacent storage axes ``i`` and ``i+1`` of a TT in coefficient space.
+
+    Operates directly on coefficient cores (the swap is linear; coefficient-
+    space and value-space results agree because each axis transforms
+    independently under the DCT-II basis).
+
+    Parameters
+    ----------
+    cores : list[np.ndarray]
+        TT coefficient cores. Modified copies returned; input is not mutated.
+    i : int
+        Position of the leftmost core in the swap pair. Must satisfy
+        ``0 <= i < len(cores) - 1``.
+    max_rank : int
+        Maximum rank for the SVD truncation between the swapped cores.
+    tolerance : float, optional
+        Relative singular-value cutoff (``s_max * tolerance``).
+
+    Returns
+    -------
+    list[np.ndarray]
+        New cores list with axes ``i`` and ``i+1`` swapped. Cores ``< i``
+        and ``> i+1`` are unchanged copies.
+    """
+    if i < 0 or i >= len(cores) - 1:
+        raise ValueError(
+            f"i={i} out of range [0, {len(cores) - 1})"
+        )
+    new_cores = [c.copy() for c in cores]
+    A = new_cores[i]      # shape (r_l, n_a, r_m)
+    B = new_cores[i + 1]  # shape (r_m, n_b, r_r)
+    r_l, n_a, r_m = A.shape
+    r_m2, n_b, r_r = B.shape
+    assert r_m == r_m2, f"core shape mismatch at {i}: {A.shape} vs {B.shape}"
+
+    # Form joint 4-tensor M[r_l, n_a, n_b, r_r] = sum_{r_m} A * B
+    M = np.einsum("lab,brs->lars", A, B)
+
+    # Transpose middle axes: (r_l, n_a, n_b, r_r) → (r_l, n_b, n_a, r_r)
+    Mt = M.transpose(0, 2, 1, 3)
+
+    # Reshape and SVD-truncate
+    mat = Mt.reshape(r_l * n_b, n_a * r_r)
+    U, S, Vh = np.linalg.svd(mat, full_matrices=False)
+    s_max = S[0] if len(S) > 0 else 0.0
+    keep = min(max_rank, len(S))
+    if s_max > 0 and tolerance > 0:
+        cutoff = s_max * tolerance
+        keep_by_tol = int(np.sum(S > cutoff))
+        keep = max(1, min(keep, keep_by_tol))
+    else:
+        keep = max(1, keep)
+    U = U[:, :keep]
+    S = S[:keep]
+    Vh = Vh[:keep, :]
+
+    # Repack: A' = U * S, shape (r_l, n_b, keep)
+    US = U * S
+    A_new = US.reshape(r_l, n_b, keep)
+    # B' = Vh, shape (keep, n_a, r_r)
+    B_new = Vh.reshape(keep, n_a, r_r)
+
+    new_cores[i] = A_new
+    new_cores[i + 1] = B_new
+    return new_cores
