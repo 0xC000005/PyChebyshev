@@ -1,0 +1,10 @@
+# This file is machine-generated - editing it directly is not advised
+
+julia_version = "1.12.6"
+manifest_format = "2.0"
+project_hash = "0f3c2719ec1585da9e72316cef5236c8665f3712"
+
+[[deps.PCBReader]]
+path = "."
+uuid = "76f73c0a-679a-4374-a68c-b4b43d65f191"
+version = "0.1.0"

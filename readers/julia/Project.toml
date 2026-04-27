@@ -1,0 +1,15 @@
+name = "PCBReader"
+uuid = "76f73c0a-679a-4374-a68c-b4b43d65f191"
+version = "0.1.0"
+authors = ["Max Zhang <maxjingwei.zhang@icloud.com>"]
+
+[deps]
+
+[compat]
+julia = "1.9"
+
+[extras]
+Test = "8dfed614-e22c-5e08-85e1-65c5234f0b40"
+
+[targets]
+test = ["Test"]
