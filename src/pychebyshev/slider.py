@@ -1223,6 +1223,46 @@ class ChebyshevSlider:
         cheb_1d = self._to_1d_chebyshev(sliced)
         return cheb_1d.roots()
 
+    def minimize(self, dim=None, fixed=None):
+        """Find the minimum value of the slider along a dimension.
+
+        Computes derivative roots to locate critical points, then
+        evaluates at all critical points and domain endpoints. For
+        multi-D sliders, all dimensions except the target must be
+        fixed.
+
+        Parameters
+        ----------
+        dim : int or None
+            Dimension along which to minimize. Defaults to 0 for 1-D.
+        fixed : dict or None
+            For multi-D, ``{dim_index: value}`` for all other dims.
+
+        Returns
+        -------
+        (value, location) : (float, float)
+            The minimum value and its coordinate in the target dimension.
+
+        Raises
+        ------
+        RuntimeError
+            If ``build()`` has not been called.
+        ValueError
+            If *dim* / *fixed* validation fails.
+        """
+        if not self._built:
+            raise RuntimeError("Call build() first")
+
+        from pychebyshev._calculus import _validate_calculus_args
+
+        dim, slice_params = _validate_calculus_args(
+            self.num_dimensions, dim, fixed, self.domain
+        )
+
+        sliced = self.slice(slice_params) if slice_params else self
+        cheb_1d = self._to_1d_chebyshev(sliced)
+        return cheb_1d.minimize()
+
     def _check_slider_compatible(self, other):
         """Validate that two sliders can be combined arithmetically."""
         from pychebyshev._algebra import _check_compatible
