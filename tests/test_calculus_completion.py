@@ -837,3 +837,77 @@ class TestSliderMinimize:
         )
         with pytest.raises(RuntimeError, match="build"):
             slider.minimize()
+
+
+# ============================================================================
+# TestSliderMaximize
+# ============================================================================
+
+class TestSliderMaximize:
+    """Tests for ChebyshevSlider.maximize()."""
+
+    def test_maximize_quadratic_1d(self):
+        """1-D Slider: max of -(x-0.3)^2 + 5 is 5 at x=0.3."""
+        def f(x, _): return -(x[0] - 0.3) ** 2 + 5.0
+        slider = ChebyshevSlider(
+            f, num_dimensions=1, domain=[(-1, 1)], n_nodes=[10],
+            partition=[[0]], pivot_point=[0.0],
+        )
+        slider.build(verbose=False)
+        val, loc = slider.maximize()
+        assert abs(val - 5.0) < 1e-10
+        assert abs(loc - 0.3) < 1e-10
+
+    def test_maximize_constant(self):
+        """Constant 7 — max is 7."""
+        def f(x, _): return 7.0
+        slider = ChebyshevSlider(
+            f, num_dimensions=1, domain=[(-2, 4)], n_nodes=[5],
+            partition=[[0]], pivot_point=[0.0],
+        )
+        slider.build(verbose=False)
+        val, _ = slider.maximize()
+        assert abs(val - 7.0) < 1e-12
+
+    def test_maximize_2d_fixed(self):
+        """2-D Slider: max of -(x-0.5)^2 + y at y=1 is 1 at x=0.5."""
+        def f(x, _): return -(x[0] - 0.5) ** 2 + x[1]
+        slider = ChebyshevSlider(
+            f, num_dimensions=2, domain=[(-1, 1), (-1, 1)], n_nodes=[8, 8],
+            partition=[[0], [1]], pivot_point=[0.0, 0.0],
+        )
+        slider.build(verbose=False)
+        val, loc = slider.maximize(dim=0, fixed={1: 1.0})
+        assert abs(val - 1.0) < 1e-9
+        assert abs(loc - 0.5) < 1e-9
+
+    def test_maximize_endpoint(self):
+        """Linear x on [0,1] — max is 1 at x=1."""
+        def f(x, _): return x[0]
+        slider = ChebyshevSlider(
+            f, num_dimensions=1, domain=[(0, 1)], n_nodes=[5],
+            partition=[[0]], pivot_point=[0.5],
+        )
+        slider.build(verbose=False)
+        val, loc = slider.maximize()
+        assert abs(val - 1.0) < 1e-10
+        assert abs(loc - 1.0) < 1e-10
+
+    def test_maximize_missing_fixed_raises(self):
+        def f(x, _): return x[0] + x[1]
+        slider = ChebyshevSlider(
+            f, num_dimensions=2, domain=[(-1, 1), (-1, 1)], n_nodes=[5, 5],
+            partition=[[0], [1]], pivot_point=[0.0, 0.0],
+        )
+        slider.build(verbose=False)
+        with pytest.raises(ValueError):
+            slider.maximize(dim=0)
+
+    def test_maximize_before_build_raises(self):
+        def f(x, _): return x[0]
+        slider = ChebyshevSlider(
+            f, num_dimensions=1, domain=[(-1, 1)], n_nodes=[5],
+            partition=[[0]], pivot_point=[0.0],
+        )
+        with pytest.raises(RuntimeError, match="build"):
+            slider.maximize()

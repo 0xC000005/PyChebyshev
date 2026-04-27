@@ -1263,6 +1263,25 @@ class ChebyshevSlider:
         cheb_1d = self._to_1d_chebyshev(sliced)
         return cheb_1d.minimize()
 
+    def maximize(self, dim=None, fixed=None):
+        """Find the maximum value of the slider along a dimension.
+
+        See ``minimize()`` for parameter details. Returns
+        ``(max_value, max_location)`` instead.
+        """
+        if not self._built:
+            raise RuntimeError("Call build() first")
+
+        from pychebyshev._calculus import _validate_calculus_args
+
+        dim, slice_params = _validate_calculus_args(
+            self.num_dimensions, dim, fixed, self.domain
+        )
+
+        sliced = self.slice(slice_params) if slice_params else self
+        cheb_1d = self._to_1d_chebyshev(sliced)
+        return cheb_1d.maximize()
+
     def _check_slider_compatible(self, other):
         """Validate that two sliders can be combined arithmetically."""
         from pychebyshev._algebra import _check_compatible
