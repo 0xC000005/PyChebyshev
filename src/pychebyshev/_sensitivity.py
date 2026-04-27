@@ -138,3 +138,110 @@ def _compute_sobol_from_coeffs(
         },
         "variance": variance,
     }
+
+
+def _compute_sobol_from_tt_cores(cores: list) -> dict:
+    """Compute first-order + total-order Sobol indices from TT coefficient cores.
+
+    Mathematically equivalent to ``_compute_sobol_from_coeffs`` applied to the
+    dense coefficient tensor, but contracts through TT cores in coefficient
+    space with cost O(d * n * r^2) instead of O(n^d).
+
+    Parameters
+    ----------
+    cores : list of np.ndarray
+        TT cores in Chebyshev coefficient space. Each core has shape
+        (r_{k-1}, n_k, r_k) with cores[0] starting from r_0=1 and
+        cores[-1] ending at r_d=1.
+
+    Returns
+    -------
+    dict
+        Same shape as ``_compute_sobol_from_coeffs``:
+        ``{"first_order": {d: index}, "total_order": {d: index}, "variance": float}``
+        where keys are storage-frame dim indices (0..len(cores)-1).
+    """
+    d = len(cores)
+    pi = float(np.pi)
+    n_per_dim = [c.shape[1] for c in cores]
+
+    # Per-dim Chebyshev inner-product weights: [pi, pi/2, pi/2, ..., pi/2]
+    w_full = []
+    for n_k in n_per_dim:
+        w = np.full(n_k, pi / 2.0)
+        w[0] = pi
+        w_full.append(w)
+
+    # ---- total_weighted_squared = sum over all alpha of
+    #      coeffs[alpha]^2 * prod_k w_full[k][alpha_k]
+    M = np.array([[1.0]])
+    for k in range(d):
+        A = cores[k]
+        Aw = A * w_full[k][None, :, None]
+        M = np.einsum("ij,ipa,jpb->ab", M, Aw, A)
+    total_weighted_squared = float(M[0, 0])
+
+    # ---- constant term c_0 (alpha = 0) -- contract along all-zero slices
+    v = np.array([1.0])
+    for k in range(d):
+        v = v @ cores[k][:, 0, :]
+    c_0 = float(v[0])
+    constant_weighted_squared = (c_0 ** 2) * (pi ** d)
+
+    variance = total_weighted_squared - constant_weighted_squared
+
+    if variance <= 0:
+        return {
+            "first_order": {j: 0.0 for j in range(d)},
+            "total_order": {j: 0.0 for j in range(d)},
+            "variance": float(max(variance, 0.0)),
+        }
+
+    first_order_energy = {}
+    total_order_energy = {}
+
+    for j in range(d):
+        # ---- first-order energy[j]: alpha_j >= 1 AND alpha_k = 0 for k != j
+        # left boundary: row vector formed by chaining cores[k][:, 0, :] for k < j
+        left = np.array([1.0])
+        for k in range(j):
+            left = left @ cores[k][:, 0, :]
+        # left has shape (r_j,)
+
+        # right boundary: column vector formed by chaining cores[k][:, 0, :] for k > j
+        right = np.array([1.0])
+        for k in range(d - 1, j, -1):
+            right = cores[k][:, 0, :] @ right
+        # right has shape (r_{j+1},)
+
+        G_j = cores[j]
+        sum_squared = 0.0
+        for m in range(1, n_per_dim[j]):
+            coef_m = float(left @ G_j[:, m, :] @ right)
+            sum_squared += coef_m * coef_m
+        weight_first = (pi / 2.0) * (pi ** (d - 1))
+        first_order_energy[j] = sum_squared * weight_first
+
+        # ---- total-order energy[j]: alpha_j >= 1 (other dims unrestricted)
+        # = total_weighted_squared - sum_{alpha_j = 0} of
+        #   coeffs[alpha]^2 * prod_k w_full[k][alpha_k]
+        # The "alpha_j = 0" sum: replace cores[j] with cores[j][:, 0:1, :]
+        # and use w_k = [pi] for dim j.
+        M_j = np.array([[1.0]])
+        for k in range(d):
+            if k == j:
+                A_slice = cores[k][:, 0:1, :]
+                w_k = np.array([pi])
+            else:
+                A_slice = cores[k]
+                w_k = w_full[k]
+            Aw_slice = A_slice * w_k[None, :, None]
+            M_j = np.einsum("ij,ipa,jpb->ab", M_j, Aw_slice, A_slice)
+        sum_alpha_j_zero_weighted = float(M_j[0, 0])
+        total_order_energy[j] = total_weighted_squared - sum_alpha_j_zero_weighted
+
+    return {
+        "first_order": {j: first_order_energy[j] / variance for j in range(d)},
+        "total_order": {j: total_order_energy[j] / variance for j in range(d)},
+        "variance": float(variance),
+    }

@@ -986,3 +986,70 @@ class TestCrossFeatureALS:
         assert err_after <= err_before * 1.1 + 1e-14, (
             f"completion increased error: before={err_before:.3e}, after={err_after:.3e}"
         )
+
+
+# ======================================================================
+# v0.21.1: Sobol indices via native TT contraction
+# ======================================================================
+
+
+class TestSobolFromTTCores:
+    """v0.21.1: _compute_sobol_from_tt_cores must produce identical Sobol
+    indices to _compute_sobol_from_coeffs on the dense coefficient tensor."""
+
+    def test_separable_2d(self):
+        """Separable f(x, y) = x + y -- equal main-effect indices ~50/50."""
+        from pychebyshev import ChebyshevApproximation
+        from pychebyshev._sensitivity import _compute_sobol_from_tt_cores
+
+        def f(x, _):
+            return x[0] + x[1]
+
+        cheb = ChebyshevApproximation(f, 2, [(-1, 1), (-1, 1)], [7, 7])
+        cheb.build(verbose=False)
+        ref = cheb.sobol_indices()
+        tt = ChebyshevTT(f, num_dimensions=2, domain=[(-1, 1), (-1, 1)], n_nodes=[7, 7])
+        tt.build(verbose=False)
+        tt_indices = _compute_sobol_from_tt_cores(tt._coeff_cores)
+        # Check first_order and total_order dicts agree
+        for key in ["first_order", "total_order"]:
+            assert set(tt_indices[key].keys()) == set(ref[key].keys())
+            for d in tt_indices[key]:
+                assert abs(tt_indices[key][d] - ref[key][d]) < 1e-9, (
+                    f"{key}[{d}]: TT={tt_indices[key][d]}, Approx={ref[key][d]}"
+                )
+        # Variance: should match too (same coefficients)
+        assert abs(tt_indices["variance"] - ref["variance"]) < 1e-9 * abs(ref["variance"])
+
+    def test_dominant_dim_3d(self):
+        """3D function dominated by dim 0 -- first_order[0] near 1.0."""
+        from pychebyshev._sensitivity import _compute_sobol_from_tt_cores
+
+        def f(x, _):
+            return x[0] + 0.01 * x[1] + 0.01 * x[2]
+
+        tt = ChebyshevTT(f, num_dimensions=3, domain=[(-1, 1)] * 3, n_nodes=[8, 8, 8])
+        tt.build(verbose=False)
+        idx = _compute_sobol_from_tt_cores(tt._coeff_cores)
+        # Dim 0 should dominate
+        assert idx["first_order"][0] > 0.99
+        assert idx["first_order"][1] < 0.01
+        assert idx["first_order"][2] < 0.01
+
+    def test_quadratic_3d_parity(self):
+        """3D quadratic -- match Approximation indices to ~1e-8."""
+        from pychebyshev import ChebyshevApproximation
+        from pychebyshev._sensitivity import _compute_sobol_from_tt_cores
+
+        def f(x, _):
+            return x[0] ** 2 + 0.5 * x[1] ** 2 + 0.25 * x[2] ** 2
+
+        cheb = ChebyshevApproximation(f, 3, [(-1, 1)] * 3, [9, 9, 9])
+        cheb.build(verbose=False)
+        ref = cheb.sobol_indices()
+        tt = ChebyshevTT(f, num_dimensions=3, domain=[(-1, 1)] * 3, n_nodes=[9, 9, 9])
+        tt.build(verbose=False)
+        idx = _compute_sobol_from_tt_cores(tt._coeff_cores)
+        for key in ["first_order", "total_order"]:
+            for d in idx[key]:
+                assert abs(idx[key][d] - ref[key][d]) < 1e-8

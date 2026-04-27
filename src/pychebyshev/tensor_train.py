@@ -2820,6 +2820,53 @@ class ChebyshevTT:
         import copy
         return copy.deepcopy(self)
 
+    def sobol_indices(self) -> dict:
+        """Compute first-order + total-order Sobol sensitivity indices.
+
+        Returns
+        -------
+        dict
+            ``{"first_order": {dim: index}, "total_order": {dim: index},
+            "variance": float}`` -- keyed by user-frame dim indices.
+
+        Raises
+        ------
+        RuntimeError
+            If ``build()`` has not been called.
+
+        Notes
+        -----
+        Computed natively by contracting through the TT coefficient cores;
+        no dense materialization. Cost O(d * n * r^2) per dim. Mathematically
+        equivalent to ``ChebyshevApproximation.sobol_indices()`` on the
+        dense version of the same function.
+
+        Under non-identity ``_dim_order`` (after ``with_auto_order`` /
+        ``reorder``), result keys are user-frame dim indices.
+        """
+        if not self._built:
+            raise RuntimeError("Call build() first")
+
+        from pychebyshev._sensitivity import _compute_sobol_from_tt_cores
+
+        # Helper returns dict keyed by storage-frame indices (0..d-1)
+        storage = _compute_sobol_from_tt_cores(self._coeff_cores)
+
+        # Translate keys to user-frame: storage position s holds
+        # original-dim self._dim_order[s].
+        user_first = {}
+        user_total = {}
+        for s in range(self.num_dimensions):
+            user_d = self._dim_order[s]
+            user_first[user_d] = storage["first_order"][s]
+            user_total[user_d] = storage["total_order"][s]
+
+        return {
+            "first_order": user_first,
+            "total_order": user_total,
+            "variance": storage["variance"],
+        }
+
     @classmethod
     def from_values(
         cls,
