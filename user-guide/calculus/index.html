@@ -983,6 +983,78 @@
   
 </li>
       
+        <li class="md-nav__item">
+  <a href="#slider-and-tt-calculus-v021" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Slider and TT calculus (v0.21+)
+      
+    </span>
+  </a>
+  
+    <nav class="md-nav" aria-label="Slider and TT calculus (v0.21+)">
+      <ul class="md-nav__list">
+        
+          <li class="md-nav__item">
+  <a href="#roots" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Roots
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#minimize-maximize" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Minimize / maximize
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#frame-transparency-under-with_auto_orderreorder" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Frame transparency under with_auto_order/reorder
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#slider-example" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Slider example
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#implementation-note" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Implementation note
+      
+    </span>
+  </a>
+  
+</li>
+        
+      </ul>
+    </nav>
+  
+</li>
+      
     </ul>
   
 </nav>
@@ -1590,6 +1662,78 @@
   
 </li>
       
+        <li class="md-nav__item">
+  <a href="#slider-and-tt-calculus-v021" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Slider and TT calculus (v0.21+)
+      
+    </span>
+  </a>
+  
+    <nav class="md-nav" aria-label="Slider and TT calculus (v0.21+)">
+      <ul class="md-nav__list">
+        
+          <li class="md-nav__item">
+  <a href="#roots" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Roots
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#minimize-maximize" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Minimize / maximize
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#frame-transparency-under-with_auto_orderreorder" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Frame transparency under with_auto_order/reorder
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#slider-example" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Slider example
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#implementation-note" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Implementation note
+      
+    </span>
+  </a>
+  
+</li>
+        
+      </ul>
+    </nav>
+  
+</li>
+      
     </ul>
   
 </nav>
@@ -1666,14 +1810,14 @@ all from a single pre-built proxy, without calling the pricing engine again.</p>
 <tr>
 <td><code>ChebyshevSlider</code></td>
 <td style="text-align: center;">Yes (v0.17)</td>
-<td style="text-align: center;">No</td>
-<td style="text-align: center;">No</td>
+<td style="text-align: center;">Yes (v0.21)</td>
+<td style="text-align: center;">Yes (v0.21)</td>
 </tr>
 <tr>
 <td><code>ChebyshevTT</code></td>
 <td style="text-align: center;">Yes (v0.17)</td>
-<td style="text-align: center;">No</td>
-<td style="text-align: center;">No</td>
+<td style="text-align: center;">Yes (v0.21)</td>
+<td style="text-align: center;">Yes (v0.21)</td>
 </tr>
 </tbody>
 </table>
@@ -2113,12 +2257,10 @@ reuse existing infrastructure: DCT coefficients, spectral differentiation
 matrices, and barycentric evaluation.</p>
 <h2 id="limitations">Limitations<a class="headerlink" href="#limitations" title="Permanent link">&para;</a></h2>
 <ul>
-<li><strong><code>roots()</code>, <code>minimize()</code>, and <code>maximize()</code> are not yet supported on
-  <code>ChebyshevSlider</code> or <code>ChebyshevTT</code>.</strong>  These operations require
-  1-D polynomial coefficient extraction; generalising to the sliding
-  decomposition or TT format is deferred.</li>
 <li><strong>Multi-D rootfinding</strong> (2D Bezout resultants) is not implemented. Only
-  1-D slices are supported via the <code>dim</code> + <code>fixed</code> interface.</li>
+  1-D slices are supported via the <code>dim</code> + <code>fixed</code> interface. This applies
+  to all four classes — <code>ChebyshevApproximation</code>, <code>ChebyshevSpline</code>,
+  <code>ChebyshevSlider</code>, and <code>ChebyshevTT</code>.</li>
 <li><strong>Result has <code>function=None</code></strong> -- partial integration results cannot call
   <code>build()</code> again, since there is no underlying function reference.</li>
 </ul>
@@ -2142,6 +2284,74 @@ matrices, and barycentric evaluation.</p>
    Interpolation", <em>SIAM Review</em> 46(3):501--517.</p>
 </li>
 </ol>
+<h2 id="slider-and-tt-calculus-v021">Slider and TT calculus (v0.21+)<a class="headerlink" href="#slider-and-tt-calculus-v021" title="Permanent link">&para;</a></h2>
+<p>Starting in v0.21, <code>ChebyshevSlider</code> and <code>ChebyshevTT</code> support the same
+calculus surface as <code>ChebyshevApproximation</code> and <code>ChebyshevSpline</code>:
+<code>integrate</code>, <code>roots</code>, <code>minimize</code>, <code>maximize</code>. The signatures are
+identical.</p>
+<h3 id="roots">Roots<a class="headerlink" href="#roots" title="Permanent link">&para;</a></h3>
+<div class="highlight"><pre><span></span><code><a id="__codelineno-9-1" name="__codelineno-9-1" href="#__codelineno-9-1"></a><span class="kn">from</span><span class="w"> </span><span class="nn">pychebyshev</span><span class="w"> </span><span class="kn">import</span> <span class="n">ChebyshevTT</span>
+<a id="__codelineno-9-2" name="__codelineno-9-2" href="#__codelineno-9-2"></a>
+<a id="__codelineno-9-3" name="__codelineno-9-3" href="#__codelineno-9-3"></a><span class="k">def</span><span class="w"> </span><span class="nf">f</span><span class="p">(</span><span class="n">x</span><span class="p">,</span> <span class="n">_</span><span class="p">):</span> <span class="k">return</span> <span class="n">x</span><span class="p">[</span><span class="mi">0</span><span class="p">]</span> <span class="o">**</span> <span class="mi">2</span> <span class="o">-</span> <span class="mf">0.25</span>
+<a id="__codelineno-9-4" name="__codelineno-9-4" href="#__codelineno-9-4"></a><span class="n">tt</span> <span class="o">=</span> <span class="n">ChebyshevTT</span><span class="p">(</span><span class="n">f</span><span class="p">,</span> <span class="n">num_dimensions</span><span class="o">=</span><span class="mi">1</span><span class="p">,</span> <span class="n">domain</span><span class="o">=</span><span class="p">[(</span><span class="o">-</span><span class="mi">1</span><span class="p">,</span> <span class="mi">1</span><span class="p">)],</span> <span class="n">n_nodes</span><span class="o">=</span><span class="p">[</span><span class="mi">10</span><span class="p">])</span>
+<a id="__codelineno-9-5" name="__codelineno-9-5" href="#__codelineno-9-5"></a><span class="n">tt</span><span class="o">.</span><span class="n">build</span><span class="p">()</span>
+<a id="__codelineno-9-6" name="__codelineno-9-6" href="#__codelineno-9-6"></a>
+<a id="__codelineno-9-7" name="__codelineno-9-7" href="#__codelineno-9-7"></a><span class="nb">print</span><span class="p">(</span><span class="n">tt</span><span class="o">.</span><span class="n">roots</span><span class="p">())</span>          <span class="c1"># [-0.5, 0.5]</span>
+</code></pre></div>
+<p>For multi-D TT/Slider, fix all but one dimension:</p>
+<div class="highlight"><pre><span></span><code><a id="__codelineno-10-1" name="__codelineno-10-1" href="#__codelineno-10-1"></a><span class="k">def</span><span class="w"> </span><span class="nf">g</span><span class="p">(</span><span class="n">x</span><span class="p">,</span> <span class="n">_</span><span class="p">):</span> <span class="k">return</span> <span class="n">x</span><span class="p">[</span><span class="mi">0</span><span class="p">]</span> <span class="o">-</span> <span class="n">x</span><span class="p">[</span><span class="mi">1</span><span class="p">]</span>
+<a id="__codelineno-10-2" name="__codelineno-10-2" href="#__codelineno-10-2"></a><span class="n">tt</span> <span class="o">=</span> <span class="n">ChebyshevTT</span><span class="p">(</span><span class="n">g</span><span class="p">,</span> <span class="n">num_dimensions</span><span class="o">=</span><span class="mi">2</span><span class="p">,</span> <span class="n">domain</span><span class="o">=</span><span class="p">[(</span><span class="o">-</span><span class="mi">1</span><span class="p">,</span> <span class="mi">1</span><span class="p">),</span> <span class="p">(</span><span class="o">-</span><span class="mi">1</span><span class="p">,</span> <span class="mi">1</span><span class="p">)],</span> <span class="n">n_nodes</span><span class="o">=</span><span class="p">[</span><span class="mi">5</span><span class="p">,</span> <span class="mi">5</span><span class="p">])</span>
+<a id="__codelineno-10-3" name="__codelineno-10-3" href="#__codelineno-10-3"></a><span class="n">tt</span><span class="o">.</span><span class="n">build</span><span class="p">()</span>
+<a id="__codelineno-10-4" name="__codelineno-10-4" href="#__codelineno-10-4"></a>
+<a id="__codelineno-10-5" name="__codelineno-10-5" href="#__codelineno-10-5"></a><span class="nb">print</span><span class="p">(</span><span class="n">tt</span><span class="o">.</span><span class="n">roots</span><span class="p">(</span><span class="n">dim</span><span class="o">=</span><span class="mi">0</span><span class="p">,</span> <span class="n">fixed</span><span class="o">=</span><span class="p">{</span><span class="mi">1</span><span class="p">:</span> <span class="mf">0.3</span><span class="p">}))</span>   <span class="c1"># [0.3]</span>
+</code></pre></div>
+<h3 id="minimize-maximize">Minimize / maximize<a class="headerlink" href="#minimize-maximize" title="Permanent link">&para;</a></h3>
+<div class="highlight"><pre><span></span><code><a id="__codelineno-11-1" name="__codelineno-11-1" href="#__codelineno-11-1"></a><span class="k">def</span><span class="w"> </span><span class="nf">f</span><span class="p">(</span><span class="n">x</span><span class="p">,</span> <span class="n">_</span><span class="p">):</span> <span class="k">return</span> <span class="p">(</span><span class="n">x</span><span class="p">[</span><span class="mi">0</span><span class="p">]</span> <span class="o">-</span> <span class="mf">0.3</span><span class="p">)</span> <span class="o">**</span> <span class="mi">2</span> <span class="o">+</span> <span class="mf">1.0</span>
+<a id="__codelineno-11-2" name="__codelineno-11-2" href="#__codelineno-11-2"></a><span class="n">tt</span> <span class="o">=</span> <span class="n">ChebyshevTT</span><span class="p">(</span><span class="n">f</span><span class="p">,</span> <span class="n">num_dimensions</span><span class="o">=</span><span class="mi">1</span><span class="p">,</span> <span class="n">domain</span><span class="o">=</span><span class="p">[(</span><span class="o">-</span><span class="mi">1</span><span class="p">,</span> <span class="mi">1</span><span class="p">)],</span> <span class="n">n_nodes</span><span class="o">=</span><span class="p">[</span><span class="mi">10</span><span class="p">])</span>
+<a id="__codelineno-11-3" name="__codelineno-11-3" href="#__codelineno-11-3"></a><span class="n">tt</span><span class="o">.</span><span class="n">build</span><span class="p">()</span>
+<a id="__codelineno-11-4" name="__codelineno-11-4" href="#__codelineno-11-4"></a>
+<a id="__codelineno-11-5" name="__codelineno-11-5" href="#__codelineno-11-5"></a><span class="n">val</span><span class="p">,</span> <span class="n">loc</span> <span class="o">=</span> <span class="n">tt</span><span class="o">.</span><span class="n">minimize</span><span class="p">()</span>    <span class="c1"># (1.0, 0.3)</span>
+<a id="__codelineno-11-6" name="__codelineno-11-6" href="#__codelineno-11-6"></a><span class="n">val</span><span class="p">,</span> <span class="n">loc</span> <span class="o">=</span> <span class="n">tt</span><span class="o">.</span><span class="n">maximize</span><span class="p">()</span>    <span class="c1"># endpoint maximum</span>
+</code></pre></div>
+<h3 id="frame-transparency-under-with_auto_orderreorder">Frame transparency under <code>with_auto_order</code>/<code>reorder</code><a class="headerlink" href="#frame-transparency-under-with_auto_orderreorder" title="Permanent link">&para;</a></h3>
+<p><code>ChebyshevTT.roots()</code>, <code>minimize()</code>, and <code>maximize()</code> accept user-frame
+<code>dim</code> and <code>fixed</code> keys. After <code>with_auto_order()</code> or <code>reorder()</code>
+permute the internal storage layout, the user-frame interface is
+unchanged — same call, same answer:</p>
+<div class="highlight"><pre><span></span><code><a id="__codelineno-12-1" name="__codelineno-12-1" href="#__codelineno-12-1"></a><span class="kn">import</span><span class="w"> </span><span class="nn">numpy</span><span class="w"> </span><span class="k">as</span><span class="w"> </span><span class="nn">np</span>
+<a id="__codelineno-12-2" name="__codelineno-12-2" href="#__codelineno-12-2"></a><span class="kn">from</span><span class="w"> </span><span class="nn">pychebyshev</span><span class="w"> </span><span class="kn">import</span> <span class="n">ChebyshevTT</span>
+<a id="__codelineno-12-3" name="__codelineno-12-3" href="#__codelineno-12-3"></a>
+<a id="__codelineno-12-4" name="__codelineno-12-4" href="#__codelineno-12-4"></a><span class="k">def</span><span class="w"> </span><span class="nf">f</span><span class="p">(</span><span class="n">x</span><span class="p">,</span> <span class="n">_</span><span class="p">):</span> <span class="k">return</span> <span class="p">(</span><span class="n">x</span><span class="p">[</span><span class="mi">0</span><span class="p">]</span> <span class="o">-</span> <span class="mf">0.4</span><span class="p">)</span> <span class="o">*</span> <span class="p">(</span><span class="mf">1.0</span> <span class="o">+</span> <span class="mf">0.1</span><span class="o">*</span><span class="n">x</span><span class="p">[</span><span class="mi">1</span><span class="p">]</span> <span class="o">+</span> <span class="mf">0.2</span><span class="o">*</span><span class="n">x</span><span class="p">[</span><span class="mi">2</span><span class="p">])</span>
+<a id="__codelineno-12-5" name="__codelineno-12-5" href="#__codelineno-12-5"></a>
+<a id="__codelineno-12-6" name="__codelineno-12-6" href="#__codelineno-12-6"></a><span class="n">tt</span> <span class="o">=</span> <span class="n">ChebyshevTT</span><span class="p">(</span><span class="n">f</span><span class="p">,</span> <span class="n">num_dimensions</span><span class="o">=</span><span class="mi">3</span><span class="p">,</span> <span class="n">domain</span><span class="o">=</span><span class="p">[(</span><span class="o">-</span><span class="mi">1</span><span class="p">,</span> <span class="mi">1</span><span class="p">)]</span><span class="o">*</span><span class="mi">3</span><span class="p">,</span> <span class="n">n_nodes</span><span class="o">=</span><span class="p">[</span><span class="mi">10</span><span class="p">,</span> <span class="mi">10</span><span class="p">,</span> <span class="mi">10</span><span class="p">])</span>
+<a id="__codelineno-12-7" name="__codelineno-12-7" href="#__codelineno-12-7"></a><span class="n">tt</span><span class="o">.</span><span class="n">build</span><span class="p">()</span>
+<a id="__codelineno-12-8" name="__codelineno-12-8" href="#__codelineno-12-8"></a><span class="n">tt_optimized</span> <span class="o">=</span> <span class="n">ChebyshevTT</span><span class="o">.</span><span class="n">with_auto_order</span><span class="p">(</span>
+<a id="__codelineno-12-9" name="__codelineno-12-9" href="#__codelineno-12-9"></a>    <span class="n">f</span><span class="p">,</span> <span class="n">num_dimensions</span><span class="o">=</span><span class="mi">3</span><span class="p">,</span> <span class="n">domain</span><span class="o">=</span><span class="p">[(</span><span class="o">-</span><span class="mi">1</span><span class="p">,</span> <span class="mi">1</span><span class="p">)]</span><span class="o">*</span><span class="mi">3</span><span class="p">,</span> <span class="n">n_nodes</span><span class="o">=</span><span class="p">[</span><span class="mi">10</span><span class="p">,</span> <span class="mi">10</span><span class="p">,</span> <span class="mi">10</span><span class="p">],</span>
+<a id="__codelineno-12-10" name="__codelineno-12-10" href="#__codelineno-12-10"></a><span class="p">)</span>
+<a id="__codelineno-12-11" name="__codelineno-12-11" href="#__codelineno-12-11"></a><span class="c1"># Same user-frame call, same result regardless of internal _dim_order</span>
+<a id="__codelineno-12-12" name="__codelineno-12-12" href="#__codelineno-12-12"></a><span class="n">roots_a</span> <span class="o">=</span> <span class="n">tt</span><span class="o">.</span><span class="n">roots</span><span class="p">(</span><span class="n">dim</span><span class="o">=</span><span class="mi">0</span><span class="p">,</span> <span class="n">fixed</span><span class="o">=</span><span class="p">{</span><span class="mi">1</span><span class="p">:</span> <span class="mf">0.0</span><span class="p">,</span> <span class="mi">2</span><span class="p">:</span> <span class="mf">0.0</span><span class="p">})</span>
+<a id="__codelineno-12-13" name="__codelineno-12-13" href="#__codelineno-12-13"></a><span class="n">roots_b</span> <span class="o">=</span> <span class="n">tt_optimized</span><span class="o">.</span><span class="n">roots</span><span class="p">(</span><span class="n">dim</span><span class="o">=</span><span class="mi">0</span><span class="p">,</span> <span class="n">fixed</span><span class="o">=</span><span class="p">{</span><span class="mi">1</span><span class="p">:</span> <span class="mf">0.0</span><span class="p">,</span> <span class="mi">2</span><span class="p">:</span> <span class="mf">0.0</span><span class="p">})</span>
+<a id="__codelineno-12-14" name="__codelineno-12-14" href="#__codelineno-12-14"></a><span class="n">np</span><span class="o">.</span><span class="n">testing</span><span class="o">.</span><span class="n">assert_array_almost_equal</span><span class="p">(</span><span class="n">roots_a</span><span class="p">,</span> <span class="n">roots_b</span><span class="p">)</span>
+</code></pre></div>
+<h3 id="slider-example">Slider example<a class="headerlink" href="#slider-example" title="Permanent link">&para;</a></h3>
+<div class="highlight"><pre><span></span><code><a id="__codelineno-13-1" name="__codelineno-13-1" href="#__codelineno-13-1"></a><span class="kn">from</span><span class="w"> </span><span class="nn">pychebyshev</span><span class="w"> </span><span class="kn">import</span> <span class="n">ChebyshevSlider</span>
+<a id="__codelineno-13-2" name="__codelineno-13-2" href="#__codelineno-13-2"></a>
+<a id="__codelineno-13-3" name="__codelineno-13-3" href="#__codelineno-13-3"></a><span class="k">def</span><span class="w"> </span><span class="nf">f</span><span class="p">(</span><span class="n">x</span><span class="p">,</span> <span class="n">_</span><span class="p">):</span> <span class="k">return</span> <span class="n">x</span><span class="p">[</span><span class="mi">0</span><span class="p">]</span> <span class="o">**</span> <span class="mi">2</span> <span class="o">-</span> <span class="mf">0.25</span>
+<a id="__codelineno-13-4" name="__codelineno-13-4" href="#__codelineno-13-4"></a><span class="n">slider</span> <span class="o">=</span> <span class="n">ChebyshevSlider</span><span class="p">(</span>
+<a id="__codelineno-13-5" name="__codelineno-13-5" href="#__codelineno-13-5"></a>    <span class="n">f</span><span class="p">,</span> <span class="n">num_dimensions</span><span class="o">=</span><span class="mi">1</span><span class="p">,</span> <span class="n">domain</span><span class="o">=</span><span class="p">[(</span><span class="o">-</span><span class="mi">1</span><span class="p">,</span> <span class="mi">1</span><span class="p">)],</span> <span class="n">n_nodes</span><span class="o">=</span><span class="p">[</span><span class="mi">10</span><span class="p">],</span>
+<a id="__codelineno-13-6" name="__codelineno-13-6" href="#__codelineno-13-6"></a>    <span class="n">partition</span><span class="o">=</span><span class="p">[[</span><span class="mi">0</span><span class="p">]],</span> <span class="n">pivot_point</span><span class="o">=</span><span class="p">[</span><span class="mf">0.0</span><span class="p">],</span>
+<a id="__codelineno-13-7" name="__codelineno-13-7" href="#__codelineno-13-7"></a><span class="p">)</span>
+<a id="__codelineno-13-8" name="__codelineno-13-8" href="#__codelineno-13-8"></a><span class="n">slider</span><span class="o">.</span><span class="n">build</span><span class="p">()</span>
+<a id="__codelineno-13-9" name="__codelineno-13-9" href="#__codelineno-13-9"></a><span class="nb">print</span><span class="p">(</span><span class="n">slider</span><span class="o">.</span><span class="n">roots</span><span class="p">())</span>            <span class="c1"># [-0.5, 0.5]</span>
+<a id="__codelineno-13-10" name="__codelineno-13-10" href="#__codelineno-13-10"></a><span class="n">val</span><span class="p">,</span> <span class="n">loc</span> <span class="o">=</span> <span class="n">slider</span><span class="o">.</span><span class="n">minimize</span><span class="p">()</span>     <span class="c1"># (-0.25, 0.0)</span>
+<a id="__codelineno-13-11" name="__codelineno-13-11" href="#__codelineno-13-11"></a><span class="n">val</span><span class="p">,</span> <span class="n">loc</span> <span class="o">=</span> <span class="n">slider</span><span class="o">.</span><span class="n">maximize</span><span class="p">()</span>     <span class="c1"># (0.75, ±1)</span>
+</code></pre></div>
+<h3 id="implementation-note">Implementation note<a class="headerlink" href="#implementation-note" title="Permanent link">&para;</a></h3>
+<p>Both classes implement these methods by reducing to a 1-D problem
+(via <code>slice()</code>), constructing a 1-D <code>ChebyshevApproximation</code>, and
+delegating to its <code>roots()</code>/<code>minimize()</code>/<code>maximize()</code>. No new math —
+all spectral algorithms reuse the v0.9 primitives in
+<code>pychebyshev._calculus</code>.</p>
 
 
 
