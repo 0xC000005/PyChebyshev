@@ -1687,6 +1687,39 @@ class ChebyshevTT:
         result_tt._dim_order = new_dim_order
         return result_tt
 
+    def _to_1d_chebyshev(self, sliced_1d):
+        """Build a 1-D ChebyshevApproximation from a 1-D ChebyshevTT.
+
+        Uses ``to_dense()`` to extract the values vector, then constructs
+        a ChebyshevApproximation via ``from_values``. ``to_dense()``
+        already applies the inverse permutation so values are in user
+        frame.
+
+        Parameters
+        ----------
+        sliced_1d : ChebyshevTT
+            A 1-D TT (``num_dimensions == 1``).
+
+        Returns
+        -------
+        ChebyshevApproximation
+            1-D Chebyshev approximation matching *sliced_1d*'s values.
+        """
+        from pychebyshev.barycentric import ChebyshevApproximation
+
+        assert sliced_1d.num_dimensions == 1, (
+            f"_to_1d_chebyshev expects a 1-D TT, got {sliced_1d.num_dimensions}-D"
+        )
+
+        values = np.asarray(sliced_1d.to_dense(), dtype=float).reshape(-1)
+        a, b = sliced_1d.domain[0]
+        return ChebyshevApproximation.from_values(
+            values,
+            num_dimensions=1,
+            domain=[(float(a), float(b))],
+            n_nodes=[int(sliced_1d.n_nodes[0])],
+        )
+
     def to_dense(self) -> np.ndarray:
         """Materialize the TT chain into a full N-D tensor of values.
 

@@ -996,3 +996,35 @@ class TestSliderCalculusCrossFeature:
         slider_loaded = pickle.loads(data)
         roots_after = slider_loaded.roots()
         np.testing.assert_array_almost_equal(roots_before, roots_after, decimal=12)
+
+
+class TestTTTo1DChebyshev:
+    """TT._to_1d_chebyshev: build a 1-D ChebyshevApproximation from
+    a 1-D TT via to_dense()."""
+
+    def test_to_1d_chebyshev_recovers_function(self):
+        """1-D TT built from f(x) = x^3, _to_1d_chebyshev returns
+        a 1-D Approximation with the same values."""
+        def f(x, _): return x[0] ** 3
+        tt = ChebyshevTT(
+            f, num_dimensions=1, domain=[(-1, 1)], n_nodes=[7],
+        )
+        tt.build(verbose=False)
+        cheb_1d = tt._to_1d_chebyshev(tt)
+        for x in np.linspace(-0.9, 0.9, 11):
+            expected = x ** 3
+            got = float(cheb_1d.eval([float(x)], derivative_order=[0]))
+            assert abs(got - expected) < 1e-9, f"x={x}: got {got}, expected {expected}"
+
+    def test_to_1d_chebyshev_preserves_domain_and_n_nodes(self):
+        """The 1-D Approximation has the same domain and n_nodes as input."""
+        def f(x, _): return x[0]
+        tt = ChebyshevTT(
+            f, num_dimensions=1, domain=[(-2.5, 3.5)], n_nodes=[9],
+        )
+        tt.build(verbose=False)
+        cheb_1d = tt._to_1d_chebyshev(tt)
+        assert cheb_1d.num_dimensions == 1
+        assert abs(cheb_1d.domain[0][0] - (-2.5)) < 1e-12
+        assert abs(cheb_1d.domain[0][1] - 3.5) < 1e-12
+        assert cheb_1d.n_nodes[0] == 9
