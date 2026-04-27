@@ -1728,6 +1728,18 @@ class ChebyshevTT:
             n_nodes=[int(sliced_1d.n_nodes[0])],
         )
 
+    def _user_frame_domain(self) -> list:
+        """Return ``self.domain`` reordered into user-frame indexing.
+
+        For canonical ``_dim_order``, this returns ``self.domain`` unchanged
+        (in semantic terms — a fresh list either way).
+        For non-identity ``_dim_order``, ``self.domain[d]`` is the
+        storage-frame domain at storage position ``d``; user-frame dim ``u``
+        lives at storage position ``self._dim_order.index(u)``.
+        """
+        return [self.domain[self._dim_order.index(u)]
+                for u in range(self.num_dimensions)]
+
     def roots(self, dim=None, fixed=None):
         """Find all roots of the TT-approximated function along *dim*.
 
@@ -1764,7 +1776,7 @@ class ChebyshevTT:
         from pychebyshev._calculus import _validate_calculus_args
 
         dim, slice_params = _validate_calculus_args(
-            self.num_dimensions, dim, fixed, self.domain
+            self.num_dimensions, dim, fixed, self._user_frame_domain()
         )
 
         sliced = self.slice(slice_params) if slice_params else self
@@ -1805,7 +1817,7 @@ class ChebyshevTT:
         from pychebyshev._calculus import _validate_calculus_args
 
         dim, slice_params = _validate_calculus_args(
-            self.num_dimensions, dim, fixed, self.domain
+            self.num_dimensions, dim, fixed, self._user_frame_domain()
         )
 
         sliced = self.slice(slice_params) if slice_params else self
@@ -1846,7 +1858,7 @@ class ChebyshevTT:
         from pychebyshev._calculus import _validate_calculus_args
 
         dim, slice_params = _validate_calculus_args(
-            self.num_dimensions, dim, fixed, self.domain
+            self.num_dimensions, dim, fixed, self._user_frame_domain()
         )
 
         sliced = self.slice(slice_params) if slice_params else self
