@@ -402,10 +402,16 @@ class TestDimOrderGuards:
         assert sliced.num_dimensions == 1
         assert isinstance(sliced.eval([0.2]), float)
 
-    def test_extrude_with_non_identity_dim_order_raises(self):
+    def test_extrude_with_non_identity_dim_order_works(self):
+        """v0.20.1 lifted the extrude dim_order guard.
+
+        Extrude on a permuted TT now succeeds via _dim_order threading.
+        Verified in detail by tests/test_v0201_dim_threading.py::TestExtrudeThreading.
+        """
         tt = self._build_non_identity_tt()
-        with pytest.raises(NotImplementedError, match="dim_order"):
-            tt.extrude([(2, [-1, 1], 4)])
+        ext = tt.extrude([(2, [-1, 1], 4)])
+        assert ext.num_dimensions == tt.num_dimensions + 1
+        assert isinstance(ext.eval([0.1, 0.2, 0.0]), float)
 
     def test_to_dense_with_non_identity_dim_order_works(self):
         """v0.20.1 lifted the to_dense dim_order guard.

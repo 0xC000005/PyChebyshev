@@ -1761,12 +1761,6 @@ class ChebyshevTT:
         Chebyshev coefficient space.
         """
         self._check_built()
-        if self._dim_order != list(range(self.num_dimensions)):
-            raise NotImplementedError(
-                "extrude() is not yet supported on TTs built via with_auto_order() "
-                "with a non-identity dim permutation. "
-                "Full dim_order threading is planned for v0.20.1."
-            )
 
         from pychebyshev._extrude_slice import (
             _normalize_extrusion_params,
@@ -1774,15 +1768,40 @@ class ChebyshevTT:
         )
 
         norm_params = _normalize_extrusion_params(params, self.num_dimensions)
+        canonical = list(range(self.num_dimensions))
+        identity = self._dim_order == canonical
 
         new_cores = list(self._coeff_cores)
         new_domain = list(self.domain)
         new_n_nodes = list(self.n_nodes)
-        # Sort by dim_idx ascending so insertions don't shift later indices
+        new_dim_order = list(self._dim_order)
+
+        # Sort by dim_idx ascending so user-facing indices stay coherent
+        # as we insert. Each new dim's "original" index is the dim_idx the
+        # user passed for it (in the result's natural numbering); existing
+        # original-dim indices >= dim_idx shift up by 1.
         for dim_idx, (lo, hi), n_new in sorted(norm_params, key=lambda p: p[0]):
-            new_cores = _extrude_tt_core(new_cores, dim_idx, lo, hi, n_new)
-            new_domain.insert(dim_idx, [lo, hi])
-            new_n_nodes.insert(dim_idx, n_new)
+            if identity:
+                # In identity mode, storage position == original-dim index;
+                # insert at storage position dim_idx (preserves v0.18
+                # canonical behavior bit-for-bit).
+                new_cores = _extrude_tt_core(new_cores, dim_idx, lo, hi, n_new)
+                new_domain.insert(dim_idx, [lo, hi])
+                new_n_nodes.insert(dim_idx, n_new)
+                new_dim_order = list(range(len(new_cores)))
+            else:
+                # Non-identity: append the new core at storage end; encode
+                # user's dim_idx via _dim_order.
+                storage_pos = len(new_cores)
+                new_cores = _extrude_tt_core(new_cores, storage_pos, lo, hi, n_new)
+                new_domain.append([lo, hi])
+                new_n_nodes.append(n_new)
+                # Increment every existing original-dim entry that the new
+                # dim is inserted before.
+                new_dim_order = [
+                    d if d < dim_idx else d + 1 for d in new_dim_order
+                ]
+                new_dim_order.append(dim_idx)
 
         new_tt_ranks = [c.shape[0] for c in new_cores] + [new_cores[-1].shape[2]]
 
@@ -1804,7 +1823,7 @@ class ChebyshevTT:
         obj._build_time = 0.0
         obj._total_build_evals = 0
         obj._cached_error_estimate = None
-        obj._dim_order = list(range(len(new_n_nodes)))
+        obj._dim_order = list(new_dim_order)
         return obj
 
     def slice(self, params):

@@ -323,3 +323,46 @@ class TestSliceThreading:
         # Within original dim 1's domain, this should succeed.
         sliced = permuted.slice((1, 1.0))
         assert sliced.num_dimensions == 2
+
+
+class TestExtrudeThreading:
+    def test_extrude_one_dim_matches_canonical(self):
+        """Extruding a permuted TT and a canonical TT yield the same function."""
+        tt_canon = _build_non_identity_tt()
+        tt_perm = tt_canon.reorder([2, 0, 1])
+
+        ext_canon = tt_canon.extrude((1, (-2, 2), 5))
+        ext_perm = tt_perm.extrude((1, (-2, 2), 5))
+
+        assert ext_canon.num_dimensions == 4
+        assert ext_perm.num_dimensions == 4
+
+        rng = np.random.default_rng(5)
+        for _ in range(10):
+            pt = rng.uniform(-1, 1, size=4).tolist()
+            assert abs(ext_canon.eval(pt) - ext_perm.eval(pt)) < 1e-7
+
+    def test_extrude_then_slice_round_trip(self):
+        """Extrude then slice the new dim → identity (function-equality)."""
+        tt = _build_non_identity_tt().reorder([2, 0, 1])
+        ext = tt.extrude((1, (-2, 2), 5))
+        rt = ext.slice((1, 0.0))
+        assert rt.num_dimensions == 3
+        rng = np.random.default_rng(6)
+        for _ in range(10):
+            pt = rng.uniform(-1, 1, size=3).tolist()
+            assert abs(rt.eval(pt) - tt.eval(pt)) < 1e-7
+
+    def test_extrude_at_position_zero(self):
+        """Extruding at position 0 prepends a new dim at the start of original-order."""
+        tt = _build_non_identity_tt().reorder([2, 0, 1])
+        ext = tt.extrude((0, (0, 1), 5))
+        assert ext.num_dimensions == 4
+        # Slicing the new dim 0 (which is the prepended new dim) at any value
+        # should give back the original 3D TT.
+        rt = ext.slice((0, 0.5))
+        assert rt.num_dimensions == 3
+        rng = np.random.default_rng(7)
+        for _ in range(5):
+            pt = rng.uniform(-1, 1, size=3).tolist()
+            assert abs(rt.eval(pt) - tt.eval(pt)) < 1e-7
