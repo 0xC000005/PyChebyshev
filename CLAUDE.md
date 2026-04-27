@@ -132,7 +132,7 @@ Not part of the library. Compare Chebyshev barycentric against alternative metho
 - `test_calculus_completion.py` — ~101 tests: `ChebyshevSlider.integrate/roots/minimize/maximize`,
   `ChebyshevTT.integrate/roots/minimize/maximize` (full and partial,
   user-frame dim/fixed transparent under `_dim_order`), cross-class
-  consistency checks, bounds validation. v0.21 additions: ~64 tests
+  consistency checks, bounds validation. v0.21 additions: 57 tests
   across 9 new test classes covering Slider/TT roots/min/max parity
   with Approximation/Spline.
 - `test_v018_tt_parity.py` — ~52 tests: `ChebyshevTT.nodes()`, `from_values()`,

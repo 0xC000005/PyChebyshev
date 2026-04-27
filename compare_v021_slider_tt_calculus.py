@@ -83,6 +83,33 @@ def demo_3d_with_auto_order() -> None:
     _check("roots[0]", float(roots[0]), 0.4)
 
 
+def demo_3d_reorder_transparency() -> None:
+    """Force non-identity _dim_order via explicit reorder() and verify
+    user-frame roots/minimize results are unchanged."""
+    print("\n=== 3-D TT reorder([2, 0, 1]): user-frame transparency under non-identity storage ===")
+    def f(x, _): return (x[0] - 0.2) ** 2 + x[1] ** 2 + x[2] ** 2
+
+    tt = ChebyshevTT(
+        f, num_dimensions=3, domain=[(-1, 1)] * 3, n_nodes=[8, 8, 8],
+    )
+    tt.build(verbose=False)
+    print(f"  Canonical TT _dim_order: {tt._dim_order}")
+
+    # Reorder forces a non-identity storage layout
+    tt_permuted = tt.reorder([2, 0, 1])
+    print(f"  After reorder([2,0,1]): _dim_order = {tt_permuted._dim_order}")
+
+    # Minimize in user-frame dim 0 must give same answer in both
+    v_canonical, l_canonical = tt.minimize(dim=0, fixed={1: 0.0, 2: 0.0})
+    v_permuted, l_permuted = tt_permuted.minimize(dim=0, fixed={1: 0.0, 2: 0.0})
+    _check("canonical min value", v_canonical, 0.0, tol=1e-8)
+    _check("canonical min loc", l_canonical, 0.2, tol=1e-8)
+    _check("permuted min value", v_permuted, 0.0, tol=1e-8)
+    _check("permuted min loc", l_permuted, 0.2, tol=1e-8)
+    _check("canonical vs permuted value", abs(v_canonical - v_permuted), 0.0, tol=1e-12)
+    _check("canonical vs permuted loc", abs(l_canonical - l_permuted), 0.0, tol=1e-12)
+
+
 def demo_cross_class_consistency() -> None:
     print("\n=== Cross-class consistency: Slider/TT/Approx agree on same function ===")
     def f(x, _): return (x[0] - 0.2) ** 2 + (x[1] + 0.1) ** 2
@@ -111,6 +138,7 @@ def main() -> None:
     demo_1d_slider()
     demo_1d_tt()
     demo_3d_with_auto_order()
+    demo_3d_reorder_transparency()
     demo_cross_class_consistency()
     print(f"\nTotal: {time.time() - t0:.2f}s")
 
