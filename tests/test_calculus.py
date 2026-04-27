@@ -804,3 +804,39 @@ class TestSubIntervalIntegrateSpline:
         result = sp.integrate(bounds=(0.0, 0.5))
         expected = 0.125  # int_0^0.5 x dx = 0.5^2/2
         assert abs(result - expected) < 1e-10, f"Expected {expected}, got {result}"
+
+
+# ======================================================================
+# TestOptimize1DVectorization
+# ======================================================================
+
+class TestOptimize1DVectorization:
+    """v0.21.1: _optimize_1d should produce bit-identical results before
+    and after vectorization. Non-regression tests."""
+
+    def test_optimize_1d_quadratic_min_unchanged(self):
+        """min of (x-0.3)^2 on [-1,1] is 0 at x=0.3."""
+        def f(x, _): return (x[0] - 0.3) ** 2
+        cheb = ChebyshevApproximation(f, 1, [(-1, 1)], [10])
+        cheb.build(verbose=False)
+        val, loc = cheb.minimize()
+        assert abs(val - 0.0) < 1e-10
+        assert abs(loc - 0.3) < 1e-10
+
+    def test_optimize_1d_quadratic_max_unchanged(self):
+        """max of -(x-0.3)^2 + 5 on [-1,1] is 5 at x=0.3."""
+        def f(x, _): return -(x[0] - 0.3) ** 2 + 5.0
+        cheb = ChebyshevApproximation(f, 1, [(-1, 1)], [10])
+        cheb.build(verbose=False)
+        val, loc = cheb.maximize()
+        assert abs(val - 5.0) < 1e-10
+        assert abs(loc - 0.3) < 1e-10
+
+    def test_optimize_1d_endpoint_min(self):
+        """Linear x on [0,1] — min at x=0 (endpoint, no critical points)."""
+        def f(x, _): return x[0]
+        cheb = ChebyshevApproximation(f, 1, [(0, 1)], [5])
+        cheb.build(verbose=False)
+        val, loc = cheb.minimize()
+        assert abs(val - 0.0) < 1e-10
+        assert abs(loc - 0.0) < 1e-10

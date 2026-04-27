@@ -266,8 +266,6 @@ def _optimize_1d(values: np.ndarray, nodes: np.ndarray,
     -------
     (value, location) : (float, float)
     """
-    from pychebyshev.barycentric import barycentric_interpolate
-
     # Derivative values at nodes
     deriv_values = diff_matrix @ values
 
@@ -278,11 +276,22 @@ def _optimize_1d(values: np.ndarray, nodes: np.ndarray,
     a, b = domain
     candidates = np.concatenate([[a], critical, [b]])
 
-    # Evaluate original function at all candidates
-    vals = np.array([
-        barycentric_interpolate(float(x), nodes, values, bary_weights)
-        for x in candidates
-    ])
+    # Vectorized barycentric evaluation at all candidates simultaneously.
+    candidates_arr = np.asarray(candidates, dtype=float).reshape(-1)
+    diff = candidates_arr[:, None] - nodes[None, :]   # shape (M, n)
+    abs_diff = np.abs(diff)
+    exact_mask = abs_diff < 1e-14                      # (M, n)
+    has_exact = exact_mask.any(axis=1)                 # (M,)
+    # Replace zero diffs with 1.0 to avoid division by zero; overwritten below.
+    safe_diff = np.where(abs_diff < 1e-14, 1.0, diff)
+    w_over_diff = bary_weights[None, :] / safe_diff    # (M, n)
+    numer = (w_over_diff * values[None, :]).sum(axis=1)
+    denom = w_over_diff.sum(axis=1)
+    vals = numer / denom                                # (M,)
+    # For candidates that hit a node exactly, take the node value directly.
+    if has_exact.any():
+        exact_node_idx = exact_mask.argmax(axis=1)
+        vals = np.where(has_exact, values[exact_node_idx], vals)
 
     idx = np.argmin(vals) if mode == "min" else np.argmax(vals)
     return float(vals[idx]), float(candidates[idx])
