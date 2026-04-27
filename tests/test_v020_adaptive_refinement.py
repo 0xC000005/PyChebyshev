@@ -255,3 +255,30 @@ class TestCrossFeatures:
         )
         ax = spl.plot_1d()
         assert ax is not None
+
+
+# ============================================================================
+# T6: Test fixtures (read-back via Python self-test)
+# ============================================================================
+
+class TestFixtures:
+    def test_approx_2d_loads(self):
+        from pathlib import Path
+        path = Path(__file__).parent / "fixtures" / "approx_2d_simple.pcb"
+        cheb = ChebyshevApproximation.load(str(path))
+        assert cheb.num_dimensions == 2
+        # f(x,y) = x*y; eval(0.5, 0.5) = 0.25
+        assert cheb.eval([0.5, 0.5], [0, 0]) == pytest.approx(0.25, abs=1e-6)
+
+    def test_approx_5d_loads(self):
+        from pathlib import Path
+        path = Path(__file__).parent / "fixtures" / "approx_5d_bs.pcb"
+        cheb = ChebyshevApproximation.load(str(path))
+        assert cheb.num_dimensions == 5
+
+    def test_spline_kink_loads(self):
+        from pathlib import Path
+        path = Path(__file__).parent / "fixtures" / "spline_1d_kink.pcb"
+        spl = ChebyshevSpline.load(str(path))
+        assert spl.num_dimensions == 1
+        assert spl.eval([0.5], [0]) == pytest.approx(0.5, abs=1e-3)
