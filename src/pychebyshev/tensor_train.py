@@ -2157,23 +2157,59 @@ class ChebyshevTT:
         # dim_order was set by with_auto_order().  Identity order is a no-op.
         canonical = list(range(self.num_dimensions))
         if self._dim_order != canonical:
-            point = [point[self._dim_order[k]] for k in range(self.num_dimensions)]
+            point_storage = [
+                point[self._dim_order[k]] for k in range(self.num_dimensions)
+            ]
+        else:
+            point_storage = list(point)
 
-        result = np.ones((1, 1))
-        for d in range(self.num_dimensions):
-            # Map point[d] from [a, b] to [-1, 1]
-            a, b = self.domain[d]
-            scaled = 2.0 * (point[d] - a) / (b - a) - 1.0
-            # Evaluate all Chebyshev polynomials T_0..T_{n-1} at scaled point
-            q = np.polynomial.chebyshev.chebval(
-                scaled, np.eye(self.n_nodes[d])
-            )  # shape (n_d,)
-            # Contract polynomial values with coefficient core:
-            # v[i,k] = sum_j q[j] * core[i,j,k]  →  shape (r_{d-1}, r_d)
-            v = np.einsum("j,ijk->ik", q, self._coeff_cores[d])
-            # Chain multiply: result = result @ v
-            result = result @ v
-        return float(result[0, 0])
+        zero_deriv = [0] * self.num_dimensions
+        return self._eval_storage_frame(point_storage, zero_deriv)
+
+    def _eval_storage_frame(
+        self,
+        point_storage: List[float],
+        derivative_order_storage: List[int],
+    ) -> float:
+        """Evaluate at a single point assuming storage-frame inputs.
+
+        This is the structural workhorse used by both :meth:`eval` (after
+        a single user→storage permutation) and :meth:`eval_multi` (which
+        permutes once then calls this helper N times).  Eliminates the
+        need for any temporary mutation of ``self._dim_order``.
+
+        Parameters
+        ----------
+        point_storage : list of float
+            Query coordinates in **storage frame** — i.e., already
+            permuted by ``self._dim_order`` if non-canonical.
+        derivative_order_storage : list of int
+            Derivative orders in **storage frame**.  ``[0, 0, ..., 0]``
+            triggers the core-contraction value path; otherwise the
+            finite-difference machinery is used.
+
+        Returns
+        -------
+        float
+            Interpolated value (or FD derivative) at the query point.
+        """
+        if all(d == 0 for d in derivative_order_storage):
+            result = np.ones((1, 1))
+            for d in range(self.num_dimensions):
+                # Map point_storage[d] from [a, b] to [-1, 1]
+                a, b = self.domain[d]
+                scaled = 2.0 * (point_storage[d] - a) / (b - a) - 1.0
+                # Evaluate all Chebyshev polynomials T_0..T_{n-1} at scaled point
+                q = np.polynomial.chebyshev.chebval(
+                    scaled, np.eye(self.n_nodes[d])
+                )  # shape (n_d,)
+                # Contract polynomial values with coefficient core:
+                # v[i,k] = sum_j q[j] * core[i,j,k]  →  shape (r_{d-1}, r_d)
+                v = np.einsum("j,ijk->ik", q, self._coeff_cores[d])
+                # Chain multiply: result = result @ v
+                result = result @ v
+            return float(result[0, 0])
+        return self._fd_derivative(point_storage, derivative_order_storage)
 
     def eval_batch(self, points: np.ndarray) -> np.ndarray:
         """Evaluate at multiple points simultaneously.
@@ -2256,41 +2292,29 @@ class ChebyshevTT:
         """
         self._check_built()
 
-        # If a non-identity ``_dim_order`` is set (e.g., from
-        # :meth:`with_auto_order` or :meth:`reorder`), permute both the
-        # input ``point`` and each ``deriv_order`` from user-frame into
-        # storage frame so the FD machinery (which references
-        # ``self.domain`` / ``self.n_nodes`` in storage frame) operates
-        # consistently.  Then temporarily neutralize ``_dim_order`` so
-        # the inner ``self.eval`` calls do not re-permute the
-        # already-storage-frame points.
+        # Structural fix (issue #19): permute user-frame coords ONCE into
+        # storage frame, then call :meth:`_eval_storage_frame` for each
+        # derivative.  The previous implementation temporarily mutated
+        # ``self._dim_order`` via try/finally to neutralize re-permutation
+        # inside the inner ``self.eval`` calls, which raced under
+        # concurrent invocations.  No mutation occurs here.
         canonical = list(range(self.num_dimensions))
         if self._dim_order != canonical:
-            point = [point[self._dim_order[k]] for k in range(self.num_dimensions)]
-            derivative_orders = [
+            point_storage = [
+                point[self._dim_order[k]] for k in range(self.num_dimensions)
+            ]
+            derivs_storage = [
                 [d[self._dim_order[k]] for k in range(self.num_dimensions)]
                 for d in derivative_orders
             ]
-            saved_dim_order = self._dim_order
-            self._dim_order = canonical
-            try:
-                results = []
-                for deriv_order in derivative_orders:
-                    if all(d == 0 for d in deriv_order):
-                        results.append(self.eval(point))
-                    else:
-                        results.append(self._fd_derivative(point, deriv_order))
-            finally:
-                self._dim_order = saved_dim_order
-            return results
+        else:
+            point_storage = list(point)
+            derivs_storage = [list(d) for d in derivative_orders]
 
-        results = []
-        for deriv_order in derivative_orders:
-            if all(d == 0 for d in deriv_order):
-                results.append(self.eval(point))
-            else:
-                results.append(self._fd_derivative(point, deriv_order))
-        return results
+        return [
+            self._eval_storage_frame(point_storage, d_storage)
+            for d_storage in derivs_storage
+        ]
 
     def _fd_derivative(self, point: List[float], deriv_order: List[int]) -> float:
         """Compute a single derivative via central finite differences.
@@ -2343,34 +2367,48 @@ class ChebyshevTT:
         return pt
 
     def _fd_single_dim(self, point: List[float], d: int, order: int) -> float:
-        """Central FD for a single dimension."""
+        """Central FD for a single dimension.
+
+        Operates entirely in storage frame: ``point`` is assumed already
+        permuted, ``d`` is a storage-frame dim index, and the inner
+        evaluations go through :meth:`_eval_storage_frame` to skip the
+        user→storage permutation.
+        """
         h = self._fd_step(d)
         pt = self._nudge_point(point, d, h)
+        zero = [0] * self.num_dimensions
 
         if order == 1:
             pt_plus = list(pt)
             pt_minus = list(pt)
             pt_plus[d] += h
             pt_minus[d] -= h
-            return (self.eval(pt_plus) - self.eval(pt_minus)) / (2.0 * h)
+            return (
+                self._eval_storage_frame(pt_plus, zero)
+                - self._eval_storage_frame(pt_minus, zero)
+            ) / (2.0 * h)
         elif order == 2:
             pt_plus = list(pt)
             pt_minus = list(pt)
             pt_plus[d] += h
             pt_minus[d] -= h
-            f_plus = self.eval(pt_plus)
-            f_center = self.eval(pt)
-            f_minus = self.eval(pt_minus)
+            f_plus = self._eval_storage_frame(pt_plus, zero)
+            f_center = self._eval_storage_frame(pt, zero)
+            f_minus = self._eval_storage_frame(pt_minus, zero)
             return (f_plus - 2.0 * f_center + f_minus) / (h * h)
         else:
             raise ValueError(f"Derivative order {order} not supported (use 1 or 2)")
 
     def _fd_cross_deriv(self, point: List[float], d1: int, d2: int) -> float:
-        """Central FD for mixed partial d^2f / dx_{d1} dx_{d2}."""
+        """Central FD for mixed partial d^2f / dx_{d1} dx_{d2}.
+
+        Operates entirely in storage frame.
+        """
         h1 = self._fd_step(d1)
         h2 = self._fd_step(d2)
         pt = self._nudge_point(point, d1, h1)
         pt = self._nudge_point(pt, d2, h2)
+        zero = [0] * self.num_dimensions
 
         def make_pt(delta1: float, delta2: float) -> List[float]:
             p = list(pt)
@@ -2378,19 +2416,23 @@ class ChebyshevTT:
             p[d2] += delta2
             return p
 
-        f_pp = self.eval(make_pt(+h1, +h2))
-        f_pm = self.eval(make_pt(+h1, -h2))
-        f_mp = self.eval(make_pt(-h1, +h2))
-        f_mm = self.eval(make_pt(-h1, -h2))
+        f_pp = self._eval_storage_frame(make_pt(+h1, +h2), zero)
+        f_pm = self._eval_storage_frame(make_pt(+h1, -h2), zero)
+        f_mp = self._eval_storage_frame(make_pt(-h1, +h2), zero)
+        f_mm = self._eval_storage_frame(make_pt(-h1, -h2), zero)
         return (f_pp - f_pm - f_mp + f_mm) / (4.0 * h1 * h2)
 
     def _fd_nested(
         self, point: List[float], active_dims: List[Tuple[int, int]]
     ) -> float:
-        """Nested FD for higher-order or multi-dimensional derivatives."""
+        """Nested FD for higher-order or multi-dimensional derivatives.
+
+        Operates entirely in storage frame.
+        """
         # Apply FD one dimension at a time
         if len(active_dims) == 0:
-            return self.eval(point)
+            zero = [0] * self.num_dimensions
+            return self._eval_storage_frame(point, zero)
 
         d, order = active_dims[0]
         remaining = active_dims[1:]

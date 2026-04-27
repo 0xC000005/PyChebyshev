@@ -641,3 +641,45 @@ class TestGetEvaluationPointsFrame:
         # Column 2 must be in user-frame dim 2 range: [-3, 3]
         assert points[:, 2].min() >= -3.0 - 1e-12
         assert points[:, 2].max() <= 3.0 + 1e-12
+
+
+class TestEvalMultiNoDimOrderMutation:
+    """Issue #19: eval_multi must not mutate self._dim_order via try/finally
+    (race-prone under concurrent calls). The fix is structural: introduce
+    _eval_storage_frame and call it from eval_multi after permuting once."""
+
+    def test_eval_multi_source_does_not_assign_dim_order(self):
+        """Source-level check: the body of eval_multi contains no
+        'self._dim_order = ' assignment."""
+        import inspect
+        from pychebyshev.tensor_train import ChebyshevTT
+
+        source = inspect.getsource(ChebyshevTT.eval_multi)
+        forbidden = [
+            "self._dim_order = ",
+            "self._dim_order=",
+        ]
+        for pat in forbidden:
+            assert pat not in source, (
+                f"eval_multi must not contain assignment '{pat}' "
+                f"after issue #19 fix"
+            )
+
+    def test_eval_multi_correctness_under_reorder(self):
+        """Behavioral check: eval_multi still returns correct values
+        for a reordered TT."""
+        def f(x, _): return x[0] ** 2 + x[1] - x[2]
+        tt = ChebyshevTT(
+            f, num_dimensions=3, domain=[(-1, 1)] * 3, n_nodes=[7, 7, 7],
+        )
+        tt.build(verbose=False)
+        tt_reordered = tt.reorder([2, 0, 1])
+        # eval_multi for value + first-derivative-wrt-x0 (in user frame)
+        results = tt_reordered.eval_multi(
+            point=[0.3, 0.4, 0.5],
+            derivative_orders=[[0, 0, 0], [1, 0, 0]],
+        )
+        # f(0.3, 0.4, 0.5) = 0.09 + 0.4 - 0.5 = -0.01
+        # df/dx0(0.3, 0.4, 0.5) = 2*0.3 = 0.6
+        assert abs(results[0] - (-0.01)) < 1e-9
+        assert abs(results[1] - 0.6) < 1e-9
