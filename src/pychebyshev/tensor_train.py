@@ -1581,10 +1581,22 @@ class ChebyshevTT:
 
         if len(dims_sorted) == self.num_dimensions:
             # Full integration: chain-multiply all M_k matrices → scalar
+            # Full integration is dim_order-invariant (sum is commutative),
+            # so no dim_order guard is needed here.
             result = contracted[dims_sorted[0]]
             for d in dims_sorted[1:]:
                 result = result @ contracted[d]
             return float(result.ravel()[0])
+
+        # Partial integration returns a ChebyshevTT — dim_order must be identity
+        # or the result TT would have wrong core ordering.
+        if self._dim_order != list(range(self.num_dimensions)):
+            raise NotImplementedError(
+                "Partial integrate() is not yet supported on TTs built via "
+                "with_auto_order() with a non-identity dim permutation. "
+                "Full integration (all dims) works regardless of dim_order. "
+                "Full dim_order threading is planned for v0.20.1."
+            )
 
         # Partial integration: absorb each contracted matrix into a
         # neighboring kept core via matrix multiplication on the rank dim.
@@ -1657,8 +1669,21 @@ class ChebyshevTT:
         Use sparingly: storage is ``prod(n_nodes)`` floats. Useful for
         inspection, conversion, or piping through
         :meth:`ChebyshevApproximation.from_values` to convert TT → barycentric.
+
+        Raises
+        ------
+        NotImplementedError
+            If this TT was built via :meth:`with_auto_order` with a
+            non-identity ``_dim_order``. Full dim_order threading planned
+            for v0.20.1.
         """
         self._check_built()
+        if self._dim_order != list(range(self.num_dimensions)):
+            raise NotImplementedError(
+                "to_dense() is not yet supported on TTs built via with_auto_order() "
+                "with a non-identity dim permutation. "
+                "Full dim_order threading is planned for v0.20.1."
+            )
 
         # Convert all coefficient cores to value cores
         value_cores = [_coeff_core_to_value_core(c) for c in self._coeff_cores]
@@ -1705,6 +1730,12 @@ class ChebyshevTT:
         Chebyshev coefficient space.
         """
         self._check_built()
+        if self._dim_order != list(range(self.num_dimensions)):
+            raise NotImplementedError(
+                "extrude() is not yet supported on TTs built via with_auto_order() "
+                "with a non-identity dim permutation. "
+                "Full dim_order threading is planned for v0.20.1."
+            )
 
         from pychebyshev._extrude_slice import (
             _normalize_extrusion_params,
@@ -1770,8 +1801,18 @@ class ChebyshevTT:
         ValueError
             If a slice value is outside the domain, if slicing all
             dimensions, or if ``dim_index`` is out of range or duplicated.
+        NotImplementedError
+            If this TT was built via :meth:`with_auto_order` with a
+            non-identity ``_dim_order``. Full dim_order threading planned
+            for v0.20.1.
         """
         self._check_built()
+        if self._dim_order != list(range(self.num_dimensions)):
+            raise NotImplementedError(
+                "slice() is not yet supported on TTs built via with_auto_order() "
+                "with a non-identity dim permutation. "
+                "Full dim_order threading is planned for v0.20.1."
+            )
 
         from pychebyshev._extrude_slice import (
             _normalize_slicing_params,
@@ -1959,8 +2000,20 @@ class ChebyshevTT:
         ------
         RuntimeError
             If ``build()`` has not been called.
+        NotImplementedError
+            If this TT was built via :meth:`with_auto_order` with a
+            non-identity ``_dim_order``. Full dim_order threading planned
+            for v0.20.1.
         """
         self._check_built()
+        if self._dim_order != list(range(self.num_dimensions)):
+            raise NotImplementedError(
+                "eval_multi() is not yet supported on TTs built via with_auto_order() "
+                "with a non-identity dim permutation. "
+                "Use eval() for value-only queries, or use the canonical-order "
+                "ChebyshevTT() constructor for derivative queries. "
+                "Full dim_order threading is planned for v0.20.1."
+            )
 
         results = []
         for deriv_order in derivative_orders:
@@ -2784,6 +2837,13 @@ class ChebyshevTT:
         if self.domain != other.domain:
             raise ValueError(
                 f"domain mismatch: {self.domain} vs {other.domain}"
+            )
+        if self._dim_order != other._dim_order:
+            raise ValueError(
+                f"_dim_order mismatch: {self._dim_order} vs {other._dim_order}. "
+                "TTs built via with_auto_order() with different chosen orderings "
+                "cannot be combined. Either use the canonical-order constructor for "
+                "both, or rebuild with matching orders."
             )
 
     def __add__(self, other: "ChebyshevTT") -> "ChebyshevTT":

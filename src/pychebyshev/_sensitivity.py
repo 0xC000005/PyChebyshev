@@ -82,6 +82,11 @@ def _compute_sobol_from_coeffs(
         {"first_order": {dim: index}, "total_order": {dim: index}, "variance": float}
     """
     coeffs = np.asarray(coeffs, dtype=np.float64)
+    if not np.isfinite(coeffs).all():
+        raise ValueError(
+            "coefficients contain NaN or Inf; sobol_indices() requires finite "
+            "spectral coefficients"
+        )
     if num_dimensions == 1:
         coeffs = coeffs.reshape(-1)
         first_order = {0: 0.0}

@@ -18,6 +18,21 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 **Beyond MoCaX:** auto-knot detection, Sobol indices, and TT dim reordering are PyChebyshev-unique adaptive features. The cross-language readers deliver on the v0.14 portability promise.
 
+### Known limitations (planned for v0.20.1)
+
+- `ChebyshevTT.with_auto_order()` produces a TT whose permuted `_dim_order` is
+  only threaded through `eval()` and full `integrate()`. Other methods —
+  `eval_multi()`, `slice()`, `extrude()`, `to_dense()`, partial `integrate()`,
+  `__add__`/`__sub__` (when the two TTs have mismatched `_dim_order`) — raise
+  `NotImplementedError` (or `ValueError` for algebra mismatch) when called on a
+  `with_auto_order` result with non-identity dim permutation. This avoids silent
+  wrong-results bugs. Full threading planned for v0.20.1.
+- `ChebyshevApproximation._build_fixed_grid()` now raises `ValueError` if the
+  user-supplied function returns NaN or Inf at any grid point, preventing
+  subsequent calls from silently using corrupt `tensor_values`.
+- `_compute_sobol_from_coeffs()` now raises `ValueError` if the input
+  coefficient tensor contains NaN or Inf.
+
 ## [0.19.0] - 2026-04-26
 
 ### Added — Build & Diagnostics

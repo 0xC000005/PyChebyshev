@@ -682,6 +682,14 @@ class ChebyshevApproximation:
             self.tensor_values = flat.reshape(self.n_nodes)
         self.n_evaluations = total
 
+        # Guard: reject NaN / Inf before proceeding with weight computation.
+        if not np.isfinite(self.tensor_values).all():
+            n_bad = int(np.sum(~np.isfinite(self.tensor_values)))
+            raise ValueError(
+                f"function returned non-finite values at {n_bad} grid point(s); "
+                "build cannot proceed with NaN/Inf in tensor_values"
+            )
+
         # Step 2: Pre-compute barycentric weights
         self.weights = []
         for d in range(self.num_dimensions):
