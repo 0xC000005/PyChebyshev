@@ -1303,6 +1303,17 @@
 </li>
       
         <li class="md-nav__item">
+  <a href="#pychebyshev.tensor_train.ChebyshevTT.reorder" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        reorder
+      
+    </span>
+  </a>
+  
+</li>
+      
+        <li class="md-nav__item">
   <a href="#pychebyshev.tensor_train.ChebyshevTT.__getstate__" class="md-nav__link">
     <span class="md-ellipsis">
       
@@ -2776,6 +2787,17 @@
     <span class="md-ellipsis">
       
         error_estimate
+      
+    </span>
+  </a>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#pychebyshev.tensor_train.ChebyshevTT.reorder" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        reorder
       
     </span>
   </a>
@@ -4956,33 +4978,12 @@ precision.</p>
   <summary>Notes</summary>
   <p>Use sparingly: storage is <code>prod(n_nodes)</code> floats. Useful for
 inspection, conversion, or piping through
-:meth:<code>ChebyshevApproximation.from_values</code> to convert TT → barycentric.</p>
+:meth:<code>ChebyshevApproximation.from_values</code> to convert TT → barycentric.
+For TTs built with a non-identity <code>_dim_order</code> (e.g. via
+:meth:<code>with_auto_order</code>), the returned tensor is transposed into
+original-dim axis order so <code>dense[i_0, ..., i_{d-1}]</code> always
+indexes axes by user-frame dim numbering.</p>
 </details>
-
-<p><span class="doc-section-title">Raises:</span></p>
-    <table>
-      <thead>
-        <tr>
-          <th>Type</th>
-          <th>Description</th>
-        </tr>
-      </thead>
-      <tbody>
-          <tr class="doc-section-item">
-            <td>
-                  <code><span title="NotImplementedError">NotImplementedError</span></code>
-            </td>
-            <td>
-              <div class="doc-md-description">
-                <p>If this TT was built via :meth:<code>with_auto_order</code> with a
-non-identity <code>_dim_order</code>. Full dim_order threading planned
-for v0.20.1.</p>
-              </div>
-            </td>
-          </tr>
-      </tbody>
-    </table>
-
 
     </div>
 
@@ -5174,18 +5175,6 @@ tuples. <code>value</code> must lie within the domain for that dimension.</p>
               <div class="doc-md-description">
                 <p>If a slice value is outside the domain, if slicing all
 dimensions, or if <code>dim_index</code> is out of range or duplicated.</p>
-              </div>
-            </td>
-          </tr>
-          <tr class="doc-section-item">
-            <td>
-                  <code><span title="NotImplementedError">NotImplementedError</span></code>
-            </td>
-            <td>
-              <div class="doc-md-description">
-                <p>If this TT was built via :meth:<code>with_auto_order</code> with a
-non-identity <code>_dim_order</code>. Full dim_order threading planned
-for v0.20.1.</p>
               </div>
             </td>
           </tr>
@@ -5513,18 +5502,6 @@ derivative).</p>
               </div>
             </td>
           </tr>
-          <tr class="doc-section-item">
-            <td>
-                  <code><span title="NotImplementedError">NotImplementedError</span></code>
-            </td>
-            <td>
-              <div class="doc-md-description">
-                <p>If this TT was built via :meth:<code>with_auto_order</code> with a
-non-identity <code>_dim_order</code>. Full dim_order threading planned
-for v0.20.1.</p>
-              </div>
-            </td>
-          </tr>
       </tbody>
     </table>
 
@@ -5592,6 +5569,143 @@ from Ruiz &amp; Zeron (2021), Section 3.4, adapted for TT format.</p>
             <td>
               <div class="doc-md-description">
                 <p>If <code>build()</code> has not been called.</p>
+              </div>
+            </td>
+          </tr>
+      </tbody>
+    </table>
+
+
+    </div>
+
+</div>
+
+<div class="doc doc-object doc-function">
+
+
+<h2 id="pychebyshev.tensor_train.ChebyshevTT.reorder" class="doc doc-heading">
+            <code class="highlight language-python"><span class="n">reorder</span><span class="p">(</span><span class="n">new_order</span><span class="p">,</span> <span class="o">*</span><span class="p">,</span> <span class="n">max_rank</span><span class="o">=</span><span class="kc">None</span><span class="p">,</span> <span class="n">tolerance</span><span class="o">=</span><span class="kc">None</span><span class="p">)</span></code>
+
+<a href="#pychebyshev.tensor_train.ChebyshevTT.reorder" class="headerlink" title="Permanent link">&para;</a></h2>
+
+
+    <div class="doc doc-contents ">
+
+        <p>Return a new TT whose storage permutation matches <code>new_order</code>.</p>
+<p>Implements the realignment via TT-swap (adjacent-axis SVDs in
+coefficient space). The swap sequence is determined by bubble-sorting
+the current <code>self._dim_order</code> into <code>new_order</code>; each swap costs
+an SVD over the merged 2-core block.</p>
+
+
+<p><span class="doc-section-title">Parameters:</span></p>
+    <table>
+      <thead>
+        <tr>
+          <th>Name</th>
+          <th>Type</th>
+          <th>Description</th>
+          <th>Default</th>
+        </tr>
+      </thead>
+      <tbody>
+          <tr class="doc-section-item">
+            <td>
+                <code>new_order</code>
+            </td>
+            <td>
+                  <code>sequence of int</code>
+            </td>
+            <td>
+              <div class="doc-md-description">
+                <p>Target permutation. Must be a permutation of
+<code>range(self.num_dimensions)</code>. The result has <code>dim_order ==
+list(new_order)</code>.</p>
+              </div>
+            </td>
+            <td>
+                <em>required</em>
+            </td>
+          </tr>
+          <tr class="doc-section-item">
+            <td>
+                <code>max_rank</code>
+            </td>
+            <td>
+                  <code><span title="int">int</span></code>
+            </td>
+            <td>
+              <div class="doc-md-description">
+                <p>Cap for the rank introduced by each swap's SVD. Defaults to
+<code>self.max_rank</code>.</p>
+              </div>
+            </td>
+            <td>
+                  <code>None</code>
+            </td>
+          </tr>
+          <tr class="doc-section-item">
+            <td>
+                <code>tolerance</code>
+            </td>
+            <td>
+                  <code><span title="float">float</span></code>
+            </td>
+            <td>
+              <div class="doc-md-description">
+                <p>Relative singular-value cutoff for each swap's SVD. Defaults to
+<code>self.tolerance</code>.</p>
+              </div>
+            </td>
+            <td>
+                  <code>None</code>
+            </td>
+          </tr>
+      </tbody>
+    </table>
+
+
+    <p><span class="doc-section-title">Returns:</span></p>
+    <table>
+      <thead>
+        <tr>
+          <th>Type</th>
+          <th>Description</th>
+        </tr>
+      </thead>
+      <tbody>
+          <tr class="doc-section-item">
+            <td>
+                  <code><a class="autorefs autorefs-internal" title="pychebyshev.tensor_train.ChebyshevTT" href="#pychebyshev.tensor_train.ChebyshevTT">ChebyshevTT</a></code>
+            </td>
+            <td>
+              <div class="doc-md-description">
+                <p>New TT representing the same function with storage permuted to
+<code>new_order</code>. <code>self</code> is not mutated.</p>
+              </div>
+            </td>
+          </tr>
+      </tbody>
+    </table>
+
+
+<p><span class="doc-section-title">Raises:</span></p>
+    <table>
+      <thead>
+        <tr>
+          <th>Type</th>
+          <th>Description</th>
+        </tr>
+      </thead>
+      <tbody>
+          <tr class="doc-section-item">
+            <td>
+                  <code><span title="ValueError">ValueError</span></code>
+            </td>
+            <td>
+              <div class="doc-md-description">
+                <p>If <code>new_order</code> is not a permutation of
+<code>range(self.num_dimensions)</code>.</p>
               </div>
             </td>
           </tr>

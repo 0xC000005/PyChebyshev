@@ -950,6 +950,34 @@
     </span>
   </a>
   
+    <nav class="md-nav" aria-label="Auto dim-reordering for Tensor Train">
+      <ul class="md-nav__list">
+        
+          <li class="md-nav__item">
+  <a href="#realigning-two-auto-ordered-tts-with-reorder" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Realigning two auto-ordered TTs with reorder()
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#full-tt-surface-under-non-identity-dim_order" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Full TT surface under non-identity dim_order
+      
+    </span>
+  </a>
+  
+</li>
+        
+      </ul>
+    </nav>
+  
 </li>
       
         <li class="md-nav__item">
@@ -1178,6 +1206,34 @@
     </span>
   </a>
   
+    <nav class="md-nav" aria-label="Auto dim-reordering for Tensor Train">
+      <ul class="md-nav__list">
+        
+          <li class="md-nav__item">
+  <a href="#realigning-two-auto-ordered-tts-with-reorder" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Realigning two auto-ordered TTs with reorder()
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#full-tt-surface-under-non-identity-dim_order" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Full TT surface under non-identity dim_order
+      
+    </span>
+  </a>
+  
+</li>
+        
+      </ul>
+    </nav>
+  
 </li>
       
         <li class="md-nav__item">
@@ -1322,25 +1378,70 @@ permutations and returns the lowest-rank result:</p>
 <li><code>"random"</code> — sample random permutations (parallelizable, but may miss optimum)</li>
 </ul>
 <p>Returns a <code>ChebyshevTT</code> with <code>dim_order</code> transparently applied, so user code
-stays in original dimension order. Internally, the TT is reordered; <code>eval()</code>
-and full <code>integrate()</code> respect the permutation transparently. Algebra operators
-(<code>+</code>, <code>-</code>, <code>*</code>, <code>/</code>, unary <code>-</code>) raise <code>NotImplementedError</code> on TTs with a
-non-identity <code>dim_order</code> — rebuild with the canonical constructor for those use cases.</p>
+stays in original dimension order. Internally, the TT is reordered; all TT
+methods respect the permutation transparently (see "Full TT surface" below).</p>
 <p>Cost: <code>n_trials</code> × normal TT build time. Use only when TT rank is a bottleneck
 (typically d ≥ 5) or you're unsure of the best ordering.</p>
+<h3 id="realigning-two-auto-ordered-tts-with-reorder">Realigning two auto-ordered TTs with <code>reorder()</code><a class="headerlink" href="#realigning-two-auto-ordered-tts-with-reorder" title="Permanent link">&para;</a></h3>
+<p>When two TTs are independently built with <code>with_auto_order</code>, they
+typically end up with different best dim_orders. Adding them directly
+raises <code>ValueError</code> (PyChebyshev intentionally avoids hidden rank
+blow-up). Use <code>reorder()</code> to opt into the alignment cost explicitly:</p>
+<div class="highlight"><pre><span></span><code><a id="__codelineno-3-1" name="__codelineno-3-1" href="#__codelineno-3-1"></a><span class="kn">import</span><span class="w"> </span><span class="nn">numpy</span><span class="w"> </span><span class="k">as</span><span class="w"> </span><span class="nn">np</span>
+<a id="__codelineno-3-2" name="__codelineno-3-2" href="#__codelineno-3-2"></a><span class="kn">from</span><span class="w"> </span><span class="nn">pychebyshev</span><span class="w"> </span><span class="kn">import</span> <span class="n">ChebyshevTT</span>
+<a id="__codelineno-3-3" name="__codelineno-3-3" href="#__codelineno-3-3"></a>
+<a id="__codelineno-3-4" name="__codelineno-3-4" href="#__codelineno-3-4"></a><span class="k">def</span><span class="w"> </span><span class="nf">f</span><span class="p">(</span><span class="n">p</span><span class="p">,</span> <span class="n">_</span><span class="p">):</span>
+<a id="__codelineno-3-5" name="__codelineno-3-5" href="#__codelineno-3-5"></a>    <span class="k">return</span> <span class="n">np</span><span class="o">.</span><span class="n">sin</span><span class="p">(</span><span class="n">p</span><span class="p">[</span><span class="mi">0</span><span class="p">])</span> <span class="o">+</span> <span class="n">p</span><span class="p">[</span><span class="mi">1</span><span class="p">]</span> <span class="o">**</span> <span class="mi">2</span> <span class="o">+</span> <span class="n">np</span><span class="o">.</span><span class="n">cos</span><span class="p">(</span><span class="n">p</span><span class="p">[</span><span class="mi">2</span><span class="p">])</span>
+<a id="__codelineno-3-6" name="__codelineno-3-6" href="#__codelineno-3-6"></a>
+<a id="__codelineno-3-7" name="__codelineno-3-7" href="#__codelineno-3-7"></a><span class="n">a</span> <span class="o">=</span> <span class="n">ChebyshevTT</span><span class="o">.</span><span class="n">with_auto_order</span><span class="p">(</span>
+<a id="__codelineno-3-8" name="__codelineno-3-8" href="#__codelineno-3-8"></a>    <span class="n">f</span><span class="p">,</span> <span class="mi">3</span><span class="p">,</span> <span class="p">[[</span><span class="o">-</span><span class="mi">1</span><span class="p">,</span> <span class="mi">1</span><span class="p">]]</span> <span class="o">*</span> <span class="mi">3</span><span class="p">,</span> <span class="p">[</span><span class="mi">11</span><span class="p">]</span> <span class="o">*</span> <span class="mi">3</span><span class="p">,</span> <span class="n">tolerance</span><span class="o">=</span><span class="mf">1e-8</span><span class="p">,</span> <span class="n">method</span><span class="o">=</span><span class="s2">&quot;greedy_swap&quot;</span>
+<a id="__codelineno-3-9" name="__codelineno-3-9" href="#__codelineno-3-9"></a><span class="p">)</span>
+<a id="__codelineno-3-10" name="__codelineno-3-10" href="#__codelineno-3-10"></a><span class="n">b</span> <span class="o">=</span> <span class="n">ChebyshevTT</span><span class="o">.</span><span class="n">with_auto_order</span><span class="p">(</span>
+<a id="__codelineno-3-11" name="__codelineno-3-11" href="#__codelineno-3-11"></a>    <span class="n">f</span><span class="p">,</span> <span class="mi">3</span><span class="p">,</span> <span class="p">[[</span><span class="o">-</span><span class="mi">1</span><span class="p">,</span> <span class="mi">1</span><span class="p">]]</span> <span class="o">*</span> <span class="mi">3</span><span class="p">,</span> <span class="p">[</span><span class="mi">11</span><span class="p">]</span> <span class="o">*</span> <span class="mi">3</span><span class="p">,</span> <span class="n">tolerance</span><span class="o">=</span><span class="mf">1e-8</span><span class="p">,</span> <span class="n">method</span><span class="o">=</span><span class="s2">&quot;random&quot;</span><span class="p">,</span> <span class="n">n_trials</span><span class="o">=</span><span class="mi">5</span>
+<a id="__codelineno-3-12" name="__codelineno-3-12" href="#__codelineno-3-12"></a><span class="p">)</span>
+<a id="__codelineno-3-13" name="__codelineno-3-13" href="#__codelineno-3-13"></a>
+<a id="__codelineno-3-14" name="__codelineno-3-14" href="#__codelineno-3-14"></a><span class="c1"># a + b  →  ValueError if a.dim_order != b.dim_order</span>
+<a id="__codelineno-3-15" name="__codelineno-3-15" href="#__codelineno-3-15"></a><span class="n">b_aligned</span> <span class="o">=</span> <span class="n">b</span><span class="o">.</span><span class="n">reorder</span><span class="p">(</span><span class="n">a</span><span class="o">.</span><span class="n">dim_order</span><span class="p">)</span>        <span class="c1"># explicit alignment via TT-swap</span>
+<a id="__codelineno-3-16" name="__codelineno-3-16" href="#__codelineno-3-16"></a><span class="n">s</span> <span class="o">=</span> <span class="n">a</span> <span class="o">+</span> <span class="n">b_aligned</span>                          <span class="c1"># works; result inherits a.dim_order</span>
+<a id="__codelineno-3-17" name="__codelineno-3-17" href="#__codelineno-3-17"></a>
+<a id="__codelineno-3-18" name="__codelineno-3-18" href="#__codelineno-3-18"></a><span class="c1"># Optional: tighten max_rank during the swap</span>
+<a id="__codelineno-3-19" name="__codelineno-3-19" href="#__codelineno-3-19"></a><span class="n">b_tight</span> <span class="o">=</span> <span class="n">b</span><span class="o">.</span><span class="n">reorder</span><span class="p">(</span><span class="n">a</span><span class="o">.</span><span class="n">dim_order</span><span class="p">,</span> <span class="n">max_rank</span><span class="o">=</span><span class="mi">8</span><span class="p">,</span> <span class="n">tolerance</span><span class="o">=</span><span class="mf">1e-6</span><span class="p">)</span>
+</code></pre></div>
+<p><code>reorder()</code> performs a sequence of adjacent-axis SVDs (TT-swap) to
+realign storage. Each swap may grow the local bond rank; <code>max_rank=</code>
+and <code>tolerance=</code> (defaulting to <code>self.max_rank</code> / <code>self.tolerance</code>)
+control truncation.</p>
+<h3 id="full-tt-surface-under-non-identity-dim_order">Full TT surface under non-identity <code>dim_order</code><a class="headerlink" href="#full-tt-surface-under-non-identity-dim_order" title="Permanent link">&para;</a></h3>
+<p>After v0.20.1, every <code>ChebyshevTT</code> method accepts non-identity
+<code>dim_order</code> transparently. Users always work in the original-dim
+numbering; PyChebyshev translates at the API boundary.</p>
+<div class="highlight"><pre><span></span><code><a id="__codelineno-4-1" name="__codelineno-4-1" href="#__codelineno-4-1"></a><span class="n">tt</span> <span class="o">=</span> <span class="n">ChebyshevTT</span><span class="o">.</span><span class="n">with_auto_order</span><span class="p">(</span>
+<a id="__codelineno-4-2" name="__codelineno-4-2" href="#__codelineno-4-2"></a>    <span class="n">f</span><span class="p">,</span> <span class="mi">3</span><span class="p">,</span> <span class="p">[[</span><span class="o">-</span><span class="mi">1</span><span class="p">,</span> <span class="mi">1</span><span class="p">]]</span> <span class="o">*</span> <span class="mi">3</span><span class="p">,</span> <span class="p">[</span><span class="mi">11</span><span class="p">]</span> <span class="o">*</span> <span class="mi">3</span><span class="p">,</span> <span class="n">tolerance</span><span class="o">=</span><span class="mf">1e-8</span>
+<a id="__codelineno-4-3" name="__codelineno-4-3" href="#__codelineno-4-3"></a><span class="p">)</span>
+<a id="__codelineno-4-4" name="__codelineno-4-4" href="#__codelineno-4-4"></a><span class="c1"># tt.dim_order may be e.g. [2, 0, 1] — storage is permuted internally.</span>
+<a id="__codelineno-4-5" name="__codelineno-4-5" href="#__codelineno-4-5"></a>
+<a id="__codelineno-4-6" name="__codelineno-4-6" href="#__codelineno-4-6"></a><span class="n">tt</span><span class="o">.</span><span class="n">eval</span><span class="p">([</span><span class="mf">0.3</span><span class="p">,</span> <span class="o">-</span><span class="mf">0.7</span><span class="p">,</span> <span class="mf">0.5</span><span class="p">])</span>              <span class="c1"># original-dim order; works</span>
+<a id="__codelineno-4-7" name="__codelineno-4-7" href="#__codelineno-4-7"></a><span class="n">tt</span><span class="o">.</span><span class="n">eval_multi</span><span class="p">([</span><span class="mf">0.3</span><span class="p">,</span> <span class="o">-</span><span class="mf">0.7</span><span class="p">,</span> <span class="mf">0.5</span><span class="p">],</span> <span class="p">[[</span><span class="mi">1</span><span class="p">,</span> <span class="mi">0</span><span class="p">,</span> <span class="mi">0</span><span class="p">]])</span>  <span class="c1"># 1st-derivative wrt orig dim 0</span>
+<a id="__codelineno-4-8" name="__codelineno-4-8" href="#__codelineno-4-8"></a><span class="n">tt</span><span class="o">.</span><span class="n">slice</span><span class="p">((</span><span class="mi">1</span><span class="p">,</span> <span class="mf">0.0</span><span class="p">))</span>                     <span class="c1"># slice original dim 1 at 0</span>
+<a id="__codelineno-4-9" name="__codelineno-4-9" href="#__codelineno-4-9"></a><span class="n">tt</span><span class="o">.</span><span class="n">extrude</span><span class="p">((</span><span class="mi">0</span><span class="p">,</span> <span class="p">(</span><span class="o">-</span><span class="mi">2</span><span class="p">,</span> <span class="mi">2</span><span class="p">),</span> <span class="mi">5</span><span class="p">))</span>            <span class="c1"># insert new dim at result-position 0</span>
+<a id="__codelineno-4-10" name="__codelineno-4-10" href="#__codelineno-4-10"></a><span class="n">tt</span><span class="o">.</span><span class="n">integrate</span><span class="p">(</span><span class="n">dims</span><span class="o">=</span><span class="p">[</span><span class="mi">2</span><span class="p">])</span>                 <span class="c1"># partial integrate original dim 2</span>
+<a id="__codelineno-4-11" name="__codelineno-4-11" href="#__codelineno-4-11"></a><span class="n">tt</span><span class="o">.</span><span class="n">to_dense</span><span class="p">()</span>                          <span class="c1"># axes returned in original-dim order</span>
+<a id="__codelineno-4-12" name="__codelineno-4-12" href="#__codelineno-4-12"></a><span class="p">(</span><span class="o">-</span><span class="n">tt</span><span class="p">)</span><span class="o">.</span><span class="n">eval</span><span class="p">([</span><span class="mf">0.1</span><span class="p">,</span> <span class="mf">0.2</span><span class="p">,</span> <span class="mf">0.3</span><span class="p">])</span>            <span class="c1"># unary algebra preserves dim_order</span>
+<a id="__codelineno-4-13" name="__codelineno-4-13" href="#__codelineno-4-13"></a><span class="mf">2.0</span> <span class="o">*</span> <span class="n">tt</span> <span class="o">+</span> <span class="n">tt</span>                          <span class="c1"># binary algebra succeeds (matching orders)</span>
+</code></pre></div>
 <h2 id="sensitivity-analysis-workflow">Sensitivity analysis workflow<a class="headerlink" href="#sensitivity-analysis-workflow" title="Permanent link">&para;</a></h2>
 <p>Combine auto-knots + Sobol to understand and simplify complex models:</p>
-<div class="highlight"><pre><span></span><code><a id="__codelineno-3-1" name="__codelineno-3-1" href="#__codelineno-3-1"></a><span class="c1"># 1. Auto-discover kinks</span>
-<a id="__codelineno-3-2" name="__codelineno-3-2" href="#__codelineno-3-2"></a><span class="n">spl</span> <span class="o">=</span> <span class="n">ChebyshevSpline</span><span class="o">.</span><span class="n">auto_knots</span><span class="p">(</span><span class="n">f</span><span class="p">,</span> <span class="mi">5</span><span class="p">,</span> <span class="n">domain</span><span class="p">,</span> <span class="n">max_knots_per_dim</span><span class="o">=</span><span class="mi">3</span><span class="p">)</span>
-<a id="__codelineno-3-3" name="__codelineno-3-3" href="#__codelineno-3-3"></a>
-<a id="__codelineno-3-4" name="__codelineno-3-4" href="#__codelineno-3-4"></a><span class="c1"># 2. Compute Sobol indices</span>
-<a id="__codelineno-3-5" name="__codelineno-3-5" href="#__codelineno-3-5"></a><span class="n">sobol</span> <span class="o">=</span> <span class="n">spl</span><span class="o">.</span><span class="n">sobol_indices</span><span class="p">()</span>
-<a id="__codelineno-3-6" name="__codelineno-3-6" href="#__codelineno-3-6"></a>
-<a id="__codelineno-3-7" name="__codelineno-3-7" href="#__codelineno-3-7"></a><span class="c1"># 3. Drop low-sensitivity dims (or use them for conditioning)</span>
-<a id="__codelineno-3-8" name="__codelineno-3-8" href="#__codelineno-3-8"></a><span class="n">important_dims</span> <span class="o">=</span> <span class="p">[</span><span class="n">i</span> <span class="k">for</span> <span class="n">i</span><span class="p">,</span> <span class="n">s</span> <span class="ow">in</span> <span class="n">sobol</span><span class="p">[</span><span class="s2">&quot;first_order&quot;</span><span class="p">]</span><span class="o">.</span><span class="n">items</span><span class="p">()</span> <span class="k">if</span> <span class="n">s</span> <span class="o">&gt;</span> <span class="mf">0.01</span><span class="p">]</span>
-<a id="__codelineno-3-9" name="__codelineno-3-9" href="#__codelineno-3-9"></a><span class="nb">print</span><span class="p">(</span><span class="sa">f</span><span class="s2">&quot;Effective dimensionality: </span><span class="si">{</span><span class="nb">len</span><span class="p">(</span><span class="n">important_dims</span><span class="p">)</span><span class="si">}</span><span class="s2"> / 5&quot;</span><span class="p">)</span>
-<a id="__codelineno-3-10" name="__codelineno-3-10" href="#__codelineno-3-10"></a>
-<a id="__codelineno-3-11" name="__codelineno-3-11" href="#__codelineno-3-11"></a><span class="c1"># 4. Build reduced model if needed, or keep full model with low-rank Slider</span>
+<div class="highlight"><pre><span></span><code><a id="__codelineno-5-1" name="__codelineno-5-1" href="#__codelineno-5-1"></a><span class="c1"># 1. Auto-discover kinks</span>
+<a id="__codelineno-5-2" name="__codelineno-5-2" href="#__codelineno-5-2"></a><span class="n">spl</span> <span class="o">=</span> <span class="n">ChebyshevSpline</span><span class="o">.</span><span class="n">auto_knots</span><span class="p">(</span><span class="n">f</span><span class="p">,</span> <span class="mi">5</span><span class="p">,</span> <span class="n">domain</span><span class="p">,</span> <span class="n">max_knots_per_dim</span><span class="o">=</span><span class="mi">3</span><span class="p">)</span>
+<a id="__codelineno-5-3" name="__codelineno-5-3" href="#__codelineno-5-3"></a>
+<a id="__codelineno-5-4" name="__codelineno-5-4" href="#__codelineno-5-4"></a><span class="c1"># 2. Compute Sobol indices</span>
+<a id="__codelineno-5-5" name="__codelineno-5-5" href="#__codelineno-5-5"></a><span class="n">sobol</span> <span class="o">=</span> <span class="n">spl</span><span class="o">.</span><span class="n">sobol_indices</span><span class="p">()</span>
+<a id="__codelineno-5-6" name="__codelineno-5-6" href="#__codelineno-5-6"></a>
+<a id="__codelineno-5-7" name="__codelineno-5-7" href="#__codelineno-5-7"></a><span class="c1"># 3. Drop low-sensitivity dims (or use them for conditioning)</span>
+<a id="__codelineno-5-8" name="__codelineno-5-8" href="#__codelineno-5-8"></a><span class="n">important_dims</span> <span class="o">=</span> <span class="p">[</span><span class="n">i</span> <span class="k">for</span> <span class="n">i</span><span class="p">,</span> <span class="n">s</span> <span class="ow">in</span> <span class="n">sobol</span><span class="p">[</span><span class="s2">&quot;first_order&quot;</span><span class="p">]</span><span class="o">.</span><span class="n">items</span><span class="p">()</span> <span class="k">if</span> <span class="n">s</span> <span class="o">&gt;</span> <span class="mf">0.01</span><span class="p">]</span>
+<a id="__codelineno-5-9" name="__codelineno-5-9" href="#__codelineno-5-9"></a><span class="nb">print</span><span class="p">(</span><span class="sa">f</span><span class="s2">&quot;Effective dimensionality: </span><span class="si">{</span><span class="nb">len</span><span class="p">(</span><span class="n">important_dims</span><span class="p">)</span><span class="si">}</span><span class="s2"> / 5&quot;</span><span class="p">)</span>
+<a id="__codelineno-5-10" name="__codelineno-5-10" href="#__codelineno-5-10"></a>
+<a id="__codelineno-5-11" name="__codelineno-5-11" href="#__codelineno-5-11"></a><span class="c1"># 4. Build reduced model if needed, or keep full model with low-rank Slider</span>
 </code></pre></div>
 <h2 id="beyond-mocax">Beyond MoCaX<a class="headerlink" href="#beyond-mocax" title="Permanent link">&para;</a></h2>
 <p>MoCaX has none of these — auto-knot discovery, Sobol indices, and dim
