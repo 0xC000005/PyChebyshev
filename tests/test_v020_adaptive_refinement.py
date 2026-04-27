@@ -101,3 +101,56 @@ class TestSobolIndicesInstance:
         result = spl.sobol_indices()
         assert "first_order" in result
         assert result["first_order"][0] == pytest.approx(1.0, abs=1e-3)
+
+
+# ============================================================================
+# T3: ChebyshevSpline.auto_knots()
+# ============================================================================
+
+def _t3_f_abs(x, _):
+    return abs(x[0])
+
+def _t3_f_two_kinks(x, _):
+    return max(0, x[0]) + max(0, x[0] - 0.5)
+
+def _t3_f_smooth(x, _):
+    return math.sin(x[0])
+
+
+class TestAutoKnots:
+    def test_recovers_single_kink(self):
+        spl = ChebyshevSpline.auto_knots(
+            _t3_f_abs, 1, [[-1, 1]],
+            max_knots_per_dim=3,
+            n_scan_points=200,
+        )
+        assert isinstance(spl, ChebyshevSpline)
+        knots = spl.get_special_points()
+        assert any(abs(k) < 0.1 for k in knots[0])
+
+    def test_recovers_two_kinks(self):
+        spl = ChebyshevSpline.auto_knots(
+            _t3_f_two_kinks, 1, [[-1, 1]],
+            max_knots_per_dim=4,
+            n_scan_points=300,
+        )
+        knots = spl.get_special_points()[0]
+        assert any(abs(k) < 0.1 for k in knots)
+        assert any(abs(k - 0.5) < 0.1 for k in knots)
+
+    def test_smooth_function_few_knots(self):
+        spl = ChebyshevSpline.auto_knots(
+            _t3_f_smooth, 1, [[-1, 1]],
+            max_knots_per_dim=3,
+            threshold_factor=10.0,
+        )
+        knots = spl.get_special_points()[0]
+        assert len(knots) == 0
+
+    def test_max_knots_per_dim_caps(self):
+        spl = ChebyshevSpline.auto_knots(
+            _t3_f_two_kinks, 1, [[-1, 1]],
+            max_knots_per_dim=1,
+        )
+        knots = spl.get_special_points()[0]
+        assert len(knots) <= 1

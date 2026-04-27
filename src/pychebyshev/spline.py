@@ -2102,3 +2102,115 @@ class ChebyshevSpline:
         return _plot_2d_contour_impl(
             self, ax=ax, n_points=n_points, n_levels=n_levels, fixed=fixed
         )
+
+    @classmethod
+    def auto_knots(
+        cls,
+        function,
+        num_dimensions,
+        domain,
+        *,
+        max_knots_per_dim: int = 5,
+        n_scan_points: int = 200,
+        threshold_factor: float = 5.0,
+        n_nodes_per_piece: int = 10,
+        additional_data=None,
+    ) -> "ChebyshevSpline":
+        """Build a ChebyshevSpline with knots auto-placed at function kinks.
+
+        Algorithm: for each dimension, scan ``function`` on
+        ``n_scan_points`` evenly-spaced points (all other dims fixed at their
+        midpoints), compute ``|d²f|`` (second differences of the sampled
+        values), cluster spikes above ``threshold_factor × mean(|d²f|)``,
+        keep the top spike per cluster, cap at ``max_knots_per_dim``.
+
+        ``mean`` is used instead of ``median`` so that sparse-signal inputs
+        (piecewise-linear functions where almost all second differences are
+        exactly zero) still yield a positive threshold.
+
+        Parameters
+        ----------
+        function : callable
+            Function signature: ``f(point, additional_data) → float``.
+        num_dimensions : int
+            Number of input dimensions.
+        domain : list of [float, float]
+            Bounds ``[lo, hi]`` for each dimension.
+        max_knots_per_dim : int, optional
+            Maximum number of knots placed in any single dimension (default 5).
+        n_scan_points : int, optional
+            Number of evenly-spaced scan points per dimension (default 200).
+        threshold_factor : float, optional
+            Spike threshold as a multiple of the mean ``|d²f|``.  Increase
+            this to suppress knot placement for smooth functions (default 5.0).
+        n_nodes_per_piece : int, optional
+            Chebyshev node count per piece per dimension (default 10).
+        additional_data : object, optional
+            Passed through to ``function`` unchanged.
+
+        Returns
+        -------
+        ChebyshevSpline
+            A built spline with auto-detected knots.
+        """
+        knots = []
+        midpoint = [(d[0] + d[1]) / 2.0 for d in domain]
+
+        for dim_idx in range(num_dimensions):
+            lo, hi = domain[dim_idx]
+            xs = np.linspace(lo, hi, n_scan_points)
+            ys = np.empty(n_scan_points)
+            for i, x in enumerate(xs):
+                point = list(midpoint)
+                point[dim_idx] = float(x)
+                ys[i] = float(function(point, additional_data))
+
+            d2 = np.abs(np.diff(ys, n=2))
+            if len(d2) == 0:
+                knots.append([])
+                continue
+
+            mean_d2 = np.mean(d2)
+            if mean_d2 == 0:
+                knots.append([])
+                continue
+
+            threshold = threshold_factor * mean_d2
+            spike_indices = np.where(d2 > threshold)[0]
+            if len(spike_indices) == 0:
+                knots.append([])
+                continue
+
+            # Cluster nearby spike indices, keeping the peak per cluster.
+            cluster_radius = max(1, n_scan_points // (max_knots_per_dim * 4))
+            clusters = []
+            current_cluster = [int(spike_indices[0])]
+            for idx in spike_indices[1:]:
+                if int(idx) - current_cluster[-1] <= cluster_radius:
+                    current_cluster.append(int(idx))
+                else:
+                    clusters.append(current_cluster)
+                    current_cluster = [int(idx)]
+            clusters.append(current_cluster)
+
+            # Pick peak index from each cluster, sort by magnitude, cap count.
+            cluster_peaks = [max(c, key=lambda i: d2[i]) for c in clusters]
+            cluster_peaks.sort(key=lambda i: -d2[i])
+            cluster_peaks = cluster_peaks[:max_knots_per_dim]
+
+            # Map each d2 index back to physical x: d2[i] ≈ curvature at xs[i+1]
+            knot_xs = sorted(float(xs[i + 1]) for i in cluster_peaks)
+            knots.append(knot_xs)
+
+        n_nodes = [n_nodes_per_piece] * num_dimensions
+
+        spl = cls(
+            function,
+            num_dimensions,
+            domain,
+            n_nodes=n_nodes,
+            knots=knots,
+            additional_data=additional_data,
+        )
+        spl.build(verbose=False)
+        return spl
