@@ -220,3 +220,38 @@ class TestAutoDimOrder:
         restored = ChebyshevTT.__new__(ChebyshevTT)
         restored.__setstate__(state)
         assert restored.dim_order == [0]
+
+
+# ============================================================================
+# T5: Cross-feature tests
+# ============================================================================
+
+class TestCrossFeatures:
+    def test_auto_knot_spline_supports_sobol(self):
+        spl = ChebyshevSpline.auto_knots(
+            _t3_f_abs, 1, [[-1, 1]], max_knots_per_dim=3,
+        )
+        result = spl.sobol_indices()
+        assert result["variance"] > 0
+        assert result["first_order"][0] == pytest.approx(1.0, abs=1e-3)
+
+    def test_auto_dim_order_tt_supports_integrate(self):
+        tt = ChebyshevTT.with_auto_order(
+            _t4_f_5d, 5, [[-1, 1]] * 5, [6] * 5,
+            max_rank=8, n_trials=2,
+        )
+        result = tt.integrate()
+        assert isinstance(result, float)
+
+    def test_auto_knot_spline_supports_v019_plot_1d(self):
+        try:
+            import matplotlib
+            matplotlib.use("Agg")
+        except ImportError:
+            pytest.skip("matplotlib not installed")
+
+        spl = ChebyshevSpline.auto_knots(
+            _t3_f_abs, 1, [[-1, 1]], max_knots_per_dim=3,
+        )
+        ax = spl.plot_1d()
+        assert ax is not None
