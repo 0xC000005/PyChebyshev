@@ -12,7 +12,7 @@ PyChebyshev is a pip-installable Python library for multi-dimensional Chebyshev 
 # Setup
 uv sync
 
-# Run tests (~1022 tests, ~115s due to 5D Black-Scholes builds)
+# Run tests (~1055 tests, ~115s due to 5D Black-Scholes builds)
 uv run pytest tests/ -v
 
 # Run a single test
@@ -76,6 +76,11 @@ The installable package. Public classes: `ChebyshevApproximation`, `ChebyshevSpl
   `sobol_indices()` instance method on Approximation+Spline, `ChebyshevTT.with_auto_order()`
   classmethod (heuristic dim reordering with transparent eval permutation), and
   reference `.pcb` readers in Rust (`readers/rust/`) and Julia (`readers/julia/`).
+- v0.20.1 closes the v0.20 `_dim_order` known limitations: `eval_multi`,
+  `slice`, `extrude`, `to_dense`, partial `integrate`, and unary algebra
+  fully thread `_dim_order`. New public `ChebyshevTT.reorder(new_order)`
+  method (TT-swap via adjacent SVDs) is the explicit alignment escape
+  hatch for binary algebra between TTs of different orders.
 
 ### Benchmark Scripts (project root)
 
@@ -133,6 +138,10 @@ Not part of the library. Compare Chebyshev barycentric against alternative metho
 - `test_v020_adaptive_refinement.py` — ~25 tests: `ChebyshevSpline.auto_knots()`,
   `sobol_indices()` on Approximation/Spline, `ChebyshevTT.with_auto_order()`;
   cross-feature and round-trip checks.
+- `test_v0201_dim_threading.py` — ~40 tests: TT `_dim_order` threading
+  through `eval_multi`, `slice`, `extrude`, `to_dense`, partial
+  `integrate`, unary algebra, binary algebra (matched `_dim_order`),
+  and `ChebyshevTT.reorder()` (TT-swap alignment).
 
 ### CI/CD (`.github/workflows/`)
 

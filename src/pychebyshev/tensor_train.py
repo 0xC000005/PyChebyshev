@@ -1532,7 +1532,9 @@ class ChebyshevTT:
 
         self._check_built()
 
-        # Normalize dims (None = all)
+        # Normalize dims (None = all). dims_sorted is in *user* frame
+        # (original-dim numbering). The user's dim labels are independent of
+        # the storage permutation `self._dim_order`.
         if dims is None:
             dims_sorted = list(range(self.num_dimensions))
         elif isinstance(dims, int):
@@ -1546,21 +1548,37 @@ class ChebyshevTT:
                 f"(num_dimensions={self.num_dimensions}, dims={dims_sorted})"
             )
 
-        # Normalize bounds: returns list of (lo, hi) or None per dim
-        normalized_bounds = _normalize_bounds(dims_sorted, bounds, self.domain)
+        # Translate user-frame dim indices to storage positions. The cores,
+        # domain, and n_nodes are all in storage frame after a reorder().
+        canonical = list(range(self.num_dimensions))
+        if self._dim_order != canonical:
+            # storage_pos for orig dim d == self._dim_order.index(d)
+            storage_for = {d: self._dim_order.index(d) for d in dims_sorted}
+        else:
+            storage_for = {d: d for d in dims_sorted}
+        integrated_storage = sorted(storage_for.values())
+        integrated_set = set(integrated_storage)
 
-        # Compute scaled quadrature weights per integrated dim.
+        # Normalize bounds: validates against domain in *storage* frame using
+        # storage positions (since `self.domain[storage_pos]` gives the
+        # physical domain of the corresponding original dim after reorder).
+        bounds_storage_dims = [storage_for[d] for d in dims_sorted]
+        normalized_bounds = _normalize_bounds(
+            bounds_storage_dims, bounds, self.domain
+        )
+
+        # Compute scaled quadrature weights per *storage* position.
         # Cores are in Chebyshev coefficient space; convert to value space
         # first via _coeff_core_to_value_core before applying Fejer-1 weights.
-        weights_per_dim = {}
-        for d, bd in zip(dims_sorted, normalized_bounds):
-            n = self.n_nodes[d]
-            a, b = self.domain[d]
+        weights_per_storage = {}
+        for sp, bd in zip(bounds_storage_dims, normalized_bounds):
+            n = self.n_nodes[sp]
+            a, b = self.domain[sp]
             if bd is None:
                 # Full domain: use standard Fejer-1 weights scaled by (b-a)/2
                 weights_unscaled = _compute_fejer1_weights(n)
                 scale = (b - a) / 2.0
-                weights_per_dim[d] = weights_unscaled * scale
+                weights_per_storage[sp] = weights_unscaled * scale
             else:
                 # Sub-interval: map bounds to reference [-1, 1], use
                 # _compute_sub_interval_weights which already returns the
@@ -1571,36 +1589,31 @@ class ChebyshevTT:
                 t_hi = 2.0 * (b_hi - a) / (b - a) - 1.0
                 weights_sub = _compute_sub_interval_weights(n, t_lo, t_hi)
                 scale = (b - a) / 2.0
-                weights_per_dim[d] = weights_sub * scale
+                weights_per_storage[sp] = weights_sub * scale
 
-        # Contract each integrated core: coefficient core → value core → M_k
+        # Contract each integrated core (by storage position):
+        # coefficient core → value core → M_k
         contracted = {}
-        for d in dims_sorted:
-            val_core = _coeff_core_to_value_core(self._coeff_cores[d])
-            contracted[d] = _integrate_tt_along_dim(val_core, weights_per_dim[d])
+        for sp in integrated_storage:
+            val_core = _coeff_core_to_value_core(self._coeff_cores[sp])
+            contracted[sp] = _integrate_tt_along_dim(
+                val_core, weights_per_storage[sp]
+            )
 
         if len(dims_sorted) == self.num_dimensions:
             # Full integration: chain-multiply all M_k matrices → scalar
             # Full integration is dim_order-invariant (sum is commutative),
-            # so no dim_order guard is needed here.
-            result = contracted[dims_sorted[0]]
-            for d in dims_sorted[1:]:
-                result = result @ contracted[d]
+            # so no dim_order guard is needed here. We chain in storage order
+            # to keep rank dims compatible.
+            result = contracted[integrated_storage[0]]
+            for sp in integrated_storage[1:]:
+                result = result @ contracted[sp]
             return float(result.ravel()[0])
-
-        # Partial integration returns a ChebyshevTT — dim_order must be identity
-        # or the result TT would have wrong core ordering.
-        if self._dim_order != list(range(self.num_dimensions)):
-            raise NotImplementedError(
-                "Partial integrate() is not yet supported on TTs built via "
-                "with_auto_order() with a non-identity dim permutation. "
-                "Full integration (all dims) works regardless of dim_order. "
-                "Full dim_order threading is planned for v0.20.1."
-            )
 
         # Partial integration: absorb each contracted matrix into a
         # neighboring kept core via matrix multiplication on the rank dim.
-        integrated_set = set(dims_sorted)
+        # We iterate over *storage* positions because rank dims chain in
+        # storage order.
         new_coeff_cores = []
         pending = None  # accumulated product of consecutive M_k matrices
 
@@ -1611,8 +1624,8 @@ class ChebyshevTT:
                     M = pending @ M
                 pending = M
                 continue
-            # k is a kept dim — absorb any pending matrix into this core's
-            # left rank dimension
+            # k is a kept storage position — absorb any pending matrix into
+            # this core's left rank dimension
             core = self._coeff_cores[k].copy()
             if pending is not None:
                 core = np.einsum("lr,rjs->ljs", pending, core)
@@ -1626,10 +1639,30 @@ class ChebyshevTT:
             last = np.einsum("ljs,sr->ljr", last, pending)
             new_coeff_cores[-1] = last
 
-        # Construct result TT via factory bypass (skip __init__ / build())
-        kept_dims = [d for d in range(self.num_dimensions) if d not in integrated_set]
-        new_domain = [self.domain[d] for d in kept_dims]
-        new_n_nodes = [self.n_nodes[d] for d in kept_dims]
+        # Construct result TT via factory bypass (skip __init__ / build()).
+        # `kept_dims` are *storage* positions of surviving cores.
+        kept_dims = [
+            sp for sp in range(self.num_dimensions) if sp not in integrated_set
+        ]
+        new_domain = [self.domain[sp] for sp in kept_dims]
+        new_n_nodes = [self.n_nodes[sp] for sp in kept_dims]
+
+        # Build result _dim_order: surviving original-dim indices renumbered
+        # to 0..len(kept)-1 in original-order ascending order. Each surviving
+        # storage position k corresponds to original dim self._dim_order[k];
+        # that original dim gets a new index based on its rank among the
+        # surviving original dims sorted ascending.
+        integrated_orig = sorted(dims_sorted)
+        new_dim_index = {}
+        next_idx = 0
+        for orig_d in range(self.num_dimensions):
+            if orig_d in integrated_orig:
+                continue
+            new_dim_index[orig_d] = next_idx
+            next_idx += 1
+        new_dim_order = [
+            new_dim_index[self._dim_order[sp]] for sp in kept_dims
+        ]
 
         result_tt = self.__class__.__new__(self.__class__)
         result_tt.function = None
@@ -1651,7 +1684,7 @@ class ChebyshevTT:
         result_tt.descriptor = self.descriptor
         result_tt.additional_data = self.additional_data
         result_tt.method = self.method
-        result_tt._dim_order = list(range(len(kept_dims)))
+        result_tt._dim_order = new_dim_order
         return result_tt
 
     def to_dense(self) -> np.ndarray:
@@ -1669,21 +1702,12 @@ class ChebyshevTT:
         Use sparingly: storage is ``prod(n_nodes)`` floats. Useful for
         inspection, conversion, or piping through
         :meth:`ChebyshevApproximation.from_values` to convert TT → barycentric.
-
-        Raises
-        ------
-        NotImplementedError
-            If this TT was built via :meth:`with_auto_order` with a
-            non-identity ``_dim_order``. Full dim_order threading planned
-            for v0.20.1.
+        For TTs built with a non-identity ``_dim_order`` (e.g. via
+        :meth:`with_auto_order`), the returned tensor is transposed into
+        original-dim axis order so ``dense[i_0, ..., i_{d-1}]`` always
+        indexes axes by user-frame dim numbering.
         """
         self._check_built()
-        if self._dim_order != list(range(self.num_dimensions)):
-            raise NotImplementedError(
-                "to_dense() is not yet supported on TTs built via with_auto_order() "
-                "with a non-identity dim permutation. "
-                "Full dim_order threading is planned for v0.20.1."
-            )
 
         # Convert all coefficient cores to value cores
         value_cores = [_coeff_core_to_value_core(c) for c in self._coeff_cores]
@@ -1699,6 +1723,13 @@ class ChebyshevTT:
 
         # Squeeze the rank-1 boundary dimensions and reshape to n_nodes
         result = result.reshape(tuple(self.n_nodes))
+        # If non-identity dim_order, transpose into original-dim axis order.
+        canonical = list(range(self.num_dimensions))
+        if self._dim_order != canonical:
+            inv = [0] * self.num_dimensions
+            for storage_pos, orig_dim in enumerate(self._dim_order):
+                inv[orig_dim] = storage_pos
+            result = np.transpose(result, axes=inv)
         return result
 
     def extrude(self, params):
@@ -1730,12 +1761,6 @@ class ChebyshevTT:
         Chebyshev coefficient space.
         """
         self._check_built()
-        if self._dim_order != list(range(self.num_dimensions)):
-            raise NotImplementedError(
-                "extrude() is not yet supported on TTs built via with_auto_order() "
-                "with a non-identity dim permutation. "
-                "Full dim_order threading is planned for v0.20.1."
-            )
 
         from pychebyshev._extrude_slice import (
             _normalize_extrusion_params,
@@ -1743,15 +1768,40 @@ class ChebyshevTT:
         )
 
         norm_params = _normalize_extrusion_params(params, self.num_dimensions)
+        canonical = list(range(self.num_dimensions))
+        identity = self._dim_order == canonical
 
         new_cores = list(self._coeff_cores)
         new_domain = list(self.domain)
         new_n_nodes = list(self.n_nodes)
-        # Sort by dim_idx ascending so insertions don't shift later indices
+        new_dim_order = list(self._dim_order)
+
+        # Sort by dim_idx ascending so user-facing indices stay coherent
+        # as we insert. Each new dim's "original" index is the dim_idx the
+        # user passed for it (in the result's natural numbering); existing
+        # original-dim indices >= dim_idx shift up by 1.
         for dim_idx, (lo, hi), n_new in sorted(norm_params, key=lambda p: p[0]):
-            new_cores = _extrude_tt_core(new_cores, dim_idx, lo, hi, n_new)
-            new_domain.insert(dim_idx, [lo, hi])
-            new_n_nodes.insert(dim_idx, n_new)
+            if identity:
+                # In identity mode, storage position == original-dim index;
+                # insert at storage position dim_idx (preserves v0.18
+                # canonical behavior bit-for-bit).
+                new_cores = _extrude_tt_core(new_cores, dim_idx, lo, hi, n_new)
+                new_domain.insert(dim_idx, [lo, hi])
+                new_n_nodes.insert(dim_idx, n_new)
+                new_dim_order = list(range(len(new_cores)))
+            else:
+                # Non-identity: append the new core at storage end; encode
+                # user's dim_idx via _dim_order.
+                storage_pos = len(new_cores)
+                new_cores = _extrude_tt_core(new_cores, storage_pos, lo, hi, n_new)
+                new_domain.append([lo, hi])
+                new_n_nodes.append(n_new)
+                # Increment every existing original-dim entry that the new
+                # dim is inserted before.
+                new_dim_order = [
+                    d if d < dim_idx else d + 1 for d in new_dim_order
+                ]
+                new_dim_order.append(dim_idx)
 
         new_tt_ranks = [c.shape[0] for c in new_cores] + [new_cores[-1].shape[2]]
 
@@ -1773,7 +1823,7 @@ class ChebyshevTT:
         obj._build_time = 0.0
         obj._total_build_evals = 0
         obj._cached_error_estimate = None
-        obj._dim_order = list(range(len(new_n_nodes)))
+        obj._dim_order = list(new_dim_order)
         return obj
 
     def slice(self, params):
@@ -1801,18 +1851,8 @@ class ChebyshevTT:
         ValueError
             If a slice value is outside the domain, if slicing all
             dimensions, or if ``dim_index`` is out of range or duplicated.
-        NotImplementedError
-            If this TT was built via :meth:`with_auto_order` with a
-            non-identity ``_dim_order``. Full dim_order threading planned
-            for v0.20.1.
         """
         self._check_built()
-        if self._dim_order != list(range(self.num_dimensions)):
-            raise NotImplementedError(
-                "slice() is not yet supported on TTs built via with_auto_order() "
-                "with a non-identity dim permutation. "
-                "Full dim_order threading is planned for v0.20.1."
-            )
 
         from pychebyshev._extrude_slice import (
             _normalize_slicing_params,
@@ -1822,9 +1862,17 @@ class ChebyshevTT:
 
         norm_params = _normalize_slicing_params(params, self.num_dimensions)
 
-        # Validate values within domain before modifying anything
+        canonical = list(range(self.num_dimensions))
+        identity = self._dim_order == canonical
+
+        # Validate values within domain before modifying anything. The user's
+        # dim_idx is in original-dim frame; translate to the storage position
+        # to look up the storage-frame domain.
         for dim_idx, value in norm_params:
-            lo, hi = self.domain[dim_idx]
+            storage_pos = (
+                dim_idx if identity else self._dim_order.index(dim_idx)
+            )
+            lo, hi = self.domain[storage_pos]
             if value < lo or value > hi:
                 raise ValueError(
                     f"Slice value {value} for dim {dim_idx} is outside "
@@ -1834,18 +1882,42 @@ class ChebyshevTT:
         new_cores = list(self._coeff_cores)
         new_domain = list(self.domain)
         new_n_nodes = list(self.n_nodes)
-        # Process slices in DESCENDING dim order so earlier indices remain valid
-        for dim_idx, value in sorted(norm_params, key=lambda p: -p[0]):
-            lo, hi = new_domain[dim_idx]
-            nodes = _make_nodes_for_dim(lo, hi, new_n_nodes[dim_idx])
-            new_cores = _slice_tt_core(new_cores, dim_idx, value, lo, hi, nodes)
-            new_domain.pop(dim_idx)
-            new_n_nodes.pop(dim_idx)
+        live_dim_order = list(self._dim_order)
+
+        # Translate every (orig_dim, value) to (storage_pos, value).
+        translated = []
+        for dim_idx, value in norm_params:
+            storage_pos = live_dim_order.index(dim_idx)
+            translated.append((storage_pos, value))
+        # Process in descending storage_pos so earlier indices remain valid
+        # as cores are popped.
+        for storage_pos, value in sorted(translated, key=lambda t: -t[0]):
+            lo, hi = new_domain[storage_pos]
+            nodes = _make_nodes_for_dim(lo, hi, new_n_nodes[storage_pos])
+            new_cores = _slice_tt_core(
+                new_cores, storage_pos, value, lo, hi, nodes
+            )
+            new_domain.pop(storage_pos)
+            new_n_nodes.pop(storage_pos)
+            live_dim_order.pop(storage_pos)
 
         if len(new_cores) == 0:
             raise RuntimeError("internal error: cannot slice all dimensions")
 
         new_tt_ranks = [c.shape[0] for c in new_cores] + [new_cores[-1].shape[2]]
+
+        # Build the result _dim_order. live_dim_order contains the surviving
+        # original-dim indices in storage order; renumber to 0..len(kept)-1
+        # in original-order ascending order.
+        sliced_orig = {dim_idx for dim_idx, _ in norm_params}
+        new_dim_index = {}
+        next_idx = 0
+        for orig_d in range(self.num_dimensions):
+            if orig_d in sliced_orig:
+                continue
+            new_dim_index[orig_d] = next_idx
+            next_idx += 1
+        result_dim_order = [new_dim_index[d] for d in live_dim_order]
 
         obj = self.__class__.__new__(self.__class__)
         obj.function = None
@@ -1865,7 +1937,7 @@ class ChebyshevTT:
         obj._build_time = 0.0
         obj._total_build_evals = 0
         obj._cached_error_estimate = None
-        obj._dim_order = list(range(len(new_n_nodes)))
+        obj._dim_order = result_dim_order
         return obj
 
     def eval(self, point: List[float]) -> float:
@@ -2000,20 +2072,36 @@ class ChebyshevTT:
         ------
         RuntimeError
             If ``build()`` has not been called.
-        NotImplementedError
-            If this TT was built via :meth:`with_auto_order` with a
-            non-identity ``_dim_order``. Full dim_order threading planned
-            for v0.20.1.
         """
         self._check_built()
-        if self._dim_order != list(range(self.num_dimensions)):
-            raise NotImplementedError(
-                "eval_multi() is not yet supported on TTs built via with_auto_order() "
-                "with a non-identity dim permutation. "
-                "Use eval() for value-only queries, or use the canonical-order "
-                "ChebyshevTT() constructor for derivative queries. "
-                "Full dim_order threading is planned for v0.20.1."
-            )
+
+        # If a non-identity ``_dim_order`` is set (e.g., from
+        # :meth:`with_auto_order` or :meth:`reorder`), permute both the
+        # input ``point`` and each ``deriv_order`` from user-frame into
+        # storage frame so the FD machinery (which references
+        # ``self.domain`` / ``self.n_nodes`` in storage frame) operates
+        # consistently.  Then temporarily neutralize ``_dim_order`` so
+        # the inner ``self.eval`` calls do not re-permute the
+        # already-storage-frame points.
+        canonical = list(range(self.num_dimensions))
+        if self._dim_order != canonical:
+            point = [point[self._dim_order[k]] for k in range(self.num_dimensions)]
+            derivative_orders = [
+                [d[self._dim_order[k]] for k in range(self.num_dimensions)]
+                for d in derivative_orders
+            ]
+            saved_dim_order = self._dim_order
+            self._dim_order = canonical
+            try:
+                results = []
+                for deriv_order in derivative_orders:
+                    if all(d == 0 for d in deriv_order):
+                        results.append(self.eval(point))
+                    else:
+                        results.append(self._fd_derivative(point, deriv_order))
+            finally:
+                self._dim_order = saved_dim_order
+            return results
 
         results = []
         for deriv_order in derivative_orders:
@@ -2257,6 +2345,105 @@ class ChebyshevTT:
             A copy of the internal permutation vector.
         """
         return list(self._dim_order)
+
+    def reorder(
+        self,
+        new_order,
+        *,
+        max_rank=None,
+        tolerance=None,
+    ) -> "ChebyshevTT":
+        """Return a new TT whose storage permutation matches ``new_order``.
+
+        Implements the realignment via TT-swap (adjacent-axis SVDs in
+        coefficient space). The swap sequence is determined by bubble-sorting
+        the current ``self._dim_order`` into ``new_order``; each swap costs
+        an SVD over the merged 2-core block.
+
+        Parameters
+        ----------
+        new_order : sequence of int
+            Target permutation. Must be a permutation of
+            ``range(self.num_dimensions)``. The result has ``dim_order ==
+            list(new_order)``.
+        max_rank : int, optional
+            Cap for the rank introduced by each swap's SVD. Defaults to
+            ``self.max_rank``.
+        tolerance : float, optional
+            Relative singular-value cutoff for each swap's SVD. Defaults to
+            ``self.tolerance``.
+
+        Returns
+        -------
+        ChebyshevTT
+            New TT representing the same function with storage permuted to
+            ``new_order``. ``self`` is not mutated.
+
+        Raises
+        ------
+        ValueError
+            If ``new_order`` is not a permutation of
+            ``range(self.num_dimensions)``.
+        """
+        from pychebyshev._algebra import _tt_swap_adjacent
+
+        self._check_built()
+        new_order = list(new_order)
+        d = self.num_dimensions
+        if sorted(new_order) != list(range(d)):
+            raise ValueError(
+                f"new_order must be a permutation of range({d}); got {new_order!r}"
+            )
+        if new_order == self._dim_order:
+            return self.clone()
+
+        eff_max_rank = self.max_rank if max_rank is None else max_rank
+        eff_tol = self.tolerance if tolerance is None else tolerance
+
+        # Bubble-sort current_order into new_order via adjacent swaps.
+        current_order = list(self._dim_order)
+        cores = [c.copy() for c in self._coeff_cores]
+        n_nodes = list(self.n_nodes)
+        domain = list(self.domain)
+
+        # For each target position k, find where the desired orig dim lives
+        # right now and bubble it leftward into place.
+        for k in range(d):
+            target_orig = new_order[k]
+            j = current_order.index(target_orig)
+            while j > k:
+                cores = _tt_swap_adjacent(
+                    cores, j - 1, max_rank=eff_max_rank, tolerance=eff_tol
+                )
+                current_order[j - 1], current_order[j] = (
+                    current_order[j], current_order[j - 1]
+                )
+                n_nodes[j - 1], n_nodes[j] = n_nodes[j], n_nodes[j - 1]
+                domain[j - 1], domain[j] = domain[j], domain[j - 1]
+                j -= 1
+
+        assert current_order == new_order
+
+        obj = self.__class__.__new__(self.__class__)
+        obj.function = None
+        obj.num_dimensions = d
+        obj.domain = domain
+        obj.n_nodes = n_nodes
+        obj.max_rank = self.max_rank
+        obj.tolerance = self.tolerance
+        obj.max_sweeps = self.max_sweeps
+        obj.max_derivative_order = self.max_derivative_order
+        obj.additional_data = self.additional_data
+        obj.descriptor = self.descriptor
+        obj.method = self.method
+        obj._coeff_cores = cores
+        obj._tt_ranks = [c.shape[0] for c in cores] + [cores[-1].shape[2]]
+        obj._built = True
+        obj._build_time = 0.0
+        obj._total_build_evals = 0
+        obj._cached_error_estimate = None
+        obj._dim_order = list(new_order)
+        return obj
 
     # ------------------------------------------------------------------
     # Serialization
@@ -2838,14 +3025,13 @@ class ChebyshevTT:
             raise ValueError(
                 f"domain mismatch: {self.domain} vs {other.domain}"
             )
-        # Guard: algebra is not yet supported on TTs with non-identity dim_order.
-        # Full threading is planned for v0.20.1.
-        canonical = list(range(self.num_dimensions))
-        if self._dim_order != canonical or other._dim_order != canonical:
-            raise NotImplementedError(
-                "TT algebra is not yet supported on TTs built via with_auto_order() "
-                "with a non-identity dim_order permutation. Both operands must use "
-                "canonical dim order. Full dim_order threading planned for v0.20.1."
+        # Binary algebra requires both operands to share the same dim_order.
+        # Use ``self.reorder(other.dim_order)`` (or vice versa) to align.
+        if self._dim_order != other._dim_order:
+            raise ValueError(
+                f"TT dim_order mismatch: {self._dim_order} vs {other._dim_order}. "
+                "Call other = other.reorder(self.dim_order) (or self = "
+                "self.reorder(other.dim_order)) to align before adding/subtracting."
             )
 
     def __add__(self, other: "ChebyshevTT") -> "ChebyshevTT":
@@ -2886,18 +3072,12 @@ class ChebyshevTT:
         obj._build_time = 0.0
         obj._total_build_evals = 0
         obj._cached_error_estimate = None
-        obj._dim_order = list(range(self.num_dimensions))
+        obj._dim_order = list(self._dim_order)
         return obj
 
     def __neg__(self) -> "ChebyshevTT":
         """Return the negation of this TT (scale one core by -1)."""
         self._check_built()
-        if self._dim_order != list(range(self.num_dimensions)):
-            raise NotImplementedError(
-                "TT __neg__ is not yet supported on TTs built via with_auto_order() "
-                "with a non-identity dim_order permutation. Full dim_order threading "
-                "planned for v0.20.1."
-            )
         new_cores = [c.copy() for c in self._coeff_cores]
         new_cores[0] = -new_cores[0]
 
@@ -2919,7 +3099,7 @@ class ChebyshevTT:
         obj._build_time = 0.0
         obj._total_build_evals = 0
         obj._cached_error_estimate = None
-        obj._dim_order = list(range(self.num_dimensions))
+        obj._dim_order = list(self._dim_order)
         return obj
 
     def __sub__(self, other: "ChebyshevTT") -> "ChebyshevTT":
@@ -2936,12 +3116,6 @@ class ChebyshevTT:
                 "(only scalar multiplication is defined for TT)"
             )
         self._check_built()
-        if self._dim_order != list(range(self.num_dimensions)):
-            raise NotImplementedError(
-                "TT __mul__ is not yet supported on TTs built via with_auto_order() "
-                "with a non-identity dim_order permutation. Full dim_order threading "
-                "planned for v0.20.1."
-            )
         s = float(scalar)
         new_cores = [c.copy() for c in self._coeff_cores]
         new_cores[0] = new_cores[0] * s
@@ -2964,7 +3138,7 @@ class ChebyshevTT:
         obj._build_time = 0.0
         obj._total_build_evals = 0
         obj._cached_error_estimate = None
-        obj._dim_order = list(range(self.num_dimensions))
+        obj._dim_order = list(self._dim_order)
         return obj
 
     def __rmul__(self, scalar) -> "ChebyshevTT":
@@ -2981,12 +3155,6 @@ class ChebyshevTT:
             )
         if float(scalar) == 0.0:
             raise ZeroDivisionError("division by zero")
-        if self._dim_order != list(range(self.num_dimensions)):
-            raise NotImplementedError(
-                "TT __truediv__ is not yet supported on TTs built via with_auto_order() "
-                "with a non-identity dim_order permutation. Full dim_order threading "
-                "planned for v0.20.1."
-            )
         return self.__mul__(1.0 / float(scalar))
 
     def __iadd__(self, other) -> "ChebyshevTT":
