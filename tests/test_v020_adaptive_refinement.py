@@ -376,20 +376,33 @@ class TestDimOrderGuards:
         with pytest.raises(NotImplementedError, match="dim_order"):
             tt1 += tt2
 
-    def test_neg_with_non_identity_dim_order_raises(self):
-        tt = self._build_non_identity_tt()
-        with pytest.raises(NotImplementedError, match="dim_order"):
-            _ = -tt
+    def test_neg_with_non_identity_dim_order_works(self):
+        """v0.20.1 lifted the __neg__ dim_order guard.
 
-    def test_mul_with_non_identity_dim_order_raises(self):
+        Negation on a permuted TT now preserves _dim_order. Verified in
+        detail by tests/test_v0201_dim_threading.py::TestUnaryAlgebraThreading.
+        """
         tt = self._build_non_identity_tt()
-        with pytest.raises(NotImplementedError, match="dim_order"):
-            _ = tt * 2.0
+        neg = -tt
+        assert neg.dim_order == tt.dim_order
+        pt = [0.3, -0.4]
+        assert abs(neg.eval(pt) + tt.eval(pt)) < 1e-7
 
-    def test_truediv_with_non_identity_dim_order_raises(self):
+    def test_mul_with_non_identity_dim_order_works(self):
+        """v0.20.1 lifted the __mul__ dim_order guard."""
         tt = self._build_non_identity_tt()
-        with pytest.raises(NotImplementedError, match="dim_order"):
-            _ = tt / 2.0
+        scaled = tt * 2.0
+        assert scaled.dim_order == tt.dim_order
+        pt = [0.3, -0.4]
+        assert abs(scaled.eval(pt) - 2.0 * tt.eval(pt)) < 1e-7
+
+    def test_truediv_with_non_identity_dim_order_works(self):
+        """v0.20.1 lifted the __truediv__ dim_order guard."""
+        tt = self._build_non_identity_tt()
+        scaled = tt / 2.0
+        assert scaled.dim_order == tt.dim_order
+        pt = [0.3, -0.4]
+        assert abs(scaled.eval(pt) - tt.eval(pt) / 2.0) < 1e-7
 
     def test_slice_with_non_identity_dim_order_works(self):
         """v0.20.1 lifted the slice dim_order guard.

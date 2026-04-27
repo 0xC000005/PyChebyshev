@@ -3079,12 +3079,6 @@ class ChebyshevTT:
     def __neg__(self) -> "ChebyshevTT":
         """Return the negation of this TT (scale one core by -1)."""
         self._check_built()
-        if self._dim_order != list(range(self.num_dimensions)):
-            raise NotImplementedError(
-                "TT __neg__ is not yet supported on TTs built via with_auto_order() "
-                "with a non-identity dim_order permutation. Full dim_order threading "
-                "planned for v0.20.1."
-            )
         new_cores = [c.copy() for c in self._coeff_cores]
         new_cores[0] = -new_cores[0]
 
@@ -3106,7 +3100,7 @@ class ChebyshevTT:
         obj._build_time = 0.0
         obj._total_build_evals = 0
         obj._cached_error_estimate = None
-        obj._dim_order = list(range(self.num_dimensions))
+        obj._dim_order = list(self._dim_order)
         return obj
 
     def __sub__(self, other: "ChebyshevTT") -> "ChebyshevTT":
@@ -3123,12 +3117,6 @@ class ChebyshevTT:
                 "(only scalar multiplication is defined for TT)"
             )
         self._check_built()
-        if self._dim_order != list(range(self.num_dimensions)):
-            raise NotImplementedError(
-                "TT __mul__ is not yet supported on TTs built via with_auto_order() "
-                "with a non-identity dim_order permutation. Full dim_order threading "
-                "planned for v0.20.1."
-            )
         s = float(scalar)
         new_cores = [c.copy() for c in self._coeff_cores]
         new_cores[0] = new_cores[0] * s
@@ -3151,7 +3139,7 @@ class ChebyshevTT:
         obj._build_time = 0.0
         obj._total_build_evals = 0
         obj._cached_error_estimate = None
-        obj._dim_order = list(range(self.num_dimensions))
+        obj._dim_order = list(self._dim_order)
         return obj
 
     def __rmul__(self, scalar) -> "ChebyshevTT":
@@ -3168,12 +3156,6 @@ class ChebyshevTT:
             )
         if float(scalar) == 0.0:
             raise ZeroDivisionError("division by zero")
-        if self._dim_order != list(range(self.num_dimensions)):
-            raise NotImplementedError(
-                "TT __truediv__ is not yet supported on TTs built via with_auto_order() "
-                "with a non-identity dim_order permutation. Full dim_order threading "
-                "planned for v0.20.1."
-            )
         return self.__mul__(1.0 / float(scalar))
 
     def __iadd__(self, other) -> "ChebyshevTT":

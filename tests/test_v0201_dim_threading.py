@@ -366,3 +366,55 @@ class TestExtrudeThreading:
         for _ in range(5):
             pt = rng.uniform(-1, 1, size=3).tolist()
             assert abs(rt.eval(pt) - tt.eval(pt)) < 1e-7
+
+
+class TestUnaryAlgebraThreading:
+    def test_neg_preserves_dim_order(self):
+        tt = _build_non_identity_tt().reorder([2, 0, 1])
+        neg = -tt
+        assert neg.dim_order == [2, 0, 1]
+        rng = np.random.default_rng(7)
+        for _ in range(8):
+            pt = rng.uniform(-1, 1, size=3).tolist()
+            assert abs(neg.eval(pt) + tt.eval(pt)) < 1e-7
+
+    def test_mul_preserves_dim_order(self):
+        tt = _build_non_identity_tt().reorder([1, 0, 2])
+        scaled = tt * 3.5
+        assert scaled.dim_order == [1, 0, 2]
+        rng = np.random.default_rng(8)
+        for _ in range(5):
+            pt = rng.uniform(-1, 1, size=3).tolist()
+            assert abs(scaled.eval(pt) - 3.5 * tt.eval(pt)) < 1e-7
+
+    def test_truediv_preserves_dim_order(self):
+        tt = _build_non_identity_tt().reorder([1, 0, 2])
+        scaled = tt / 2.0
+        assert scaled.dim_order == [1, 0, 2]
+        rng = np.random.default_rng(9)
+        for _ in range(5):
+            pt = rng.uniform(-1, 1, size=3).tolist()
+            assert abs(scaled.eval(pt) - tt.eval(pt) / 2.0) < 1e-7
+
+    def test_rmul_preserves_dim_order(self):
+        tt = _build_non_identity_tt().reorder([2, 0, 1])
+        scaled = 2.0 * tt
+        assert scaled.dim_order == [2, 0, 1]
+        rng = np.random.default_rng(10)
+        for _ in range(5):
+            pt = rng.uniform(-1, 1, size=3).tolist()
+            assert abs(scaled.eval(pt) - 2.0 * tt.eval(pt)) < 1e-7
+
+    def test_imul_preserves_dim_order(self):
+        tt = _build_non_identity_tt().reorder([2, 0, 1])
+        ref_eval = tt.eval([0.1, 0.2, 0.3])
+        tt *= 2.0
+        assert tt.dim_order == [2, 0, 1]
+        assert abs(tt.eval([0.1, 0.2, 0.3]) - 2.0 * ref_eval) < 1e-7
+
+    def test_itruediv_preserves_dim_order(self):
+        tt = _build_non_identity_tt().reorder([2, 0, 1])
+        ref_eval = tt.eval([0.1, 0.2, 0.3])
+        tt /= 2.0
+        assert tt.dim_order == [2, 0, 1]
+        assert abs(tt.eval([0.1, 0.2, 0.3]) - ref_eval / 2.0) < 1e-7
