@@ -954,6 +954,17 @@
 </li>
       
         <li class="md-nav__item">
+  <a href="#pychebyshev.spline.ChebyshevSpline.sobol_indices" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        sobol_indices
+      
+    </span>
+  </a>
+  
+</li>
+      
+        <li class="md-nav__item">
   <a href="#pychebyshev.spline.ChebyshevSpline.__getstate__" class="md-nav__link">
     <span class="md-ellipsis">
       
@@ -1244,6 +1255,17 @@
     <span class="md-ellipsis">
       
         plot_2d_contour
+      
+    </span>
+  </a>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#pychebyshev.spline.ChebyshevSpline.auto_knots" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        auto_knots
       
     </span>
   </a>
@@ -1554,6 +1576,62 @@
     
   
     Build & Diagnostics
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../adaptive-refinement/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Adaptive Refinement
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../cross-language-readers/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Cross-language readers
   
 
     
@@ -2052,6 +2130,17 @@
 </li>
       
         <li class="md-nav__item">
+  <a href="#pychebyshev.spline.ChebyshevSpline.sobol_indices" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        sobol_indices
+      
+    </span>
+  </a>
+  
+</li>
+      
+        <li class="md-nav__item">
   <a href="#pychebyshev.spline.ChebyshevSpline.__getstate__" class="md-nav__link">
     <span class="md-ellipsis">
       
@@ -2342,6 +2431,17 @@
     <span class="md-ellipsis">
       
         plot_2d_contour
+      
+    </span>
+  </a>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#pychebyshev.spline.ChebyshevSpline.auto_knots" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        auto_knots
       
     </span>
   </a>
@@ -3666,6 +3766,81 @@ contribute to every point).</p>
             <td>
               <div class="doc-md-description">
                 <p>Estimated maximum interpolation error (sup-norm).</p>
+              </div>
+            </td>
+          </tr>
+      </tbody>
+    </table>
+
+
+<p><span class="doc-section-title">Raises:</span></p>
+    <table>
+      <thead>
+        <tr>
+          <th>Type</th>
+          <th>Description</th>
+        </tr>
+      </thead>
+      <tbody>
+          <tr class="doc-section-item">
+            <td>
+                  <code><span title="RuntimeError">RuntimeError</span></code>
+            </td>
+            <td>
+              <div class="doc-md-description">
+                <p>If <code>build()</code> has not been called.</p>
+              </div>
+            </td>
+          </tr>
+      </tbody>
+    </table>
+
+
+    </div>
+
+</div>
+
+<div class="doc doc-object doc-function">
+
+
+<h2 id="pychebyshev.spline.ChebyshevSpline.sobol_indices" class="doc doc-heading">
+            <code class="highlight language-python"><span class="n">sobol_indices</span><span class="p">()</span></code>
+
+<a href="#pychebyshev.spline.ChebyshevSpline.sobol_indices" class="headerlink" title="Permanent link">&para;</a></h2>
+
+
+    <div class="doc doc-contents ">
+
+        <p>Compute Sobol indices aggregated across spline pieces.</p>
+<p>Indices are computed per-piece (under the Chebyshev measure
+ω(x) = 1/sqrt(1-x²) on [-1, 1] mapped to each piece's local domain),
+then aggregated by piece volume × piece variance.</p>
+
+
+<details class="note" open>
+  <summary>Note</summary>
+  <p>Per-piece weighting uses uniform domain volume × Chebyshev-weighted
+variance — a hybrid measure. For a single-piece (no-knot) spline,
+this reduces to the Approximation case.</p>
+</details>
+
+    <p><span class="doc-section-title">Returns:</span></p>
+    <table>
+      <thead>
+        <tr>
+          <th>Type</th>
+          <th>Description</th>
+        </tr>
+      </thead>
+      <tbody>
+          <tr class="doc-section-item">
+            <td>
+                  <code><span title="dict">dict</span></code>
+            </td>
+            <td>
+              <div class="doc-md-description">
+                <p><code>{"first_order": {dim: index}, "total_order": {dim: index},
+"variance": float}</code></p>
               </div>
             </td>
           </tr>
@@ -5515,6 +5690,203 @@ merges the results.</p>
     <div class="doc doc-contents ">
 
         <p>Plot a filled-contour 2-D slice. Requires matplotlib.</p>
+
+
+    </div>
+
+</div>
+
+<div class="doc doc-object doc-function">
+
+
+<h2 id="pychebyshev.spline.ChebyshevSpline.auto_knots" class="doc doc-heading">
+            <code class="highlight language-python"><span class="n">auto_knots</span><span class="p">(</span><span class="n">function</span><span class="p">,</span> <span class="n">num_dimensions</span><span class="p">,</span> <span class="n">domain</span><span class="p">,</span> <span class="o">*</span><span class="p">,</span> <span class="n">max_knots_per_dim</span><span class="o">=</span><span class="mi">5</span><span class="p">,</span> <span class="n">n_scan_points</span><span class="o">=</span><span class="mi">200</span><span class="p">,</span> <span class="n">threshold_factor</span><span class="o">=</span><span class="mf">5.0</span><span class="p">,</span> <span class="n">n_nodes_per_piece</span><span class="o">=</span><span class="mi">10</span><span class="p">,</span> <span class="n">additional_data</span><span class="o">=</span><span class="kc">None</span><span class="p">)</span></code>
+
+  <span class="doc doc-labels">
+      <small class="doc doc-label doc-label-classmethod"><code>classmethod</code></small>
+  </span>
+
+<a href="#pychebyshev.spline.ChebyshevSpline.auto_knots" class="headerlink" title="Permanent link">&para;</a></h2>
+
+
+    <div class="doc doc-contents ">
+
+        <p>Build a ChebyshevSpline with knots auto-placed at function kinks.</p>
+<p>Algorithm: for each dimension, scan <code>function</code> on
+<code>n_scan_points</code> evenly-spaced points (all other dims fixed at their
+midpoints), compute <code>|d²f|</code> (second differences of the sampled
+values), cluster spikes above <code>threshold_factor × mean(|d²f|)</code>,
+keep the top spike per cluster, cap at <code>max_knots_per_dim</code>.</p>
+<p><code>mean</code> is used instead of <code>median</code> so that sparse-signal inputs
+(piecewise-linear functions where almost all second differences are
+exactly zero) still yield a positive threshold.</p>
+
+
+<p><span class="doc-section-title">Parameters:</span></p>
+    <table>
+      <thead>
+        <tr>
+          <th>Name</th>
+          <th>Type</th>
+          <th>Description</th>
+          <th>Default</th>
+        </tr>
+      </thead>
+      <tbody>
+          <tr class="doc-section-item">
+            <td>
+                <code>function</code>
+            </td>
+            <td>
+                  <code><span title="callable">callable</span></code>
+            </td>
+            <td>
+              <div class="doc-md-description">
+                <p>Function signature: <code>f(point, additional_data) → float</code>.</p>
+              </div>
+            </td>
+            <td>
+                <em>required</em>
+            </td>
+          </tr>
+          <tr class="doc-section-item">
+            <td>
+                <code>num_dimensions</code>
+            </td>
+            <td>
+                  <code><span title="int">int</span></code>
+            </td>
+            <td>
+              <div class="doc-md-description">
+                <p>Number of input dimensions.</p>
+              </div>
+            </td>
+            <td>
+                <em>required</em>
+            </td>
+          </tr>
+          <tr class="doc-section-item">
+            <td>
+                <code>domain</code>
+            </td>
+            <td>
+                  <code>list of [float, float]</code>
+            </td>
+            <td>
+              <div class="doc-md-description">
+                <p>Bounds <code>[lo, hi]</code> for each dimension.</p>
+              </div>
+            </td>
+            <td>
+                <em>required</em>
+            </td>
+          </tr>
+          <tr class="doc-section-item">
+            <td>
+                <code>max_knots_per_dim</code>
+            </td>
+            <td>
+                  <code><span title="int">int</span></code>
+            </td>
+            <td>
+              <div class="doc-md-description">
+                <p>Maximum number of knots placed in any single dimension (default 5).</p>
+              </div>
+            </td>
+            <td>
+                  <code>5</code>
+            </td>
+          </tr>
+          <tr class="doc-section-item">
+            <td>
+                <code>n_scan_points</code>
+            </td>
+            <td>
+                  <code><span title="int">int</span></code>
+            </td>
+            <td>
+              <div class="doc-md-description">
+                <p>Number of evenly-spaced scan points per dimension (default 200).</p>
+              </div>
+            </td>
+            <td>
+                  <code>200</code>
+            </td>
+          </tr>
+          <tr class="doc-section-item">
+            <td>
+                <code>threshold_factor</code>
+            </td>
+            <td>
+                  <code><span title="float">float</span></code>
+            </td>
+            <td>
+              <div class="doc-md-description">
+                <p>Spike threshold as a multiple of the mean <code>|d²f|</code>.  Increase
+this to suppress knot placement for smooth functions (default 5.0).</p>
+              </div>
+            </td>
+            <td>
+                  <code>5.0</code>
+            </td>
+          </tr>
+          <tr class="doc-section-item">
+            <td>
+                <code>n_nodes_per_piece</code>
+            </td>
+            <td>
+                  <code><span title="int">int</span></code>
+            </td>
+            <td>
+              <div class="doc-md-description">
+                <p>Chebyshev node count per piece per dimension (default 10).</p>
+              </div>
+            </td>
+            <td>
+                  <code>10</code>
+            </td>
+          </tr>
+          <tr class="doc-section-item">
+            <td>
+                <code>additional_data</code>
+            </td>
+            <td>
+                  <code><span title="object">object</span></code>
+            </td>
+            <td>
+              <div class="doc-md-description">
+                <p>Passed through to <code>function</code> unchanged.</p>
+              </div>
+            </td>
+            <td>
+                  <code>None</code>
+            </td>
+          </tr>
+      </tbody>
+    </table>
+
+
+    <p><span class="doc-section-title">Returns:</span></p>
+    <table>
+      <thead>
+        <tr>
+          <th>Type</th>
+          <th>Description</th>
+        </tr>
+      </thead>
+      <tbody>
+          <tr class="doc-section-item">
+            <td>
+                  <code><a class="autorefs autorefs-internal" title="pychebyshev.spline.ChebyshevSpline" href="#pychebyshev.spline.ChebyshevSpline">ChebyshevSpline</a></code>
+            </td>
+            <td>
+              <div class="doc-md-description">
+                <p>A built spline with auto-detected knots.</p>
+              </div>
+            </td>
+          </tr>
+      </tbody>
+    </table>
 
 
     </div>

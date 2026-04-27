@@ -1149,6 +1149,17 @@
 </li>
       
         <li class="md-nav__item">
+  <a href="#pychebyshev.tensor_train.ChebyshevTT.dim_order" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        dim_order
+      
+    </span>
+  </a>
+  
+</li>
+      
+        <li class="md-nav__item">
   <a href="#pychebyshev.tensor_train.ChebyshevTT.build" class="md-nav__link">
     <span class="md-ellipsis">
       
@@ -1417,6 +1428,17 @@
     <span class="md-ellipsis">
       
         from_values
+      
+    </span>
+  </a>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#pychebyshev.tensor_train.ChebyshevTT.with_auto_order" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        with_auto_order
       
     </span>
   </a>
@@ -1886,6 +1908,62 @@
     
   
     Build & Diagnostics
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../adaptive-refinement/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Adaptive Refinement
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../cross-language-readers/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Cross-language readers
   
 
     
@@ -2551,6 +2629,17 @@
 </li>
       
         <li class="md-nav__item">
+  <a href="#pychebyshev.tensor_train.ChebyshevTT.dim_order" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        dim_order
+      
+    </span>
+  </a>
+  
+</li>
+      
+        <li class="md-nav__item">
   <a href="#pychebyshev.tensor_train.ChebyshevTT.build" class="md-nav__link">
     <span class="md-ellipsis">
       
@@ -2819,6 +2908,17 @@
     <span class="md-ellipsis">
       
         from_values
+      
+    </span>
+  </a>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#pychebyshev.tensor_train.ChebyshevTT.with_auto_order" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        with_auto_order
       
     </span>
   </a>
@@ -4106,6 +4206,56 @@ Default is 10.</p>
 
 </div>
 
+<div class="doc doc-object doc-attribute">
+
+
+
+<h2 id="pychebyshev.tensor_train.ChebyshevTT.dim_order" class="doc doc-heading">
+            <code class="highlight language-python"><span class="n">dim_order</span></code>
+
+  <span class="doc doc-labels">
+      <small class="doc doc-label doc-label-property"><code>property</code></small>
+  </span>
+
+<a href="#pychebyshev.tensor_train.ChebyshevTT.dim_order" class="headerlink" title="Permanent link">&para;</a></h2>
+
+
+    <div class="doc doc-contents ">
+
+        <p>Permutation of original dimension indices applied at construction.</p>
+<p><code>dim_order[k]</code> is the original dimension index stored at TT position
+<code>k</code>.  For a default (non-permuted) TT this is <code>[0, 1, ..., d-1]</code>.
+For a TT built by :meth:<code>with_auto_order</code> it reflects the chosen
+ordering.  :meth:<code>eval</code> uses this to transparently remap user-supplied
+coordinates into the internal storage order.</p>
+
+
+    <p><span class="doc-section-title">Returns:</span></p>
+    <table>
+      <thead>
+        <tr>
+          <th>Type</th>
+          <th>Description</th>
+        </tr>
+      </thead>
+      <tbody>
+          <tr class="doc-section-item">
+            <td>
+                  <code>list of int</code>
+            </td>
+            <td>
+              <div class="doc-md-description">
+                <p>A copy of the internal permutation vector.</p>
+              </div>
+            </td>
+          </tr>
+      </tbody>
+    </table>
+
+    </div>
+
+</div>
+
 
 
 
@@ -4809,6 +4959,31 @@ inspection, conversion, or piping through
 :meth:<code>ChebyshevApproximation.from_values</code> to convert TT → barycentric.</p>
 </details>
 
+<p><span class="doc-section-title">Raises:</span></p>
+    <table>
+      <thead>
+        <tr>
+          <th>Type</th>
+          <th>Description</th>
+        </tr>
+      </thead>
+      <tbody>
+          <tr class="doc-section-item">
+            <td>
+                  <code><span title="NotImplementedError">NotImplementedError</span></code>
+            </td>
+            <td>
+              <div class="doc-md-description">
+                <p>If this TT was built via :meth:<code>with_auto_order</code> with a
+non-identity <code>_dim_order</code>. Full dim_order threading planned
+for v0.20.1.</p>
+              </div>
+            </td>
+          </tr>
+      </tbody>
+    </table>
+
+
     </div>
 
 </div>
@@ -4999,6 +5174,18 @@ tuples. <code>value</code> must lie within the domain for that dimension.</p>
               <div class="doc-md-description">
                 <p>If a slice value is outside the domain, if slicing all
 dimensions, or if <code>dim_index</code> is out of range or duplicated.</p>
+              </div>
+            </td>
+          </tr>
+          <tr class="doc-section-item">
+            <td>
+                  <code><span title="NotImplementedError">NotImplementedError</span></code>
+            </td>
+            <td>
+              <div class="doc-md-description">
+                <p>If this TT was built via :meth:<code>with_auto_order</code> with a
+non-identity <code>_dim_order</code>. Full dim_order threading planned
+for v0.20.1.</p>
               </div>
             </td>
           </tr>
@@ -5323,6 +5510,18 @@ derivative).</p>
             <td>
               <div class="doc-md-description">
                 <p>If <code>build()</code> has not been called.</p>
+              </div>
+            </td>
+          </tr>
+          <tr class="doc-section-item">
+            <td>
+                  <code><span title="NotImplementedError">NotImplementedError</span></code>
+            </td>
+            <td>
+              <div class="doc-md-description">
+                <p>If this TT was built via :meth:<code>with_auto_order</code> with a
+non-identity <code>_dim_order</code>. Full dim_order threading planned
+for v0.20.1.</p>
               </div>
             </td>
           </tr>
@@ -5974,6 +6173,276 @@ values.</p>
       </tbody>
     </table>
 
+
+    </div>
+
+</div>
+
+<div class="doc doc-object doc-function">
+
+
+<h2 id="pychebyshev.tensor_train.ChebyshevTT.with_auto_order" class="doc doc-heading">
+            <code class="highlight language-python"><span class="n">with_auto_order</span><span class="p">(</span><span class="n">function</span><span class="p">,</span> <span class="n">num_dimensions</span><span class="p">,</span> <span class="n">domain</span><span class="p">,</span> <span class="n">n_nodes</span><span class="p">,</span> <span class="o">*</span><span class="p">,</span> <span class="n">max_rank</span><span class="o">=</span><span class="mi">10</span><span class="p">,</span> <span class="n">tolerance</span><span class="o">=</span><span class="mf">1e-06</span><span class="p">,</span> <span class="n">max_sweeps</span><span class="o">=</span><span class="mi">10</span><span class="p">,</span> <span class="n">additional_data</span><span class="o">=</span><span class="kc">None</span><span class="p">,</span> <span class="n">n_trials</span><span class="o">=</span><span class="mi">5</span><span class="p">,</span> <span class="n">method</span><span class="o">=</span><span class="s1">&#39;greedy_swap&#39;</span><span class="p">)</span></code>
+
+  <span class="doc doc-labels">
+      <small class="doc doc-label doc-label-classmethod"><code>classmethod</code></small>
+  </span>
+
+<a href="#pychebyshev.tensor_train.ChebyshevTT.with_auto_order" class="headerlink" title="Permanent link">&para;</a></h2>
+
+
+    <div class="doc doc-contents ">
+
+        <p>Build a TT, trying multiple dim orderings, returning the lowest-rank result.</p>
+<p>TT-Cross compression depends on the order in which dimensions are
+processed.  Different orderings yield different TT ranks for the same
+function.  This classmethod tries several permutations via the chosen
+<code>method</code> and returns the TT whose total rank (sum of all bond
+dimensions) is smallest.</p>
+<p>The returned TT has its :attr:<code>dim_order</code> set to the chosen permutation.
+:meth:<code>eval</code> and :meth:<code>eval_batch</code> transparently remap user-supplied
+coordinates so the caller never needs to permute by hand.</p>
+
+
+<p><span class="doc-section-title">Parameters:</span></p>
+    <table>
+      <thead>
+        <tr>
+          <th>Name</th>
+          <th>Type</th>
+          <th>Description</th>
+          <th>Default</th>
+        </tr>
+      </thead>
+      <tbody>
+          <tr class="doc-section-item">
+            <td>
+                <code>function</code>
+            </td>
+            <td>
+                  <code><span title="callable">callable</span></code>
+            </td>
+            <td>
+              <div class="doc-md-description">
+                <p>Function <code>f(point, data) -&gt; float</code> in the <em>original</em> dimension
+order (i.e., <code>point[0]</code> is the first user dimension, etc.).</p>
+              </div>
+            </td>
+            <td>
+                <em>required</em>
+            </td>
+          </tr>
+          <tr class="doc-section-item">
+            <td>
+                <code>num_dimensions</code>
+            </td>
+            <td>
+                  <code><span title="int">int</span></code>
+            </td>
+            <td>
+              <div class="doc-md-description">
+                <p>Number of input dimensions.</p>
+              </div>
+            </td>
+            <td>
+                <em>required</em>
+            </td>
+          </tr>
+          <tr class="doc-section-item">
+            <td>
+                <code>domain</code>
+            </td>
+            <td>
+                  <code>list of (float, float)</code>
+            </td>
+            <td>
+              <div class="doc-md-description">
+                <p>Bounds for each dimension in the original order.</p>
+              </div>
+            </td>
+            <td>
+                <em>required</em>
+            </td>
+          </tr>
+          <tr class="doc-section-item">
+            <td>
+                <code>n_nodes</code>
+            </td>
+            <td>
+                  <code>list of int</code>
+            </td>
+            <td>
+              <div class="doc-md-description">
+                <p>Node counts per dimension in the original order.</p>
+              </div>
+            </td>
+            <td>
+                <em>required</em>
+            </td>
+          </tr>
+          <tr class="doc-section-item">
+            <td>
+                <code>max_rank</code>
+            </td>
+            <td>
+                  <code><span title="int">int</span></code>
+            </td>
+            <td>
+              <div class="doc-md-description">
+                <p>Maximum TT rank passed to each trial build.  Default is 10.</p>
+              </div>
+            </td>
+            <td>
+                  <code>10</code>
+            </td>
+          </tr>
+          <tr class="doc-section-item">
+            <td>
+                <code>tolerance</code>
+            </td>
+            <td>
+                  <code><span title="float">float</span></code>
+            </td>
+            <td>
+              <div class="doc-md-description">
+                <p>Convergence tolerance passed to each trial build.  Default is 1e-6.</p>
+              </div>
+            </td>
+            <td>
+                  <code>1e-06</code>
+            </td>
+          </tr>
+          <tr class="doc-section-item">
+            <td>
+                <code>max_sweeps</code>
+            </td>
+            <td>
+                  <code><span title="int">int</span></code>
+            </td>
+            <td>
+              <div class="doc-md-description">
+                <p>Maximum TT-Cross sweeps per trial.  Default is 10.</p>
+              </div>
+            </td>
+            <td>
+                  <code>10</code>
+            </td>
+          </tr>
+          <tr class="doc-section-item">
+            <td>
+                <code>additional_data</code>
+            </td>
+            <td>
+                  <code><span title="object">object</span></code>
+            </td>
+            <td>
+              <div class="doc-md-description">
+                <p>Passed through to <code>function</code> as its second argument.</p>
+              </div>
+            </td>
+            <td>
+                  <code>None</code>
+            </td>
+          </tr>
+          <tr class="doc-section-item">
+            <td>
+                <code>n_trials</code>
+            </td>
+            <td>
+                  <code><span title="int">int</span></code>
+            </td>
+            <td>
+              <div class="doc-md-description">
+                <p>Number of swap iterations / random permutations to attempt.
+Default is 5.</p>
+              </div>
+            </td>
+            <td>
+                  <code>5</code>
+            </td>
+          </tr>
+          <tr class="doc-section-item">
+            <td>
+                <code>method</code>
+            </td>
+            <td>
+                  <code>``&#34;greedy_swap&#34;`` or ``&#34;random&#34;``</code>
+            </td>
+            <td>
+              <div class="doc-md-description">
+                <p>Ordering strategy.</p>
+<p><code>"greedy_swap"</code> (default) starts from the canonical order and
+greedily performs adjacent transpositions that reduce total rank,
+repeating up to <code>n_trials</code> outer iterations.</p>
+<p><code>"random"</code> samples <code>n_trials</code> random permutations in addition
+to the canonical order and picks the best.</p>
+              </div>
+            </td>
+            <td>
+                  <code>&#39;greedy_swap&#39;</code>
+            </td>
+          </tr>
+      </tbody>
+    </table>
+
+
+    <p><span class="doc-section-title">Returns:</span></p>
+    <table>
+      <thead>
+        <tr>
+          <th>Type</th>
+          <th>Description</th>
+        </tr>
+      </thead>
+      <tbody>
+          <tr class="doc-section-item">
+            <td>
+                  <code><a class="autorefs autorefs-internal" title="pychebyshev.tensor_train.ChebyshevTT" href="#pychebyshev.tensor_train.ChebyshevTT">ChebyshevTT</a></code>
+            </td>
+            <td>
+              <div class="doc-md-description">
+                <p>Built TT with possibly-permuted dim order; the :attr:<code>dim_order</code>
+property records the chosen permutation.</p>
+              </div>
+            </td>
+          </tr>
+      </tbody>
+    </table>
+
+
+<p><span class="doc-section-title">Raises:</span></p>
+    <table>
+      <thead>
+        <tr>
+          <th>Type</th>
+          <th>Description</th>
+        </tr>
+      </thead>
+      <tbody>
+          <tr class="doc-section-item">
+            <td>
+                  <code><span title="ValueError">ValueError</span></code>
+            </td>
+            <td>
+              <div class="doc-md-description">
+                <p>If <code>method</code> is not one of the supported values.</p>
+              </div>
+            </td>
+          </tr>
+      </tbody>
+    </table>
+
+
+<details class="note" open>
+  <summary>Notes</summary>
+  <p>Each trial is a full TT-Cross build.  With <code>greedy_swap</code> and
+<code>n_trials=5</code> on a 5-D function, up to ~13 builds may be performed.
+For expensive functions use a small <code>n_trials</code> or <code>method='random'</code>
+with a small <code>n_trials</code>.</p>
+<p>Factory-derived objects (<code>slice</code>, <code>extrude</code>, algebra results) have
+an identity dim_order regardless of the source TT's order, because
+dimension indices shift when dims are added/removed.</p>
+</details>
 
     </div>
 

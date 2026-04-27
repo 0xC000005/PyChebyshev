@@ -11,10 +11,10 @@
       
       
       
-        <link rel="prev" href="../concepts/">
+        <link rel="prev" href="../build-diagnostics/">
       
       
-        <link rel="next" href="../serialization/">
+        <link rel="next" href="../cross-language-readers/">
       
       
         
@@ -25,7 +25,7 @@
     
     
       
-        <title>Usage Patterns - PyChebyshev</title>
+        <title>Adaptive Refinement - PyChebyshev</title>
       
     
     
@@ -80,7 +80,7 @@
     <div data-md-component="skip">
       
         
-        <a href="#usage-patterns" class="md-skip">
+        <a href="#adaptive-refinement-v020" class="md-skip">
           Skip to content
         </a>
       
@@ -116,7 +116,7 @@
         <div class="md-header__topic" data-md-component="header-topic">
           <span class="md-ellipsis">
             
-              Usage Patterns
+              Adaptive Refinement
             
           </span>
         </div>
@@ -381,37 +381,10 @@
                 
   
   
-    
   
   
-  
-    <li class="md-nav__item md-nav__item--active">
-      
-      <input class="md-nav__toggle md-toggle" type="checkbox" id="__toc">
-      
-      
-        
-      
-      
-        <label class="md-nav__link md-nav__link--active" for="__toc">
-          
-  
-  
-  <span class="md-ellipsis">
-    
-  
-    Usage Patterns
-  
-
-    
-  </span>
-  
-  
-
-          <span class="md-nav__icon md-icon"></span>
-        </label>
-      
-      <a href="./" class="md-nav__link md-nav__link--active">
+    <li class="md-nav__item">
+      <a href="../usage/" class="md-nav__link">
         
   
   
@@ -427,120 +400,6 @@
   
 
       </a>
-      
-        
-
-<nav class="md-nav md-nav--secondary" aria-label="Table of contents">
-  
-  
-  
-    
-  
-  
-    <label class="md-nav__title" for="__toc">
-      <span class="md-nav__icon md-icon"></span>
-      Table of contents
-    </label>
-    <ul class="md-nav__list" data-md-component="toc" data-md-scrollfix>
-      
-        <li class="md-nav__item">
-  <a href="#basic-workflow" class="md-nav__link">
-    <span class="md-ellipsis">
-      
-        Basic Workflow
-      
-    </span>
-  </a>
-  
-</li>
-      
-        <li class="md-nav__item">
-  <a href="#evaluation-methods" class="md-nav__link">
-    <span class="md-ellipsis">
-      
-        Evaluation Methods
-      
-    </span>
-  </a>
-  
-    <nav class="md-nav" aria-label="Evaluation Methods">
-      <ul class="md-nav__list">
-        
-          <li class="md-nav__item">
-  <a href="#vectorized_eval-recommended" class="md-nav__link">
-    <span class="md-ellipsis">
-      
-        vectorized_eval() — Recommended
-      
-    </span>
-  </a>
-  
-</li>
-        
-          <li class="md-nav__item">
-  <a href="#vectorized_eval_multi-best-for-multiple-derivatives" class="md-nav__link">
-    <span class="md-ellipsis">
-      
-        vectorized_eval_multi() — Best for multiple derivatives
-      
-    </span>
-  </a>
-  
-</li>
-        
-      </ul>
-    </nav>
-  
-</li>
-      
-        <li class="md-nav__item">
-  <a href="#batch-evaluation" class="md-nav__link">
-    <span class="md-ellipsis">
-      
-        Batch Evaluation
-      
-    </span>
-  </a>
-  
-</li>
-      
-        <li class="md-nav__item">
-  <a href="#function-signature" class="md-nav__link">
-    <span class="md-ellipsis">
-      
-        Function Signature
-      
-    </span>
-  </a>
-  
-</li>
-      
-        <li class="md-nav__item">
-  <a href="#next-steps" class="md-nav__link">
-    <span class="md-ellipsis">
-      
-        Next Steps
-      
-    </span>
-  </a>
-  
-</li>
-      
-        <li class="md-nav__item">
-  <a href="#references" class="md-nav__link">
-    <span class="md-ellipsis">
-      
-        References
-      
-    </span>
-  </a>
-  
-</li>
-      
-    </ul>
-  
-</nav>
-      
     </li>
   
 
@@ -998,10 +857,37 @@
                 
   
   
+    
   
   
-    <li class="md-nav__item">
-      <a href="../adaptive-refinement/" class="md-nav__link">
+  
+    <li class="md-nav__item md-nav__item--active">
+      
+      <input class="md-nav__toggle md-toggle" type="checkbox" id="__toc">
+      
+      
+        
+      
+      
+        <label class="md-nav__link md-nav__link--active" for="__toc">
+          
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Adaptive Refinement
+  
+
+    
+  </span>
+  
+  
+
+          <span class="md-nav__icon md-icon"></span>
+        </label>
+      
+      <a href="./" class="md-nav__link md-nav__link--active">
         
   
   
@@ -1017,6 +903,103 @@
   
 
       </a>
+      
+        
+
+<nav class="md-nav md-nav--secondary" aria-label="Table of contents">
+  
+  
+  
+    
+  
+  
+    <label class="md-nav__title" for="__toc">
+      <span class="md-nav__icon md-icon"></span>
+      Table of contents
+    </label>
+    <ul class="md-nav__list" data-md-component="toc" data-md-scrollfix>
+      
+        <li class="md-nav__item">
+  <a href="#auto-knot-detection" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Auto-knot detection
+      
+    </span>
+  </a>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#sobol-indices" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Sobol indices
+      
+    </span>
+  </a>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#auto-dim-reordering-for-tensor-train" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Auto dim-reordering for Tensor Train
+      
+    </span>
+  </a>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#sensitivity-analysis-workflow" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Sensitivity analysis workflow
+      
+    </span>
+  </a>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#beyond-mocax" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Beyond MoCaX
+      
+    </span>
+  </a>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#see-also" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        See Also
+      
+    </span>
+  </a>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#references" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        References
+      
+    </span>
+  </a>
+  
+</li>
+      
+    </ul>
+  
+</nav>
+      
     </li>
   
 
@@ -1165,10 +1148,10 @@
     <ul class="md-nav__list" data-md-component="toc" data-md-scrollfix>
       
         <li class="md-nav__item">
-  <a href="#basic-workflow" class="md-nav__link">
+  <a href="#auto-knot-detection" class="md-nav__link">
     <span class="md-ellipsis">
       
-        Basic Workflow
+        Auto-knot detection
       
     </span>
   </a>
@@ -1176,49 +1159,10 @@
 </li>
       
         <li class="md-nav__item">
-  <a href="#evaluation-methods" class="md-nav__link">
+  <a href="#sobol-indices" class="md-nav__link">
     <span class="md-ellipsis">
       
-        Evaluation Methods
-      
-    </span>
-  </a>
-  
-    <nav class="md-nav" aria-label="Evaluation Methods">
-      <ul class="md-nav__list">
-        
-          <li class="md-nav__item">
-  <a href="#vectorized_eval-recommended" class="md-nav__link">
-    <span class="md-ellipsis">
-      
-        vectorized_eval() — Recommended
-      
-    </span>
-  </a>
-  
-</li>
-        
-          <li class="md-nav__item">
-  <a href="#vectorized_eval_multi-best-for-multiple-derivatives" class="md-nav__link">
-    <span class="md-ellipsis">
-      
-        vectorized_eval_multi() — Best for multiple derivatives
-      
-    </span>
-  </a>
-  
-</li>
-        
-      </ul>
-    </nav>
-  
-</li>
-      
-        <li class="md-nav__item">
-  <a href="#batch-evaluation" class="md-nav__link">
-    <span class="md-ellipsis">
-      
-        Batch Evaluation
+        Sobol indices
       
     </span>
   </a>
@@ -1226,10 +1170,10 @@
 </li>
       
         <li class="md-nav__item">
-  <a href="#function-signature" class="md-nav__link">
+  <a href="#auto-dim-reordering-for-tensor-train" class="md-nav__link">
     <span class="md-ellipsis">
       
-        Function Signature
+        Auto dim-reordering for Tensor Train
       
     </span>
   </a>
@@ -1237,10 +1181,32 @@
 </li>
       
         <li class="md-nav__item">
-  <a href="#next-steps" class="md-nav__link">
+  <a href="#sensitivity-analysis-workflow" class="md-nav__link">
     <span class="md-ellipsis">
       
-        Next Steps
+        Sensitivity analysis workflow
+      
+    </span>
+  </a>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#beyond-mocax" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Beyond MoCaX
+      
+    </span>
+  </a>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#see-also" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        See Also
       
     </span>
   </a>
@@ -1278,115 +1244,117 @@
   
 
 
-<h1 id="usage-patterns">Usage Patterns<a class="headerlink" href="#usage-patterns" title="Permanent link">&para;</a></h1>
-<h2 id="basic-workflow">Basic Workflow<a class="headerlink" href="#basic-workflow" title="Permanent link">&para;</a></h2>
-<p>Every PyChebyshev workflow follows three steps:</p>
-<ol>
-<li><strong>Define</strong> a callable function</li>
-<li><strong>Build</strong> the interpolant (evaluates at Chebyshev nodes, pre-computes weights)</li>
-<li><strong>Query</strong> at arbitrary points</li>
-</ol>
-<div class="highlight"><pre><span></span><code><a id="__codelineno-0-1" name="__codelineno-0-1" href="#__codelineno-0-1"></a><span class="kn">from</span><span class="w"> </span><span class="nn">pychebyshev</span><span class="w"> </span><span class="kn">import</span> <span class="n">ChebyshevApproximation</span>
-<a id="__codelineno-0-2" name="__codelineno-0-2" href="#__codelineno-0-2"></a>
-<a id="__codelineno-0-3" name="__codelineno-0-3" href="#__codelineno-0-3"></a><span class="n">cheb</span> <span class="o">=</span> <span class="n">ChebyshevApproximation</span><span class="p">(</span><span class="n">func</span><span class="p">,</span> <span class="n">num_dimensions</span><span class="p">,</span> <span class="n">domain</span><span class="p">,</span> <span class="n">n_nodes</span><span class="p">)</span>
-<a id="__codelineno-0-4" name="__codelineno-0-4" href="#__codelineno-0-4"></a><span class="n">cheb</span><span class="o">.</span><span class="n">build</span><span class="p">()</span>
-<a id="__codelineno-0-5" name="__codelineno-0-5" href="#__codelineno-0-5"></a><span class="n">result</span> <span class="o">=</span> <span class="n">cheb</span><span class="o">.</span><span class="n">vectorized_eval</span><span class="p">(</span><span class="n">point</span><span class="p">,</span> <span class="n">derivative_order</span><span class="p">)</span>
+<h1 id="adaptive-refinement-v020">Adaptive Refinement (v0.20)<a class="headerlink" href="#adaptive-refinement-v020" title="Permanent link">&para;</a></h1>
+<p>Three new features for handling functions you don't fully understand a priori.</p>
+<h2 id="auto-knot-detection">Auto-knot detection<a class="headerlink" href="#auto-knot-detection" title="Permanent link">&para;</a></h2>
+<p>Discover kinks in your function automatically and build a <code>ChebyshevSpline</code>
+with knots placed at them:</p>
+<div class="highlight"><pre><span></span><code><a id="__codelineno-0-1" name="__codelineno-0-1" href="#__codelineno-0-1"></a><span class="kn">import</span><span class="w"> </span><span class="nn">math</span>
+<a id="__codelineno-0-2" name="__codelineno-0-2" href="#__codelineno-0-2"></a><span class="kn">from</span><span class="w"> </span><span class="nn">pychebyshev</span><span class="w"> </span><span class="kn">import</span> <span class="n">ChebyshevSpline</span>
+<a id="__codelineno-0-3" name="__codelineno-0-3" href="#__codelineno-0-3"></a>
+<a id="__codelineno-0-4" name="__codelineno-0-4" href="#__codelineno-0-4"></a><span class="k">def</span><span class="w"> </span><span class="nf">f</span><span class="p">(</span><span class="n">x</span><span class="p">,</span> <span class="n">_</span><span class="p">):</span>
+<a id="__codelineno-0-5" name="__codelineno-0-5" href="#__codelineno-0-5"></a>    <span class="k">return</span> <span class="nb">abs</span><span class="p">(</span><span class="n">x</span><span class="p">[</span><span class="mi">0</span><span class="p">]</span> <span class="o">-</span> <span class="mf">0.3</span><span class="p">)</span> <span class="o">+</span> <span class="n">math</span><span class="o">.</span><span class="n">sin</span><span class="p">(</span><span class="n">x</span><span class="p">[</span><span class="mi">0</span><span class="p">])</span>
+<a id="__codelineno-0-6" name="__codelineno-0-6" href="#__codelineno-0-6"></a>
+<a id="__codelineno-0-7" name="__codelineno-0-7" href="#__codelineno-0-7"></a><span class="n">spl</span> <span class="o">=</span> <span class="n">ChebyshevSpline</span><span class="o">.</span><span class="n">auto_knots</span><span class="p">(</span>
+<a id="__codelineno-0-8" name="__codelineno-0-8" href="#__codelineno-0-8"></a>    <span class="n">f</span><span class="p">,</span> <span class="mi">1</span><span class="p">,</span> <span class="p">[[</span><span class="o">-</span><span class="mi">1</span><span class="p">,</span> <span class="mi">1</span><span class="p">]],</span>
+<a id="__codelineno-0-9" name="__codelineno-0-9" href="#__codelineno-0-9"></a>    <span class="n">max_knots_per_dim</span><span class="o">=</span><span class="mi">5</span><span class="p">,</span>
+<a id="__codelineno-0-10" name="__codelineno-0-10" href="#__codelineno-0-10"></a>    <span class="n">n_scan_points</span><span class="o">=</span><span class="mi">200</span><span class="p">,</span>
+<a id="__codelineno-0-11" name="__codelineno-0-11" href="#__codelineno-0-11"></a>    <span class="n">threshold_factor</span><span class="o">=</span><span class="mf">5.0</span><span class="p">,</span>
+<a id="__codelineno-0-12" name="__codelineno-0-12" href="#__codelineno-0-12"></a><span class="p">)</span>
+<a id="__codelineno-0-13" name="__codelineno-0-13" href="#__codelineno-0-13"></a><span class="n">spl</span><span class="o">.</span><span class="n">eval</span><span class="p">([</span><span class="mf">0.3</span><span class="p">],</span> <span class="p">[</span><span class="mi">0</span><span class="p">])</span>  <span class="c1"># works without you specifying knots=[[0.3]]</span>
 </code></pre></div>
-<h2 id="evaluation-methods">Evaluation Methods<a class="headerlink" href="#evaluation-methods" title="Permanent link">&para;</a></h2>
-<p>PyChebyshev provides several evaluation methods with different speed/safety tradeoffs:</p>
-<table>
-<thead>
-<tr>
-<th>Method</th>
-<th>Speed</th>
-<th>Safety</th>
-<th>Use When</th>
-</tr>
-</thead>
-<tbody>
-<tr>
-<td><code>eval()</code></td>
-<td>Slowest</td>
-<td>Full validation</td>
-<td>Testing and debugging</td>
-</tr>
-<tr>
-<td><code>vectorized_eval()</code></td>
-<td>Fastest</td>
-<td>Full validation</td>
-<td><strong>Default choice</strong></td>
-</tr>
-<tr>
-<td><code>vectorized_eval_multi()</code></td>
-<td>Fastest (multi)</td>
-<td>Full validation</td>
-<td>Price + Greeks at same point</td>
-</tr>
-</tbody>
-</table>
-<div class="admonition note">
-<p class="admonition-title">Why no JIT?</p>
-<p>Earlier versions offered a Numba JIT <code>fast_eval()</code> path, but <code>vectorized_eval()</code>
-is <strong>~150x faster</strong> because it routes N-D tensor contractions through BLAS GEMV
-— a single optimized matrix-vector multiply per dimension, exploiting the
-barycentric formula's linear-in-values structure (Berrut &amp; Trefethen 2004). JIT
-compilation cannot beat BLAS for this workload. <code>fast_eval()</code> is deprecated and
-will be removed in a future version. See <code>compare_methods_time_accuracy.py</code> in
-the repository for benchmarks.</p>
-</div>
-<h3 id="vectorized_eval-recommended"><code>vectorized_eval()</code> — Recommended<a class="headerlink" href="#vectorized_eval-recommended" title="Permanent link">&para;</a></h3>
-<p>Uses BLAS matrix-vector products. For 5D with 11 nodes, replaces 16,105 Python loop
-iterations with 5 BLAS calls:</p>
-<div class="highlight"><pre><span></span><code><a id="__codelineno-1-1" name="__codelineno-1-1" href="#__codelineno-1-1"></a><span class="n">price</span> <span class="o">=</span> <span class="n">cheb</span><span class="o">.</span><span class="n">vectorized_eval</span><span class="p">([</span><span class="mi">100</span><span class="p">,</span> <span class="mi">100</span><span class="p">,</span> <span class="mf">1.0</span><span class="p">,</span> <span class="mf">0.25</span><span class="p">,</span> <span class="mf">0.05</span><span class="p">],</span> <span class="p">[</span><span class="mi">0</span><span class="p">,</span> <span class="mi">0</span><span class="p">,</span> <span class="mi">0</span><span class="p">,</span> <span class="mi">0</span><span class="p">,</span> <span class="mi">0</span><span class="p">])</span>
-</code></pre></div>
-<h3 id="vectorized_eval_multi-best-for-multiple-derivatives"><code>vectorized_eval_multi()</code> — Best for multiple derivatives<a class="headerlink" href="#vectorized_eval_multi-best-for-multiple-derivatives" title="Permanent link">&para;</a></h3>
-<p>Pre-computes normalized barycentric weights once, reuses across all derivative orders:</p>
-<div class="highlight"><pre><span></span><code><a id="__codelineno-2-1" name="__codelineno-2-1" href="#__codelineno-2-1"></a><span class="n">results</span> <span class="o">=</span> <span class="n">cheb</span><span class="o">.</span><span class="n">vectorized_eval_multi</span><span class="p">(</span>
-<a id="__codelineno-2-2" name="__codelineno-2-2" href="#__codelineno-2-2"></a>    <span class="p">[</span><span class="mi">100</span><span class="p">,</span> <span class="mi">100</span><span class="p">,</span> <span class="mf">1.0</span><span class="p">,</span> <span class="mf">0.25</span><span class="p">,</span> <span class="mf">0.05</span><span class="p">],</span>
-<a id="__codelineno-2-3" name="__codelineno-2-3" href="#__codelineno-2-3"></a>    <span class="p">[</span>
-<a id="__codelineno-2-4" name="__codelineno-2-4" href="#__codelineno-2-4"></a>        <span class="p">[</span><span class="mi">0</span><span class="p">,</span> <span class="mi">0</span><span class="p">,</span> <span class="mi">0</span><span class="p">,</span> <span class="mi">0</span><span class="p">,</span> <span class="mi">0</span><span class="p">],</span>  <span class="c1"># price</span>
-<a id="__codelineno-2-5" name="__codelineno-2-5" href="#__codelineno-2-5"></a>        <span class="p">[</span><span class="mi">1</span><span class="p">,</span> <span class="mi">0</span><span class="p">,</span> <span class="mi">0</span><span class="p">,</span> <span class="mi">0</span><span class="p">,</span> <span class="mi">0</span><span class="p">],</span>  <span class="c1"># delta (dV/dS)</span>
-<a id="__codelineno-2-6" name="__codelineno-2-6" href="#__codelineno-2-6"></a>        <span class="p">[</span><span class="mi">2</span><span class="p">,</span> <span class="mi">0</span><span class="p">,</span> <span class="mi">0</span><span class="p">,</span> <span class="mi">0</span><span class="p">,</span> <span class="mi">0</span><span class="p">],</span>  <span class="c1"># gamma (d²V/dS²)</span>
-<a id="__codelineno-2-7" name="__codelineno-2-7" href="#__codelineno-2-7"></a>        <span class="p">[</span><span class="mi">0</span><span class="p">,</span> <span class="mi">0</span><span class="p">,</span> <span class="mi">0</span><span class="p">,</span> <span class="mi">1</span><span class="p">,</span> <span class="mi">0</span><span class="p">],</span>  <span class="c1"># vega  (dV/dσ)</span>
-<a id="__codelineno-2-8" name="__codelineno-2-8" href="#__codelineno-2-8"></a>        <span class="p">[</span><span class="mi">0</span><span class="p">,</span> <span class="mi">0</span><span class="p">,</span> <span class="mi">0</span><span class="p">,</span> <span class="mi">0</span><span class="p">,</span> <span class="mi">1</span><span class="p">],</span>  <span class="c1"># rho   (dV/dr)</span>
-<a id="__codelineno-2-9" name="__codelineno-2-9" href="#__codelineno-2-9"></a>    <span class="p">],</span>
-<a id="__codelineno-2-10" name="__codelineno-2-10" href="#__codelineno-2-10"></a><span class="p">)</span>
-<a id="__codelineno-2-11" name="__codelineno-2-11" href="#__codelineno-2-11"></a><span class="n">price</span><span class="p">,</span> <span class="n">delta</span><span class="p">,</span> <span class="n">gamma</span><span class="p">,</span> <span class="n">vega</span><span class="p">,</span> <span class="n">rho</span> <span class="o">=</span> <span class="n">results</span>
-</code></pre></div>
-<h2 id="batch-evaluation">Batch Evaluation<a class="headerlink" href="#batch-evaluation" title="Permanent link">&para;</a></h2>
-<p>For evaluating at many points:</p>
-<div class="highlight"><pre><span></span><code><a id="__codelineno-3-1" name="__codelineno-3-1" href="#__codelineno-3-1"></a><span class="kn">import</span><span class="w"> </span><span class="nn">numpy</span><span class="w"> </span><span class="k">as</span><span class="w"> </span><span class="nn">np</span>
-<a id="__codelineno-3-2" name="__codelineno-3-2" href="#__codelineno-3-2"></a>
-<a id="__codelineno-3-3" name="__codelineno-3-3" href="#__codelineno-3-3"></a><span class="n">points</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">array</span><span class="p">([</span>
-<a id="__codelineno-3-4" name="__codelineno-3-4" href="#__codelineno-3-4"></a>    <span class="p">[</span><span class="mi">100</span><span class="p">,</span> <span class="mi">100</span><span class="p">,</span> <span class="mf">1.0</span><span class="p">,</span> <span class="mf">0.25</span><span class="p">,</span> <span class="mf">0.05</span><span class="p">],</span>
-<a id="__codelineno-3-5" name="__codelineno-3-5" href="#__codelineno-3-5"></a>    <span class="p">[</span><span class="mi">110</span><span class="p">,</span> <span class="mi">100</span><span class="p">,</span> <span class="mf">1.0</span><span class="p">,</span> <span class="mf">0.25</span><span class="p">,</span> <span class="mf">0.05</span><span class="p">],</span>
-<a id="__codelineno-3-6" name="__codelineno-3-6" href="#__codelineno-3-6"></a>    <span class="p">[</span><span class="mi">90</span><span class="p">,</span> <span class="mi">100</span><span class="p">,</span> <span class="mf">1.0</span><span class="p">,</span> <span class="mf">0.25</span><span class="p">,</span> <span class="mf">0.05</span><span class="p">],</span>
-<a id="__codelineno-3-7" name="__codelineno-3-7" href="#__codelineno-3-7"></a><span class="p">])</span>
-<a id="__codelineno-3-8" name="__codelineno-3-8" href="#__codelineno-3-8"></a><span class="n">prices</span> <span class="o">=</span> <span class="n">cheb</span><span class="o">.</span><span class="n">vectorized_eval_batch</span><span class="p">(</span><span class="n">points</span><span class="p">,</span> <span class="p">[</span><span class="mi">0</span><span class="p">,</span> <span class="mi">0</span><span class="p">,</span> <span class="mi">0</span><span class="p">,</span> <span class="mi">0</span><span class="p">,</span> <span class="mi">0</span><span class="p">])</span>
-</code></pre></div>
-<h2 id="function-signature">Function Signature<a class="headerlink" href="#function-signature" title="Permanent link">&para;</a></h2>
-<p>The function passed to <code>ChebyshevApproximation</code> must accept:</p>
+<p>The algorithm scans <code>f</code> per-dimension, computes second differences as a curvature
+proxy, and clusters spikes where <code>|d²f|</code> exceeds a robust threshold. It's
+heuristic — tune <code>threshold_factor</code> upward for noisy inputs, downward to catch
+subtler kinks.</p>
 <ul>
-<li><code>point</code> — a list of floats (one per dimension)</li>
-<li><code>data</code> — arbitrary additional data (use <code>None</code> if not needed)</li>
+<li><code>max_knots_per_dim</code> — max interior knots per dimension (prevents over-segmentation)</li>
+<li><code>n_scan_points</code> — density of grid points to scan each dimension</li>
+<li><code>threshold_factor</code> — multiplier on the mean-based threshold (<code>mean(|d²f|)</code>); default 5.0</li>
 </ul>
-<div class="highlight"><pre><span></span><code><a id="__codelineno-4-1" name="__codelineno-4-1" href="#__codelineno-4-1"></a><span class="k">def</span><span class="w"> </span><span class="nf">my_func</span><span class="p">(</span><span class="n">point</span><span class="p">,</span> <span class="n">data</span><span class="p">):</span>
-<a id="__codelineno-4-2" name="__codelineno-4-2" href="#__codelineno-4-2"></a>    <span class="n">x</span><span class="p">,</span> <span class="n">y</span><span class="p">,</span> <span class="n">z</span> <span class="o">=</span> <span class="n">point</span>
-<a id="__codelineno-4-3" name="__codelineno-4-3" href="#__codelineno-4-3"></a>    <span class="k">return</span> <span class="n">x</span><span class="o">**</span><span class="mi">2</span> <span class="o">+</span> <span class="n">y</span> <span class="o">*</span> <span class="n">z</span>
+<p>Returns a <code>ChebyshevSpline</code> with auto-discovered knots and equal nodes per piece.</p>
+<h2 id="sobol-indices">Sobol indices<a class="headerlink" href="#sobol-indices" title="Permanent link">&para;</a></h2>
+<p>Compute first-order and total-order Sobol sensitivity indices directly
+from spectral coefficients (no Monte Carlo, no extra function evals):</p>
+<div class="highlight"><pre><span></span><code><a id="__codelineno-1-1" name="__codelineno-1-1" href="#__codelineno-1-1"></a><span class="kn">from</span><span class="w"> </span><span class="nn">pychebyshev</span><span class="w"> </span><span class="kn">import</span> <span class="n">ChebyshevApproximation</span>
+<a id="__codelineno-1-2" name="__codelineno-1-2" href="#__codelineno-1-2"></a>
+<a id="__codelineno-1-3" name="__codelineno-1-3" href="#__codelineno-1-3"></a><span class="n">cheb</span> <span class="o">=</span> <span class="n">ChebyshevApproximation</span><span class="p">(</span><span class="n">f</span><span class="p">,</span> <span class="mi">3</span><span class="p">,</span> <span class="n">domain</span><span class="p">,</span> <span class="n">n_nodes</span><span class="o">=</span><span class="mi">20</span><span class="p">)</span><span class="o">.</span><span class="n">build</span><span class="p">()</span>
+<a id="__codelineno-1-4" name="__codelineno-1-4" href="#__codelineno-1-4"></a>
+<a id="__codelineno-1-5" name="__codelineno-1-5" href="#__codelineno-1-5"></a><span class="n">result</span> <span class="o">=</span> <span class="n">cheb</span><span class="o">.</span><span class="n">sobol_indices</span><span class="p">()</span>
+<a id="__codelineno-1-6" name="__codelineno-1-6" href="#__codelineno-1-6"></a><span class="c1"># {</span>
+<a id="__codelineno-1-7" name="__codelineno-1-7" href="#__codelineno-1-7"></a><span class="c1">#   &quot;first_order&quot;: {0: 0.32, 1: 0.51, 2: 0.17},</span>
+<a id="__codelineno-1-8" name="__codelineno-1-8" href="#__codelineno-1-8"></a><span class="c1">#   &quot;total_order&quot;: {0: 0.35, 1: 0.55, 2: 0.20},</span>
+<a id="__codelineno-1-9" name="__codelineno-1-9" href="#__codelineno-1-9"></a><span class="c1">#   &quot;variance&quot;: 1.234,</span>
+<a id="__codelineno-1-10" name="__codelineno-1-10" href="#__codelineno-1-10"></a><span class="c1"># }</span>
 </code></pre></div>
-<h2 id="next-steps">Next Steps<a class="headerlink" href="#next-steps" title="Permanent link">&para;</a></h2>
 <ul>
-<li><a href="../greeks/">Computing Greeks</a> -- analytical derivatives via spectral differentiation</li>
-<li><a href="../algebra/">Chebyshev Algebra</a> -- combine interpolants via <code>+</code>, <code>-</code>, <code>*</code>, <code>/</code></li>
-<li><a href="../calculus/">Chebyshev Calculus</a> -- integration, rootfinding &amp; optimization on interpolants</li>
-<li><a href="../error-estimation/">Error Estimation</a> -- check accuracy without test points</li>
-<li><a href="../serialization/">Saving &amp; Loading</a> -- persist built interpolants for production</li>
-<li>For 5+ dimensions, see <a href="../tensor-train/">Tensor Train</a> or <a href="../sliding/">Sliding Technique</a></li>
+<li><code>first_order[i]</code> — fraction of total variance driven by dimension <code>i</code> alone</li>
+<li><code>total_order[i]</code> — fraction including all interactions involving dimension <code>i</code></li>
+<li><code>variance</code> — global variance of the function over the domain</li>
+</ul>
+<p>First-order indices sum to 1 only for purely additive models; the deficit
+<code>1 − Σ S_i</code> captures interactions. Total-order indices satisfy <code>Σ S_T_i ≥ 1</code>,
+with the excess attributable to interactions. Available on <code>ChebyshevApproximation</code>
+and <code>ChebyshevSpline</code>. See Saltelli et al. (2010) for the mathematical foundation.</p>
+<div class="admonition note">
+<p class="admonition-title">Note</p>
+<p><code>ChebyshevTT</code> does not yet support Sobol; this is deferred to v0.21.</p>
+</div>
+<h2 id="auto-dim-reordering-for-tensor-train">Auto dim-reordering for Tensor Train<a class="headerlink" href="#auto-dim-reordering-for-tensor-train" title="Permanent link">&para;</a></h2>
+<p><code>ChebyshevTT</code> rank depends on dimension order. <code>with_auto_order</code> tries multiple
+permutations and returns the lowest-rank result:</p>
+<div class="highlight"><pre><span></span><code><a id="__codelineno-2-1" name="__codelineno-2-1" href="#__codelineno-2-1"></a><span class="kn">from</span><span class="w"> </span><span class="nn">pychebyshev</span><span class="w"> </span><span class="kn">import</span> <span class="n">ChebyshevTT</span>
+<a id="__codelineno-2-2" name="__codelineno-2-2" href="#__codelineno-2-2"></a>
+<a id="__codelineno-2-3" name="__codelineno-2-3" href="#__codelineno-2-3"></a><span class="n">tt</span> <span class="o">=</span> <span class="n">ChebyshevTT</span><span class="o">.</span><span class="n">with_auto_order</span><span class="p">(</span>
+<a id="__codelineno-2-4" name="__codelineno-2-4" href="#__codelineno-2-4"></a>    <span class="n">f</span><span class="p">,</span> <span class="mi">5</span><span class="p">,</span> <span class="n">domain</span><span class="p">,</span> <span class="n">n_nodes</span><span class="o">=</span><span class="mi">10</span><span class="p">,</span>
+<a id="__codelineno-2-5" name="__codelineno-2-5" href="#__codelineno-2-5"></a>    <span class="n">max_rank</span><span class="o">=</span><span class="mi">10</span><span class="p">,</span>
+<a id="__codelineno-2-6" name="__codelineno-2-6" href="#__codelineno-2-6"></a>    <span class="n">n_trials</span><span class="o">=</span><span class="mi">5</span><span class="p">,</span>
+<a id="__codelineno-2-7" name="__codelineno-2-7" href="#__codelineno-2-7"></a>    <span class="n">method</span><span class="o">=</span><span class="s2">&quot;greedy_swap&quot;</span><span class="p">,</span>   <span class="c1"># or &quot;random&quot;</span>
+<a id="__codelineno-2-8" name="__codelineno-2-8" href="#__codelineno-2-8"></a><span class="p">)</span>
+<a id="__codelineno-2-9" name="__codelineno-2-9" href="#__codelineno-2-9"></a><span class="n">tt</span><span class="o">.</span><span class="n">eval</span><span class="p">([</span><span class="n">s</span><span class="p">,</span> <span class="n">k</span><span class="p">,</span> <span class="n">t</span><span class="p">,</span> <span class="n">r</span><span class="p">,</span> <span class="n">sigma</span><span class="p">])</span>  <span class="c1"># original dim order — permutation is transparent</span>
+<a id="__codelineno-2-10" name="__codelineno-2-10" href="#__codelineno-2-10"></a><span class="nb">print</span><span class="p">(</span><span class="n">tt</span><span class="o">.</span><span class="n">dim_order</span><span class="p">)</span>            <span class="c1"># e.g. [4, 0, 2, 1, 3]</span>
+</code></pre></div>
+<ul>
+<li><code>max_rank</code> — cap on TT rank during build</li>
+<li><code>n_trials</code> — number of permutations to try (cost scales linearly)</li>
+<li><code>method</code> — permutation strategy:</li>
+<li><code>"greedy_swap"</code> — iteratively swap dimensions to reduce local rank (O(d²))</li>
+<li><code>"random"</code> — sample random permutations (parallelizable, but may miss optimum)</li>
+</ul>
+<p>Returns a <code>ChebyshevTT</code> with <code>dim_order</code> transparently applied, so user code
+stays in original dimension order. Internally, the TT is reordered; <code>eval()</code>
+and full <code>integrate()</code> respect the permutation transparently. Algebra operators
+(<code>+</code>, <code>-</code>, <code>*</code>, <code>/</code>, unary <code>-</code>) raise <code>NotImplementedError</code> on TTs with a
+non-identity <code>dim_order</code> — rebuild with the canonical constructor for those use cases.</p>
+<p>Cost: <code>n_trials</code> × normal TT build time. Use only when TT rank is a bottleneck
+(typically d ≥ 5) or you're unsure of the best ordering.</p>
+<h2 id="sensitivity-analysis-workflow">Sensitivity analysis workflow<a class="headerlink" href="#sensitivity-analysis-workflow" title="Permanent link">&para;</a></h2>
+<p>Combine auto-knots + Sobol to understand and simplify complex models:</p>
+<div class="highlight"><pre><span></span><code><a id="__codelineno-3-1" name="__codelineno-3-1" href="#__codelineno-3-1"></a><span class="c1"># 1. Auto-discover kinks</span>
+<a id="__codelineno-3-2" name="__codelineno-3-2" href="#__codelineno-3-2"></a><span class="n">spl</span> <span class="o">=</span> <span class="n">ChebyshevSpline</span><span class="o">.</span><span class="n">auto_knots</span><span class="p">(</span><span class="n">f</span><span class="p">,</span> <span class="mi">5</span><span class="p">,</span> <span class="n">domain</span><span class="p">,</span> <span class="n">max_knots_per_dim</span><span class="o">=</span><span class="mi">3</span><span class="p">)</span>
+<a id="__codelineno-3-3" name="__codelineno-3-3" href="#__codelineno-3-3"></a>
+<a id="__codelineno-3-4" name="__codelineno-3-4" href="#__codelineno-3-4"></a><span class="c1"># 2. Compute Sobol indices</span>
+<a id="__codelineno-3-5" name="__codelineno-3-5" href="#__codelineno-3-5"></a><span class="n">sobol</span> <span class="o">=</span> <span class="n">spl</span><span class="o">.</span><span class="n">sobol_indices</span><span class="p">()</span>
+<a id="__codelineno-3-6" name="__codelineno-3-6" href="#__codelineno-3-6"></a>
+<a id="__codelineno-3-7" name="__codelineno-3-7" href="#__codelineno-3-7"></a><span class="c1"># 3. Drop low-sensitivity dims (or use them for conditioning)</span>
+<a id="__codelineno-3-8" name="__codelineno-3-8" href="#__codelineno-3-8"></a><span class="n">important_dims</span> <span class="o">=</span> <span class="p">[</span><span class="n">i</span> <span class="k">for</span> <span class="n">i</span><span class="p">,</span> <span class="n">s</span> <span class="ow">in</span> <span class="n">sobol</span><span class="p">[</span><span class="s2">&quot;first_order&quot;</span><span class="p">]</span><span class="o">.</span><span class="n">items</span><span class="p">()</span> <span class="k">if</span> <span class="n">s</span> <span class="o">&gt;</span> <span class="mf">0.01</span><span class="p">]</span>
+<a id="__codelineno-3-9" name="__codelineno-3-9" href="#__codelineno-3-9"></a><span class="nb">print</span><span class="p">(</span><span class="sa">f</span><span class="s2">&quot;Effective dimensionality: </span><span class="si">{</span><span class="nb">len</span><span class="p">(</span><span class="n">important_dims</span><span class="p">)</span><span class="si">}</span><span class="s2"> / 5&quot;</span><span class="p">)</span>
+<a id="__codelineno-3-10" name="__codelineno-3-10" href="#__codelineno-3-10"></a>
+<a id="__codelineno-3-11" name="__codelineno-3-11" href="#__codelineno-3-11"></a><span class="c1"># 4. Build reduced model if needed, or keep full model with low-rank Slider</span>
+</code></pre></div>
+<h2 id="beyond-mocax">Beyond MoCaX<a class="headerlink" href="#beyond-mocax" title="Permanent link">&para;</a></h2>
+<p>MoCaX has none of these — auto-knot discovery, Sobol indices, and dim
+reordering are PyChebyshev-unique adaptive features as of v0.20.</p>
+<h2 id="see-also">See Also<a class="headerlink" href="#see-also" title="Permanent link">&para;</a></h2>
+<ul>
+<li><a href="../spline/">Chebyshev Splines</a> — manual knot placement and the piecewise interpolation strategy</li>
+<li><a href="../tensor-train/">Tensor Train</a> — TT construction and rank reduction</li>
+<li><a href="../error-driven-construction/">Error-Driven Construction</a> — auto-N doubling for per-piece refinement</li>
 </ul>
 <h2 id="references">References<a class="headerlink" href="#references" title="Permanent link">&para;</a></h2>
 <ul>
-<li>Berrut, J.-P. &amp; Trefethen, L. N. (2004). "Barycentric Lagrange Interpolation."
-  <em>SIAM Review</em> 46(3):501--517.</li>
+<li>Saltelli, A., Annoni, P., Azzini, I., et al. (2010). "Variance based sensitivity analysis of model output. Design and estimator for the total sensitivity index." <em>Computer Physics Communications</em>, 181(2), 259–270.</li>
+<li>Trefethen, L. N. (2013). <em>Approximation Theory and Approximation Practice.</em> SIAM. Chapter 6.</li>
 </ul>
 
 
