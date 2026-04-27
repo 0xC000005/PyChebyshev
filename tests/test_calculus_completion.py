@@ -1281,3 +1281,64 @@ class TestTTCalculusCrossFeature:
         tt_loaded = pickle.loads(data)
         roots_after = tt_loaded.roots()
         np.testing.assert_array_almost_equal(roots_before, roots_after, decimal=10)
+
+
+# ============================================================================
+# TestCrossClassCalculusConsistency
+# ============================================================================
+
+class TestCrossClassCalculusConsistency:
+    """Slider/TT roots/min/max must match ChebyshevApproximation on the
+    same function to ~1e-9."""
+
+    def test_slider_matches_approx_roots(self):
+        """Same quadratic, same nodes — Slider.roots == Approx.roots."""
+        def f(x, _): return x[0] ** 2 - 0.25
+        cheb = ChebyshevApproximation(f, 1, [(-1, 1)], [10])
+        slider = ChebyshevSlider(
+            f, num_dimensions=1, domain=[(-1, 1)], n_nodes=[10],
+            partition=[[0]], pivot_point=[0.0],
+        )
+        cheb.build(verbose=False)
+        slider.build(verbose=False)
+        np.testing.assert_array_almost_equal(
+            sorted(cheb.roots()), sorted(slider.roots()), decimal=10
+        )
+
+    def test_tt_matches_approx_roots(self):
+        """Same quadratic — TT.roots == Approx.roots."""
+        def f(x, _): return x[0] ** 2 - 0.25
+        cheb = ChebyshevApproximation(f, 1, [(-1, 1)], [10])
+        tt = ChebyshevTT(f, num_dimensions=1, domain=[(-1, 1)], n_nodes=[10])
+        cheb.build(verbose=False)
+        tt.build(verbose=False)
+        np.testing.assert_array_almost_equal(
+            sorted(cheb.roots()), sorted(tt.roots()), decimal=9
+        )
+
+    def test_slider_matches_approx_minmax_2d(self):
+        """2-D function — Slider min/max == Approx min/max with same fixed."""
+        def f(x, _): return (x[0] - 0.2) ** 2 + (x[1] - 0.1) ** 2
+        cheb = ChebyshevApproximation(f, 2, [(-1, 1), (-1, 1)], [9, 9])
+        slider = ChebyshevSlider(
+            f, num_dimensions=2, domain=[(-1, 1), (-1, 1)], n_nodes=[9, 9],
+            partition=[[0], [1]], pivot_point=[0.0, 0.0],
+        )
+        cheb.build(verbose=False)
+        slider.build(verbose=False)
+        v_c, l_c = cheb.minimize(dim=0, fixed={1: 0.1})
+        v_s, l_s = slider.minimize(dim=0, fixed={1: 0.1})
+        assert abs(v_c - v_s) < 1e-9
+        assert abs(l_c - l_s) < 1e-9
+
+    def test_tt_matches_approx_minmax_3d(self):
+        """3-D — TT min/max == Approx min/max with same fixed."""
+        def f(x, _): return (x[0] - 0.3) ** 2 + (x[1] + 0.1) ** 2 + x[2]
+        cheb = ChebyshevApproximation(f, 3, [(-1, 1)] * 3, [7, 7, 7])
+        tt = ChebyshevTT(f, num_dimensions=3, domain=[(-1, 1)] * 3, n_nodes=[7, 7, 7])
+        cheb.build(verbose=False)
+        tt.build(verbose=False)
+        v_c, l_c = cheb.maximize(dim=0, fixed={1: 0.0, 2: 0.5})
+        v_t, l_t = tt.maximize(dim=0, fixed={1: 0.0, 2: 0.5})
+        assert abs(v_c - v_t) < 1e-7
+        assert abs(l_c - l_t) < 1e-7
