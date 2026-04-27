@@ -330,9 +330,17 @@ class TestFixtures:
 # ============================================================================
 
 class TestDimOrderGuards:
-    """Tests that document the v0.20 limitation: with_auto_order's permuted
-    _dim_order is only threaded through eval() and full integrate().
-    Other methods raise NotImplementedError until v0.20.1 fixes it."""
+    """v0.20.1 lifted the v0.20 dim_order guards.
+
+    These tests originally asserted that the v0.20 ``with_auto_order``
+    permuted ``_dim_order`` would raise ``NotImplementedError`` from any
+    method other than ``eval()`` / full ``integrate()``. v0.20.1 threaded
+    ``_dim_order`` through every public method (eval_multi, slice,
+    extrude, to_dense, partial integrate, unary algebra, binary algebra
+    on matching orders) and exposed ``ChebyshevTT.reorder()`` as the
+    explicit alignment escape hatch for binary algebra on mismatched
+    orders. The tests below now assert the lifted behavior; in-depth
+    correctness is verified by ``tests/test_v0201_dim_threading.py``."""
 
     def _build_non_identity_tt(self):
         """Build a 2-D TT with deterministic non-identity _dim_order.
