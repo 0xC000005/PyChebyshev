@@ -1266,6 +1266,40 @@ class ChebyshevApproximation:
         self._cached_error_estimate = total
         return total
 
+    def sobol_indices(self) -> dict:
+        """Compute first-order and total-order Sobol sensitivity indices.
+
+        Uses the Chebyshev spectral expansion of the interpolant to compute
+        variance-based sensitivity indices analytically (no Monte Carlo).
+
+        Returns
+        -------
+        dict
+            ``{"first_order": {dim: index}, "total_order": {dim: index},
+            "variance": float}``
+
+        Raises
+        ------
+        RuntimeError
+            If ``build()`` has not been called.
+        """
+        from pychebyshev._sensitivity import _compute_sobol_from_coeffs
+        from scipy.fft import dctn
+
+        if self.tensor_values is None:
+            raise RuntimeError("Call build() first")
+
+        coeffs = dctn(self.tensor_values, type=2, norm="ortho")
+        # PyChebyshev convention: c_0 is halved per dim
+        if self.num_dimensions == 1:
+            coeffs[0] *= 0.5
+        else:
+            for d in range(self.num_dimensions):
+                slicer = [slice(None)] * self.num_dimensions
+                slicer[d] = 0
+                coeffs[tuple(slicer)] *= 0.5
+        return _compute_sobol_from_coeffs(coeffs, self.num_dimensions)
+
     def get_error_threshold(self) -> float | None:
         """Return the error_threshold passed to ``__init__``, or None if unset.
 

@@ -732,6 +732,76 @@ class ChebyshevSpline:
         )
         return self._cached_error_estimate
 
+    def sobol_indices(self) -> dict:
+        """Compute Sobol indices aggregated across spline pieces.
+
+        Each piece is treated independently; final indices weight per-piece
+        variances by piece-domain volume.
+
+        Returns
+        -------
+        dict
+            ``{"first_order": {dim: index}, "total_order": {dim: index},
+            "variance": float}``
+
+        Raises
+        ------
+        RuntimeError
+            If ``build()`` has not been called.
+        """
+        from pychebyshev._sensitivity import _compute_sobol_from_coeffs
+        from scipy.fft import dctn
+
+        if not self._built:
+            raise RuntimeError("Call build() first")
+
+        total_variance = 0.0
+        first_order_energy = {d: 0.0 for d in range(self.num_dimensions)}
+        total_order_energy = {d: 0.0 for d in range(self.num_dimensions)}
+
+        for piece in self._pieces:
+            if piece is None:
+                continue
+            vol = 1.0
+            for d in range(self.num_dimensions):
+                lo, hi = piece.domain[d]
+                vol *= (hi - lo)
+            coeffs = dctn(piece.tensor_values, type=2, norm="ortho")
+            if self.num_dimensions == 1:
+                coeffs[0] *= 0.5
+            else:
+                for d in range(self.num_dimensions):
+                    slicer = [slice(None)] * self.num_dimensions
+                    slicer[d] = 0
+                    coeffs[tuple(slicer)] *= 0.5
+            piece_result = _compute_sobol_from_coeffs(coeffs, self.num_dimensions)
+            total_variance += vol * piece_result["variance"]
+            for d in range(self.num_dimensions):
+                first_order_energy[d] += (
+                    vol * piece_result["first_order"][d] * piece_result["variance"]
+                )
+                total_order_energy[d] += (
+                    vol * piece_result["total_order"][d] * piece_result["variance"]
+                )
+
+        if total_variance == 0:
+            return {
+                "first_order": {d: 0.0 for d in range(self.num_dimensions)},
+                "total_order": {d: 0.0 for d in range(self.num_dimensions)},
+                "variance": 0.0,
+            }
+        return {
+            "first_order": {
+                d: first_order_energy[d] / total_variance
+                for d in range(self.num_dimensions)
+            },
+            "total_order": {
+                d: total_order_energy[d] / total_variance
+                for d in range(self.num_dimensions)
+            },
+            "variance": total_variance,
+        }
+
     # ------------------------------------------------------------------
     # Properties
     # ------------------------------------------------------------------
