@@ -311,6 +311,23 @@ class TestTTIntegrateBoundsAndValidation:
         loaded = ChebyshevTT.load(str(path))
         assert loaded.eval([0.5]) == pytest.approx(result.eval([0.5]), abs=1e-12)
 
+    def test_out_of_domain_error_uses_user_frame_dim(self):
+        """Issue #20: error message must reference the user-frame dim
+        the user passed, not the storage-frame index."""
+        def f(x, _): return x[0] + x[1] + x[2]
+        tt = ChebyshevTT(
+            f, num_dimensions=3,
+            domain=[(-1, 1), (-2, 2), (-3, 3)], n_nodes=[5, 5, 5],
+        )
+        tt.build(verbose=False)
+        tt_reordered = tt.reorder([2, 0, 1])
+        # User passes dims=[1] (user-frame dim 1, range [-2, 2]).
+        # Pre-fix: error would reference dim 2 (storage position).
+        with pytest.raises(ValueError) as exc_info:
+            tt_reordered.integrate(dims=[1], bounds=[(5.0, 6.0)])
+        msg = str(exc_info.value)
+        assert "dim 1" in msg, f"Error message references wrong dim: {msg}"
+
 
 # ============================================================================
 # T6: Slider full integration (returns scalar)
@@ -1281,6 +1298,67 @@ class TestTTCalculusCrossFeature:
         tt_loaded = pickle.loads(data)
         roots_after = tt_loaded.roots()
         np.testing.assert_array_almost_equal(roots_before, roots_after, decimal=10)
+
+    def test_roots_non_uniform_domain_after_reorder(self):
+        """Non-uniform domain + reorder: fixed= must validate against
+        user-frame domain, and roots must be in user-frame coordinates."""
+        # f(x, y, z) = (x - 0.4) (1 + 0*y + 0*z)
+        # User-frame dim 0: domain [-1, 1], root at x=0.4
+        # User-frame dim 1: domain [-2, 2]
+        # User-frame dim 2: domain [-3, 3]
+        def f(x, _): return (x[0] - 0.4) * (1.0 + 0.0 * x[1] + 0.0 * x[2])
+        tt = ChebyshevTT(
+            f, num_dimensions=3,
+            domain=[(-1, 1), (-2, 2), (-3, 3)], n_nodes=[8, 8, 8],
+        )
+        tt.build(verbose=False)
+        tt_reordered = tt.reorder([2, 0, 1])
+        # fixed[1] = 1.5 is valid in user-frame dim 1 ([-2, 2]).
+        # In storage-frame after reorder([2,0,1]), storage dim 1 is original dim 0
+        # with domain [-1, 1]; 1.5 would be out of that storage-frame range.
+        # Pre-fix: validation against storage-frame raises misleading error.
+        roots = tt_reordered.roots(dim=0, fixed={1: 1.5, 2: 0.0})
+        assert len(roots) == 1
+        assert abs(roots[0] - 0.4) < 1e-7
+
+    def test_roots_non_uniform_domain_user_frame_out_of_range_raises(self):
+        """A fixed value outside the user-frame domain must raise ValueError."""
+        def f(x, _): return x[0] + x[1] + x[2]
+        tt = ChebyshevTT(
+            f, num_dimensions=3,
+            domain=[(-1, 1), (-2, 2), (-3, 3)], n_nodes=[5, 5, 5],
+        )
+        tt.build(verbose=False)
+        tt_reordered = tt.reorder([2, 0, 1])
+        # User-frame dim 1 has range [-2, 2]; passing 5.0 must fail
+        with pytest.raises(ValueError, match="domain"):
+            tt_reordered.roots(dim=0, fixed={1: 5.0, 2: 0.0})
+
+    def test_minimize_non_uniform_domain_after_reorder(self):
+        """Same non-uniform-domain pattern for minimize."""
+        def f(x, _): return (x[0] - 0.3) ** 2 + 0.0 * x[1] + 0.0 * x[2]
+        tt = ChebyshevTT(
+            f, num_dimensions=3,
+            domain=[(-1, 1), (-2, 2), (-3, 3)], n_nodes=[8, 8, 8],
+        )
+        tt.build(verbose=False)
+        tt_reordered = tt.reorder([2, 0, 1])
+        val, loc = tt_reordered.minimize(dim=0, fixed={1: 1.5, 2: 0.0})
+        assert abs(val - 0.0) < 1e-7
+        assert abs(loc - 0.3) < 1e-7
+
+    def test_maximize_non_uniform_domain_after_reorder(self):
+        """Same non-uniform-domain pattern for maximize."""
+        def f(x, _): return -(x[0] - 0.3) ** 2 + 0.0 * x[1] + 0.0 * x[2]
+        tt = ChebyshevTT(
+            f, num_dimensions=3,
+            domain=[(-1, 1), (-2, 2), (-3, 3)], n_nodes=[8, 8, 8],
+        )
+        tt.build(verbose=False)
+        tt_reordered = tt.reorder([2, 0, 1])
+        val, loc = tt_reordered.maximize(dim=0, fixed={1: 1.5, 2: 0.0})
+        assert abs(val - 0.0) < 1e-7
+        assert abs(loc - 0.3) < 1e-7
 
 
 # ============================================================================

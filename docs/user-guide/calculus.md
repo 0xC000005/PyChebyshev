@@ -570,6 +570,8 @@ roots_b = tt_optimized.roots(dim=0, fixed={1: 0.0, 2: 0.0})
 np.testing.assert_array_almost_equal(roots_a, roots_b)
 ```
 
+> **Non-uniform domains:** v0.21.1 closed a latent bug where TT calculus methods validated `fixed` values against the storage-frame domain. With non-uniform per-dim domains and a non-identity `_dim_order` (after `with_auto_order` / `reorder`), this could either reject valid user-frame inputs or silently accept invalid ones. Since v0.21.1, validation always uses the user-frame physical domain.
+
 ### Slider example
 
 ```python

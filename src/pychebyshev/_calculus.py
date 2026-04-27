@@ -133,7 +133,7 @@ def _compute_sub_interval_weights(n: int, t_lo: float,
     return weights_desc[::-1].copy()
 
 
-def _normalize_bounds(dims, bounds, domain):
+def _normalize_bounds(dims, bounds, domain, dim_labels=None):
     """Normalize and validate the *bounds* parameter for ``integrate()``.
 
     Parameters
@@ -144,6 +144,12 @@ def _normalize_bounds(dims, bounds, domain):
         User-provided bounds specification.
     domain : list
         Per-dimension ``[lo, hi]`` bounds.
+    dim_labels : list of int or None
+        Optional override for dim labels used in error messages. When
+        ``None`` (default), error messages use the corresponding entry
+        from ``dims``. When provided, ``dim_labels[i]`` is used instead
+        of ``dims[i]`` so callers can present user-frame indices when
+        ``dims`` is in storage frame.
 
     Returns
     -------
@@ -173,14 +179,15 @@ def _normalize_bounds(dims, bounds, domain):
             result.append(None)
             continue
         lo, hi = bd
+        label = dim_labels[i] if dim_labels is not None else dims[i]
         if lo > hi:
-            raise ValueError(f"bounds lo={lo} > hi={hi} for dim {dims[i]}")
+            raise ValueError(f"bounds lo={lo} > hi={hi} for dim {label}")
         d = dims[i]
         dom_lo, dom_hi = domain[d]
         if lo < dom_lo - 1e-14 or hi > dom_hi + 1e-14:
             raise ValueError(
                 f"bounds ({lo}, {hi}) outside domain [{dom_lo}, {dom_hi}] "
-                f"for dim {d}"
+                f"for dim {label}"
             )
         lo = max(lo, dom_lo)
         hi = min(hi, dom_hi)
@@ -259,8 +266,6 @@ def _optimize_1d(values: np.ndarray, nodes: np.ndarray,
     -------
     (value, location) : (float, float)
     """
-    from pychebyshev.barycentric import barycentric_interpolate
-
     # Derivative values at nodes
     deriv_values = diff_matrix @ values
 
@@ -271,11 +276,22 @@ def _optimize_1d(values: np.ndarray, nodes: np.ndarray,
     a, b = domain
     candidates = np.concatenate([[a], critical, [b]])
 
-    # Evaluate original function at all candidates
-    vals = np.array([
-        barycentric_interpolate(float(x), nodes, values, bary_weights)
-        for x in candidates
-    ])
+    # Vectorized barycentric evaluation at all candidates simultaneously.
+    candidates_arr = np.asarray(candidates, dtype=float).reshape(-1)
+    diff = candidates_arr[:, None] - nodes[None, :]   # shape (M, n)
+    abs_diff = np.abs(diff)
+    exact_mask = abs_diff < 1e-14                      # (M, n)
+    has_exact = exact_mask.any(axis=1)                 # (M,)
+    # Replace zero diffs with 1.0 to avoid division by zero; overwritten below.
+    safe_diff = np.where(abs_diff < 1e-14, 1.0, diff)
+    w_over_diff = bary_weights[None, :] / safe_diff    # (M, n)
+    numer = (w_over_diff * values[None, :]).sum(axis=1)
+    denom = w_over_diff.sum(axis=1)
+    vals = numer / denom                                # (M,)
+    # For candidates that hit a node exactly, take the node value directly.
+    if has_exact.any():
+        exact_node_idx = exact_mask.argmax(axis=1)
+        vals = np.where(has_exact, values[exact_node_idx], vals)
 
     idx = np.argmin(vals) if mode == "min" else np.argmax(vals)
     return float(vals[idx]), float(candidates[idx])

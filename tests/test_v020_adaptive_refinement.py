@@ -515,3 +515,85 @@ class TestNaNGuards:
         coeffs = np.array([1.0, float("inf"), 0.0])
         with pytest.raises(ValueError, match="NaN or Inf"):
             _compute_sobol_from_coeffs(coeffs, num_dimensions=1)
+
+
+# ============================================================================
+# v0.21.1: ChebyshevTT.sobol_indices parity (native TT contraction)
+# ============================================================================
+
+class TestTTSobolParity:
+    """v0.21.1: ChebyshevTT.sobol_indices must match
+    ChebyshevApproximation.sobol_indices on the same function."""
+
+    def test_separable_2d(self):
+        def f(x, _):
+            return x[0] + x[1]
+
+        cheb = ChebyshevApproximation(f, 2, [(-1, 1), (-1, 1)], [7, 7])
+        tt = ChebyshevTT(f, num_dimensions=2, domain=[(-1, 1), (-1, 1)], n_nodes=[7, 7])
+        cheb.build(verbose=False)
+        tt.build(verbose=False)
+        cheb_idx = cheb.sobol_indices()
+        tt_idx = tt.sobol_indices()
+        for key in ["first_order", "total_order"]:
+            for d in cheb_idx[key]:
+                assert abs(cheb_idx[key][d] - tt_idx[key][d]) < 1e-9
+
+    def test_quadratic_3d(self):
+        def f(x, _):
+            return x[0] ** 2 + 0.5 * x[1] ** 2 + 0.25 * x[2] ** 2
+
+        cheb = ChebyshevApproximation(f, 3, [(-1, 1)] * 3, [10, 10, 10])
+        tt = ChebyshevTT(f, num_dimensions=3, domain=[(-1, 1)] * 3, n_nodes=[10, 10, 10])
+        cheb.build(verbose=False)
+        tt.build(verbose=False)
+        cheb_idx = cheb.sobol_indices()
+        tt_idx = tt.sobol_indices()
+        for key in ["first_order", "total_order"]:
+            for d in cheb_idx[key]:
+                assert abs(cheb_idx[key][d] - tt_idx[key][d]) < 1e-7
+
+    def test_user_frame_after_reorder(self):
+        """sobol_indices keys must be user-frame, even after reorder."""
+        def f(x, _):
+            return x[0] + 0.01 * x[1] + 0.01 * x[2]
+
+        tt = ChebyshevTT(f, num_dimensions=3, domain=[(-1, 1)] * 3, n_nodes=[8, 8, 8])
+        tt.build(verbose=False)
+        tt_reordered = tt.reorder([2, 0, 1])
+        idx = tt_reordered.sobol_indices()
+        # Dim 0 (user-frame) should still dominate
+        assert idx["first_order"][0] > 0.99
+        assert idx["first_order"][1] < 0.01
+        assert idx["first_order"][2] < 0.01
+
+    def test_before_build_raises(self):
+        def f(x, _):
+            return x[0]
+
+        tt = ChebyshevTT(f, num_dimensions=1, domain=[(-1, 1)], n_nodes=[5])
+        with pytest.raises(RuntimeError, match="build"):
+            tt.sobol_indices()
+
+    def test_non_uniform_domain_after_reorder(self):
+        """Cross-validate TT sobol against Approximation under non-uniform
+        per-dim domains AND non-identity _dim_order — the configuration that
+        v0.21.0 cluster bugs hid behind uniform-domain test coverage."""
+        def f(x, _): return (x[0] - 0.2) ** 2 + 0.5 * (x[1] / 2.0) ** 2 + 0.25 * (x[2] / 3.0) ** 2
+        cheb = ChebyshevApproximation(f, 3, [(-1, 1), (-2, 2), (-3, 3)], [10, 10, 10])
+        tt = ChebyshevTT(
+            f, num_dimensions=3,
+            domain=[(-1, 1), (-2, 2), (-3, 3)], n_nodes=[10, 10, 10],
+        )
+        cheb.build(verbose=False)
+        tt.build(verbose=False)
+        tt_reordered = tt.reorder([2, 0, 1])
+        # Reference (canonical Approximation)
+        ref = cheb.sobol_indices()
+        # Reordered TT — keys must still be in user frame
+        idx = tt_reordered.sobol_indices()
+        for key in ["first_order", "total_order"]:
+            for d in ref[key]:
+                assert abs(ref[key][d] - idx[key][d]) < 1e-7, (
+                    f"{key}[{d}]: cheb={ref[key][d]}, tt_reordered={idx[key][d]}"
+                )

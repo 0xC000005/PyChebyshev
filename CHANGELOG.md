@@ -5,6 +5,63 @@ All notable changes to PyChebyshev will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [0.21.1] - 2026-04-27
+
+### Added
+
+- `ChebyshevTT.sobol_indices()` — first-order and total-order Sobol
+  sensitivity indices computed natively by contracting through the TT
+  coefficient cores. O(d · n · r²) per dim, no dense materialization.
+  Mirrors v0.20 `ChebyshevApproximation.sobol_indices` API; keys are
+  user-frame dim indices regardless of internal `_dim_order`.
+
+### Fixed
+
+- `ChebyshevTT.roots()`/`minimize()`/`maximize()` previously validated
+  `fixed` values against the storage-frame domain instead of the
+  user-frame physical domain. Under `with_auto_order()` or `reorder()`
+  with non-uniform per-dim domains, this could raise misleading errors
+  or accept invalid inputs. Now validates against user-frame domain.
+- `ChebyshevTT.inner_product()` previously returned a meaningless
+  Frobenius product when `self._dim_order != other._dim_order`, with
+  no error. Now raises `ValueError` with a `reorder()` alignment hint,
+  matching v0.20.1 binary algebra behavior.
+- `ChebyshevTT.get_evaluation_points()` previously returned columns in
+  storage order, breaking `eval(get_evaluation_points()[i])` for any
+  TT with non-identity `_dim_order`. Now returns columns in user-frame
+  order.
+- `ChebyshevTT.eval_multi()` previously mutated `self._dim_order` via
+  try/finally, racing under concurrent calls (issue #19). Now uses a
+  private `_eval_storage_frame` helper with no mutation.
+- `ChebyshevTT.integrate()` error messages on out-of-domain bounds
+  previously referenced the storage-frame dim index instead of the
+  user-frame index passed by the caller (issue #20). Now references
+  the user-frame index.
+- `_algebra._check_compatible` previously raised "Domain mismatch"
+  when comparing two interpolants with mixed `tuple` vs `list` domain
+  syntax even when bounds were numerically identical (issue #22). Now
+  uses `np.allclose` for comparison.
+
+### Performance
+
+- `vectorized_eval_batch` now hoists the differentiation matrix matmul
+  outside the per-point loop. Significant speedup for derivative
+  batch evaluations on large point sets.
+- `_calculus._optimize_1d` (used by all four classes' `minimize/maximize`)
+  now uses a single vectorized barycentric evaluation over critical
+  points + endpoints instead of a Python list comprehension.
+
+### Notes
+
+- Closes the v0.20+v0.20.1 `_dim_order` cluster on `ChebyshevTT`.
+  All TT methods that read `self.domain[d]` or `self.n_nodes[d]` now
+  consistently translate user-frame indices to storage-frame
+  internally.
+- No breaking API changes: all "Fixed" items change wrong behavior to
+  correct behavior. The `inner_product` strict-mode raises on mismatched
+  `_dim_order` (previously silently returned wrong numbers), which is
+  a behavior change in the failure path only.
+
 ## [0.21.0] - 2026-04-27
 
 ### Added

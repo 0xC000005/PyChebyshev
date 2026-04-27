@@ -38,12 +38,15 @@ def _check_compatible(a, b) -> None:
             f"Dimension mismatch: {a.num_dimensions} vs {b.num_dimensions}"
         )
 
-    if a.n_nodes != b.n_nodes:
+    if not np.array_equal(np.asarray(a.n_nodes, dtype=int), np.asarray(b.n_nodes, dtype=int)):
         raise ValueError(
             f"Node count mismatch: {a.n_nodes} vs {b.n_nodes}"
         )
 
-    if a.domain != b.domain:
+    if not np.allclose(
+        np.asarray(a.domain, dtype=float),
+        np.asarray(b.domain, dtype=float),
+    ):
         raise ValueError(
             f"Domain mismatch: {a.domain} vs {b.domain}"
         )

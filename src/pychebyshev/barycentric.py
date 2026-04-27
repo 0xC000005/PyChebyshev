@@ -948,6 +948,47 @@ class ChebyshevApproximation:
 
         return float(current)
 
+    def _apply_derivative_passes(
+        self, tensor: np.ndarray, derivative_order: List[int] | None
+    ) -> np.ndarray:
+        """Apply differentiation-matrix passes to the full coefficient tensor.
+
+        For each dimension ``d`` with ``derivative_order[d] > 0``, applies the
+        transposed differentiation matrix ``D_T`` along axis ``d`` the required
+        number of times.  Operates on the **full** tensor (no axes reduced),
+        using ``np.moveaxis`` to expose the target axis as the last axis for
+        efficient matmul.
+
+        This helper is designed for use in :meth:`vectorized_eval_batch`, where
+        the derivative passes are hoisted outside the per-point loop.
+        :meth:`vectorized_eval` inlines the same logic per-dimension as it
+        reduces axes incrementally and does not call this helper.
+
+        Parameters
+        ----------
+        tensor : np.ndarray
+            Full coefficient tensor of shape matching ``self.tensor_values``.
+        derivative_order : list of int or None
+            Derivative order per dimension.  ``None`` is treated as all-zeros.
+
+        Returns
+        -------
+        np.ndarray
+            Tensor with all derivative passes applied, same shape as input.
+        """
+        if derivative_order is None:
+            return tensor
+        result = tensor
+        for d in range(self.num_dimensions - 1, -1, -1):
+            deriv = derivative_order[d]
+            if deriv > 0:
+                D_T = self.diff_matrices[d].T
+                for _ in range(deriv):
+                    arr = np.moveaxis(result, d, -1)
+                    arr = arr @ D_T
+                    result = np.moveaxis(arr, -1, d)
+        return result
+
     def vectorized_eval_batch(
         self,
         points: np.ndarray,
@@ -976,10 +1017,33 @@ class ChebyshevApproximation:
         derivative_order = self._resolve_derivative_args(
             derivative_order, derivative_id
         )
+        if self.tensor_values is None:
+            raise RuntimeError("Call build() first")
+
+        # Hoist: apply all derivative-matrix matmuls once — they are
+        # point-independent (depend only on the grid, not on query coords).
+        # Delegates to _apply_derivative_passes which operates on the full
+        # tensor using moveaxis to target each axis in turn.
+        tensor_with_derivs = self._apply_derivative_passes(
+            self.tensor_values, derivative_order
+        )
+
+        # Per-point: only the barycentric reduction (no derivative passes).
+        _matmul = self._matmul_last_axis
         N = points.shape[0]
         results = np.empty(N)
         for i in range(N):
-            results[i] = self.vectorized_eval(points[i], derivative_order=derivative_order)
+            current = tensor_with_derivs
+            for d in range(self.num_dimensions - 1, -1, -1):
+                x = points[i, d]
+                diff = x - self.nodes[d]
+                exact = np.where(np.abs(diff) < 1e-14)[0]
+                if len(exact) > 0:
+                    current = current[..., exact[0]]
+                else:
+                    w_over_diff = self.weights[d] / diff
+                    current = _matmul(current, w_over_diff) / np.sum(w_over_diff)
+            results[i] = float(current)
         return results
 
     def vectorized_eval_multi(
