@@ -197,6 +197,37 @@ def _compute_sobol_from_tt_cores(cores: list) -> dict:
             "variance": float(max(variance, 0.0)),
         }
 
+    # ---- Precompute left and right partial self-inner-product matrices
+    #      to reduce total-order computation from O(d^2 * n * r^2) to
+    #      O(d * n * r^2).
+    #
+    # L[k] has shape (r_k, r_k): partial contraction of dims 0..k-1.
+    # R[k] has shape (r_k, r_k): partial contraction of dims k..d-1.
+    #
+    # L[0] = identity(1); L[k+1] = einsum("ij,ipa,jpb->ab", L[k], Aw_k, A_k)
+    # R[d] = identity(1); R[k]   = einsum("ab,ipa,jpb->ij", R[k+1], Aw_k, A_k)
+    #
+    # For total-order[j]: the "alpha_j = 0" weighted sum decomposes as
+    #   L[j] x cores[j][:,0,:] x R[j+1] (contracted with itself and scaled by pi).
+    #   sum_alpha_j_zero = pi * einsum("ij,ia,jb,ab->", L[j], c_j0, c_j0, R[j+1])
+    #   where c_j0 = cores[j][:, 0, :].
+
+    # Build L[0..d]
+    L = [None] * (d + 1)
+    L[0] = np.array([[1.0]])
+    for k in range(d):
+        A_k = cores[k]
+        Aw_k = A_k * w_full[k][None, :, None]
+        L[k + 1] = np.einsum("ij,ipa,jpb->ab", L[k], Aw_k, A_k)
+
+    # Build R[0..d]
+    R = [None] * (d + 1)
+    R[d] = np.array([[1.0]])
+    for k in range(d - 1, -1, -1):
+        A_k = cores[k]
+        Aw_k = A_k * w_full[k][None, :, None]
+        R[k] = np.einsum("ab,ipa,jpb->ij", R[k + 1], Aw_k, A_k)
+
     first_order_energy = {}
     total_order_energy = {}
 
@@ -223,21 +254,13 @@ def _compute_sobol_from_tt_cores(cores: list) -> dict:
         first_order_energy[j] = sum_squared * weight_first
 
         # ---- total-order energy[j]: alpha_j >= 1 (other dims unrestricted)
-        # = total_weighted_squared - sum_{alpha_j = 0} of
-        #   coeffs[alpha]^2 * prod_k w_full[k][alpha_k]
-        # The "alpha_j = 0" sum: replace cores[j] with cores[j][:, 0:1, :]
-        # and use w_k = [pi] for dim j.
-        M_j = np.array([[1.0]])
-        for k in range(d):
-            if k == j:
-                A_slice = cores[k][:, 0:1, :]
-                w_k = np.array([pi])
-            else:
-                A_slice = cores[k]
-                w_k = w_full[k]
-            Aw_slice = A_slice * w_k[None, :, None]
-            M_j = np.einsum("ij,ipa,jpb->ab", M_j, Aw_slice, A_slice)
-        sum_alpha_j_zero_weighted = float(M_j[0, 0])
+        # = total_weighted_squared - sum_{alpha_j = 0} weighted
+        # Using cached L[j] and R[j+1]:
+        #   sum_alpha_j_zero = pi * einsum("ij,ia,jb,ab->", L[j], c_j0, c_j0, R[j+1])
+        c_j0 = cores[j][:, 0, :]  # shape (r_j, r_{j+1})
+        sum_alpha_j_zero_weighted = pi * float(
+            np.einsum("ij,ia,jb,ab->", L[j], c_j0, c_j0, R[j + 1])
+        )
         total_order_energy[j] = total_weighted_squared - sum_alpha_j_zero_weighted
 
     return {
