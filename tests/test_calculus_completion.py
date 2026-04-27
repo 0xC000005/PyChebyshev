@@ -1196,3 +1196,88 @@ class TestTTMaximize:
         tt = ChebyshevTT(f, num_dimensions=1, domain=[(-1, 1)], n_nodes=[5])
         with pytest.raises(RuntimeError, match="build"):
             tt.maximize()
+
+
+# ============================================================================
+# TestTTCalculusCrossFeature
+# ============================================================================
+
+class TestTTCalculusCrossFeature:
+    """Cross-feature integration tests for TT roots/min/max."""
+
+    def test_roots_after_with_auto_order(self):
+        """with_auto_order builds a TT with potentially non-identity _dim_order;
+        roots in user-frame must still find the correct values."""
+        # Function with known root structure along dim 0
+        def f(x, _): return (x[0] - 0.4) * (1.0 + 0.1 * x[1] + 0.2 * x[2])
+        tt = ChebyshevTT.with_auto_order(
+            f, num_dimensions=3, domain=[(-1, 1)] * 3, n_nodes=[10, 10, 10],
+            n_trials=3,
+        )
+        # Whatever the storage order, user-frame dim=0 should yield root at 0.4
+        roots = tt.roots(dim=0, fixed={1: 0.0, 2: 0.0})
+        assert len(roots) == 1
+        assert abs(roots[0] - 0.4) < 1e-8
+
+    def test_minimize_after_reorder(self):
+        """Explicit reorder([2, 0, 1]) preserves user-frame minimize results."""
+        def f(x, _): return (x[0] - 0.2) ** 2 + x[1] ** 2 + x[2] ** 2
+        tt = ChebyshevTT(
+            f, num_dimensions=3, domain=[(-1, 1)] * 3, n_nodes=[8, 8, 8],
+        )
+        tt.build(verbose=False)
+        tt_reordered = tt.reorder([2, 0, 1])
+        val, loc = tt_reordered.minimize(dim=0, fixed={1: 0.0, 2: 0.0})
+        # f(0.2, 0, 0) = 0
+        assert abs(val - 0.0) < 1e-7
+        assert abs(loc - 0.2) < 1e-7
+
+    def test_maximize_after_extrude(self):
+        """Extrude a 1-D TT to 2-D; max along original dim still works."""
+        def f(x, _): return -(x[0] - 0.3) ** 2 + 5.0
+        tt_1d = ChebyshevTT(f, num_dimensions=1, domain=[(-1, 1)], n_nodes=[10])
+        tt_1d.build(verbose=False)
+        tt_2d = tt_1d.extrude([(1, (-1.0, 1.0), 5)])
+        val, loc = tt_2d.maximize(dim=0, fixed={1: 0.5})
+        assert abs(val - 5.0) < 1e-9
+        assert abs(loc - 0.3) < 1e-9
+
+    def test_roots_after_slice(self):
+        """Slice a 3-D TT to 2-D, then roots along surviving dim."""
+        def f(x, _): return x[0] * x[1] - 0.1 + 0.0 * x[2]
+        tt = ChebyshevTT(
+            f, num_dimensions=3, domain=[(-1, 1), (0.5, 1.5), (-1, 1)],
+            n_nodes=[7, 7, 7],
+        )
+        tt.build(verbose=False)
+        tt_2d = tt.slice([(2, 0.0)])
+        # f(x, 0.5, 0) = 0.5*x - 0.1 = 0 at x = 0.2
+        roots = tt_2d.roots(dim=0, fixed={1: 0.5})
+        assert len(roots) == 1
+        assert abs(roots[0] - 0.2) < 1e-8
+
+    def test_minimize_after_algebra(self):
+        """TT built via algebra (e.g. tt + 2*other) — minimize still works."""
+        def f(x, _): return x[0]
+        def g(x, _): return -x[0]
+        tf = ChebyshevTT(f, num_dimensions=1, domain=[(-1, 1)], n_nodes=[5])
+        tg = ChebyshevTT(g, num_dimensions=1, domain=[(-1, 1)], n_nodes=[5])
+        tf.build(verbose=False)
+        tg.build(verbose=False)
+        # h(x) = f(x) + 2*g(x) = x - 2x = -x; min on [-1,1] is -1 at x=1
+        h = tf + 2.0 * tg
+        val, loc = h.minimize()
+        assert abs(val - (-1.0)) < 1e-10
+        assert abs(loc - 1.0) < 1e-10
+
+    def test_save_load_round_trip_preserves_roots(self):
+        """Pickle round-trip preserves TT.roots()."""
+        import pickle
+        def f(x, _): return x[0] ** 2 - 0.25
+        tt = ChebyshevTT(f, num_dimensions=1, domain=[(-1, 1)], n_nodes=[10])
+        tt.build(verbose=False)
+        roots_before = tt.roots()
+        data = pickle.dumps(tt)
+        tt_loaded = pickle.loads(data)
+        roots_after = tt_loaded.roots()
+        np.testing.assert_array_almost_equal(roots_before, roots_after, decimal=10)
