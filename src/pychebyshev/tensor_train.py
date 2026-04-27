@@ -1482,6 +1482,14 @@ class ChebyshevTT:
                 "inner_product requires matching n_nodes; "
                 f"got {self.n_nodes} vs {other.n_nodes}"
             )
+        if list(self._dim_order) != list(other._dim_order):
+            raise ValueError(
+                f"inner_product requires matching _dim_order: "
+                f"{self._dim_order} vs {other._dim_order}. "
+                f"Call other = other.reorder(self._dim_order) "
+                f"(or self = self.reorder(other._dim_order)) to align "
+                f"before computing inner_product."
+            )
 
         M = np.array([[1.0]])  # (r_self_0, r_other_0) = (1, 1)
         for k in range(self.num_dimensions):

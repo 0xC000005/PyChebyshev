@@ -587,6 +587,41 @@ class TestInnerProduct:
         with pytest.raises(RuntimeError, match="Call build"):
             tt_a.inner_product(tt_b)
 
+    def test_inner_product_dim_order_mismatch_raises(self):
+        """Two TTs with different _dim_order must raise ValueError."""
+        def f(x, _): return x[0] ** 2 + x[1] + x[2] ** 2
+        tt_canonical = ChebyshevTT(
+            f, num_dimensions=3, domain=[(-1, 1)] * 3, n_nodes=[5, 5, 5]
+        )
+        tt_canonical.build(verbose=False)
+        tt_reordered = tt_canonical.reorder([2, 0, 1])
+        with pytest.raises(ValueError, match="dim_order"):
+            tt_canonical.inner_product(tt_reordered)
+        # Also the reverse direction
+        with pytest.raises(ValueError, match="dim_order"):
+            tt_reordered.inner_product(tt_canonical)
+
+    def test_inner_product_after_explicit_reorder_alignment(self):
+        """After explicit reorder() to align dim_orders, inner_product
+        succeeds and matches the canonical-vs-canonical result."""
+        def f(x, _): return x[0] ** 2 + x[1] + x[2] ** 2
+        tt_a = ChebyshevTT(
+            f, num_dimensions=3, domain=[(-1, 1)] * 3, n_nodes=[5, 5, 5]
+        )
+        tt_b = ChebyshevTT(
+            f, num_dimensions=3, domain=[(-1, 1)] * 3, n_nodes=[5, 5, 5]
+        )
+        tt_a.build(verbose=False)
+        tt_b.build(verbose=False)
+        baseline = tt_a.inner_product(tt_b)
+        # Permute b, then realign before calling inner_product
+        tt_b_permuted = tt_b.reorder([2, 0, 1])
+        tt_b_realigned = tt_b_permuted.reorder([0, 1, 2])
+        aligned = tt_a.inner_product(tt_b_realigned)
+        assert abs(baseline - aligned) < 1e-9, (
+            f"baseline {baseline} != aligned {aligned}"
+        )
+
 
 class TestALSInternals:
     """White-box tests for the internal ALS sweep primitive."""
