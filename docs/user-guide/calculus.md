@@ -36,8 +36,8 @@ all from a single pre-built proxy, without calling the pricing engine again.
 |-------|:---:|:---:|:---:|
 | `ChebyshevApproximation` | Yes | Yes | Yes |
 | `ChebyshevSpline` | Yes | Yes | Yes |
-| `ChebyshevSlider` | Yes (v0.17) | No | No |
-| `ChebyshevTT` | Yes (v0.17) | No | No |
+| `ChebyshevSlider` | Yes (v0.17) | Yes (v0.21) | Yes (v0.21) |
+| `ChebyshevTT` | Yes (v0.17) | Yes (v0.21) | Yes (v0.21) |
 
 ## Integration
 
@@ -484,12 +484,10 @@ matrices, and barycentric evaluation.
 
 ## Limitations
 
-- **`roots()`, `minimize()`, and `maximize()` are not yet supported on
-  `ChebyshevSlider` or `ChebyshevTT`.**  These operations require
-  1-D polynomial coefficient extraction; generalising to the sliding
-  decomposition or TT format is deferred.
 - **Multi-D rootfinding** (2D Bezout resultants) is not implemented. Only
-  1-D slices are supported via the `dim` + `fixed` interface.
+  1-D slices are supported via the `dim` + `fixed` interface. This applies
+  to all four classes — `ChebyshevApproximation`, `ChebyshevSpline`,
+  `ChebyshevSlider`, and `ChebyshevTT`.
 - **Result has `function=None`** -- partial integration results cannot call
   `build()` again, since there is no underlying function reference.
 
