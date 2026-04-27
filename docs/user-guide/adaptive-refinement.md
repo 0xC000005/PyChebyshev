@@ -89,13 +89,67 @@ print(tt.dim_order)            # e.g. [4, 0, 2, 1, 3]
   - `"random"` — sample random permutations (parallelizable, but may miss optimum)
 
 Returns a `ChebyshevTT` with `dim_order` transparently applied, so user code
-stays in original dimension order. Internally, the TT is reordered; `eval()`
-and full `integrate()` respect the permutation transparently. Algebra operators
-(`+`, `-`, `*`, `/`, unary `-`) raise `NotImplementedError` on TTs with a
-non-identity `dim_order` — rebuild with the canonical constructor for those use cases.
+stays in original dimension order. Internally, the TT is reordered; all TT
+methods respect the permutation transparently (see "Full TT surface" below).
 
 Cost: `n_trials` × normal TT build time. Use only when TT rank is a bottleneck
 (typically d ≥ 5) or you're unsure of the best ordering.
+
+### Realigning two auto-ordered TTs with `reorder()`
+
+When two TTs are independently built with `with_auto_order`, they
+typically end up with different best dim_orders. Adding them directly
+raises `ValueError` (PyChebyshev intentionally avoids hidden rank
+blow-up). Use `reorder()` to opt into the alignment cost explicitly:
+
+```python
+import numpy as np
+from pychebyshev import ChebyshevTT
+
+def f(p, _):
+    return np.sin(p[0]) + p[1] ** 2 + np.cos(p[2])
+
+a = ChebyshevTT.with_auto_order(
+    f, 3, [[-1, 1]] * 3, [11] * 3, tolerance=1e-8, method="greedy_swap"
+)
+b = ChebyshevTT.with_auto_order(
+    f, 3, [[-1, 1]] * 3, [11] * 3, tolerance=1e-8, method="random", n_trials=5
+)
+
+# a + b  →  ValueError if a.dim_order != b.dim_order
+b_aligned = b.reorder(a.dim_order)        # explicit alignment via TT-swap
+s = a + b_aligned                          # works; result inherits a.dim_order
+
+# Optional: tighten max_rank during the swap
+b_tight = b.reorder(a.dim_order, max_rank=8, tolerance=1e-6)
+```
+
+`reorder()` performs a sequence of adjacent-axis SVDs (TT-swap) to
+realign storage. Each swap may grow the local bond rank; `max_rank=`
+and `tolerance=` (defaulting to `self.max_rank` / `self.tolerance`)
+control truncation.
+
+### Full TT surface under non-identity `dim_order`
+
+After v0.20.1, every `ChebyshevTT` method accepts non-identity
+`dim_order` transparently. Users always work in the original-dim
+numbering; PyChebyshev translates at the API boundary.
+
+```python
+tt = ChebyshevTT.with_auto_order(
+    f, 3, [[-1, 1]] * 3, [11] * 3, tolerance=1e-8
+)
+# tt.dim_order may be e.g. [2, 0, 1] — storage is permuted internally.
+
+tt.eval([0.3, -0.7, 0.5])              # original-dim order; works
+tt.eval_multi([0.3, -0.7, 0.5], [[1, 0, 0]])  # 1st-derivative wrt orig dim 0
+tt.slice((1, 0.0))                     # slice original dim 1 at 0
+tt.extrude((0, (-2, 2), 5))            # insert new dim at result-position 0
+tt.integrate(dims=[2])                 # partial integrate original dim 2
+tt.to_dense()                          # axes returned in original-dim order
+(-tt).eval([0.1, 0.2, 0.3])            # unary algebra preserves dim_order
+2.0 * tt + tt                          # binary algebra succeeds (matching orders)
+```
 
 ## Sensitivity analysis workflow
 
