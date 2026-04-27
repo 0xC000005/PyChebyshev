@@ -12,7 +12,7 @@ PyChebyshev is a pip-installable Python library for multi-dimensional Chebyshev 
 # Setup
 uv sync
 
-# Run tests (~989 tests, ~110s due to 5D Black-Scholes builds)
+# Run tests (~1022 tests, ~115s due to 5D Black-Scholes builds)
 uv run pytest tests/ -v
 
 # Run a single test
@@ -72,6 +72,10 @@ The installable package. Public classes: `ChebyshevApproximation`, `ChebyshevSpl
   `plot_convergence()` (Approximation), and `plot_1d`/`plot_2d_surface`/`plot_2d_contour`
   instance methods on all four classes. New optional dep group
   `pychebyshev[viz]` (matplotlib + tqdm).
+- v0.20 adds `ChebyshevSpline.auto_knots()` classmethod (auto-place knots at kinks),
+  `sobol_indices()` instance method on Approximation+Spline, `ChebyshevTT.with_auto_order()`
+  classmethod (heuristic dim reordering with transparent eval permutation), and
+  reference `.pcb` readers in Rust (`readers/rust/`) and Julia (`readers/julia/`).
 
 ### Benchmark Scripts (project root)
 
@@ -126,6 +130,9 @@ Not part of the library. Compare Chebyshev barycentric against alternative metho
 - `test_v019_build_diagnostics.py` — ~40 tests: parallel build via `n_workers=`,
   tqdm progress bars (`verbose=2`), `plot_convergence()`, `plot_1d()`,
   `plot_2d_surface()`, `plot_2d_contour()`; cross-feature integration.
+- `test_v020_adaptive_refinement.py` — ~25 tests: `ChebyshevSpline.auto_knots()`,
+  `sobol_indices()` on Approximation/Spline, `ChebyshevTT.with_auto_order()`;
+  cross-feature and round-trip checks.
 
 ### CI/CD (`.github/workflows/`)
 
