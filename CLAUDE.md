@@ -12,7 +12,7 @@ PyChebyshev is a pip-installable Python library for multi-dimensional Chebyshev 
 # Setup
 uv sync
 
-# Run tests (~1112 tests, ~115s due to 5D Black-Scholes builds)
+# Run tests (~1133 tests, ~115s due to 5D Black-Scholes builds)
 uv run pytest tests/ -v
 
 # Run a single test
@@ -84,6 +84,12 @@ The installable package. Public classes: `ChebyshevApproximation`, `ChebyshevSpl
 - v0.21 adds `ChebyshevSlider.roots()/minimize()/maximize()` and
   `ChebyshevTT.roots()/minimize()/maximize()`. After v0.21, all four
   classes support the full calculus surface (integrate + roots + min/max).
+- v0.21.1 closes the v0.20+v0.20.1 `_dim_order` cluster on `ChebyshevTT`:
+  `roots/minimize/maximize` validate against user-frame domain;
+  `inner_product` raises on mismatched `_dim_order`; `get_evaluation_points`
+  returns user-frame columns; `eval_multi` no longer mutates `_dim_order`.
+  Perf: vectorized `_optimize_1d` and `vectorized_eval_batch` derivative
+  hoist. `ChebyshevTT.sobol_indices` deferred to v0.22.
 
 ### Benchmark Scripts (project root)
 
@@ -129,12 +135,13 @@ Not part of the library. Compare Chebyshev barycentric against alternative metho
   `get_evaluation_points`, `get_num_evaluation_points`), `peek_format_version`,
   `is_dimensionality_allowed`, `defer_build` + `set_original_function_values`,
   `Domain`/`Ns`/`SpecialPoints` typed helpers.
-- `test_calculus_completion.py` — ~101 tests: `ChebyshevSlider.integrate/roots/minimize/maximize`,
+- `test_calculus_completion.py` — ~106 tests: `ChebyshevSlider.integrate/roots/minimize/maximize`,
   `ChebyshevTT.integrate/roots/minimize/maximize` (full and partial,
   user-frame dim/fixed transparent under `_dim_order`), cross-class
   consistency checks, bounds validation. v0.21 additions: 57 tests
   across 9 new test classes covering Slider/TT roots/min/max parity
-  with Approximation/Spline.
+  with Approximation/Spline. v0.21.1 additions: 5 tests covering
+  user-frame domain validation fix under non-identity `_dim_order`.
 - `test_v018_tt_parity.py` — ~52 tests: `ChebyshevTT.nodes()`, `from_values()`,
   `extrude()`, `slice()`, algebra (`+`, `-`, `*` scalar, in-place, `__neg__`),
   `to_dense()`; cross-feature and round-trip checks.
