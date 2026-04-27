@@ -363,18 +363,29 @@ class TestDimOrderGuards:
         result = tt.eval_multi([0.3, 0.4], [[0, 0]])
         assert result[0] == pytest.approx(0.3 + 0.4, abs=1e-6)
 
-    def test_add_with_non_identity_dim_order_raises(self):
-        """tt + tt where BOTH have same non-identity order should raise NotImplementedError."""
-        tt1 = self._build_non_identity_tt()
-        tt2 = self._build_non_identity_tt()
-        with pytest.raises(NotImplementedError, match="dim_order"):
-            _ = tt1 + tt2
+    def test_add_with_matching_non_identity_dim_order_works(self):
+        """v0.20.1 lifted the binary-algebra dim_order guard.
 
-    def test_iadd_with_non_identity_dim_order_raises(self):
+        ``tt + tt`` where both operands share the SAME non-identity order
+        now succeeds; the result inherits ``_dim_order``. Mismatched orders
+        raise ``ValueError``. Verified in detail by
+        tests/test_v0201_dim_threading.py::TestBinaryAlgebraStrict.
+        """
         tt1 = self._build_non_identity_tt()
         tt2 = self._build_non_identity_tt()
-        with pytest.raises(NotImplementedError, match="dim_order"):
-            tt1 += tt2
+        s = tt1 + tt2
+        assert s.dim_order == tt1.dim_order
+        pt = [0.3, -0.4]
+        assert abs(s.eval(pt) - 2 * tt1.eval(pt)) < 1e-6
+
+    def test_iadd_with_matching_non_identity_dim_order_works(self):
+        """v0.20.1 lifted the binary-algebra dim_order guard for in-place add."""
+        tt1 = self._build_non_identity_tt()
+        tt2 = self._build_non_identity_tt()
+        ref_eval = tt1.eval([0.3, -0.4]) + tt2.eval([0.3, -0.4])
+        tt1 += tt2
+        assert tt1.dim_order == [1, 0]
+        assert abs(tt1.eval([0.3, -0.4]) - ref_eval) < 1e-6
 
     def test_neg_with_non_identity_dim_order_works(self):
         """v0.20.1 lifted the __neg__ dim_order guard.

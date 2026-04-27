@@ -3025,14 +3025,13 @@ class ChebyshevTT:
             raise ValueError(
                 f"domain mismatch: {self.domain} vs {other.domain}"
             )
-        # Guard: algebra is not yet supported on TTs with non-identity dim_order.
-        # Full threading is planned for v0.20.1.
-        canonical = list(range(self.num_dimensions))
-        if self._dim_order != canonical or other._dim_order != canonical:
-            raise NotImplementedError(
-                "TT algebra is not yet supported on TTs built via with_auto_order() "
-                "with a non-identity dim_order permutation. Both operands must use "
-                "canonical dim order. Full dim_order threading planned for v0.20.1."
+        # Binary algebra requires both operands to share the same dim_order.
+        # Use ``self.reorder(other.dim_order)`` (or vice versa) to align.
+        if self._dim_order != other._dim_order:
+            raise ValueError(
+                f"TT dim_order mismatch: {self._dim_order} vs {other._dim_order}. "
+                "Call other = other.reorder(self.dim_order) (or self = "
+                "self.reorder(other.dim_order)) to align before adding/subtracting."
             )
 
     def __add__(self, other: "ChebyshevTT") -> "ChebyshevTT":
@@ -3073,7 +3072,7 @@ class ChebyshevTT:
         obj._build_time = 0.0
         obj._total_build_evals = 0
         obj._cached_error_estimate = None
-        obj._dim_order = list(range(self.num_dimensions))
+        obj._dim_order = list(self._dim_order)
         return obj
 
     def __neg__(self) -> "ChebyshevTT":

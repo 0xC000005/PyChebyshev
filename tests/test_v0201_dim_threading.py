@@ -418,3 +418,61 @@ class TestUnaryAlgebraThreading:
         tt /= 2.0
         assert tt.dim_order == [2, 0, 1]
         assert abs(tt.eval([0.1, 0.2, 0.3]) - ref_eval / 2.0) < 1e-7
+
+
+class TestBinaryAlgebraStrict:
+    def test_add_matching_dim_order_works(self):
+        tt = _build_non_identity_tt().reorder([1, 0, 2])
+        s = tt + tt
+        assert s.dim_order == [1, 0, 2]
+        rng = np.random.default_rng(11)
+        for _ in range(5):
+            pt = rng.uniform(-1, 1, size=3).tolist()
+            assert abs(s.eval(pt) - 2 * tt.eval(pt)) < 1e-7
+
+    def test_sub_matching_dim_order_works(self):
+        tt = _build_non_identity_tt().reorder([1, 0, 2])
+        scaled = 2.0 * tt
+        diff = scaled - tt
+        assert diff.dim_order == [1, 0, 2]
+        rng = np.random.default_rng(12)
+        for _ in range(5):
+            pt = rng.uniform(-1, 1, size=3).tolist()
+            assert abs(diff.eval(pt) - tt.eval(pt)) < 1e-7
+
+    def test_add_mismatched_dim_order_raises_with_hint(self):
+        a = _build_non_identity_tt().reorder([1, 0, 2])
+        b = _build_non_identity_tt().reorder([2, 0, 1])
+        with pytest.raises(ValueError, match=r"reorder\("):
+            _ = a + b
+
+    def test_sub_mismatched_dim_order_raises(self):
+        a = _build_non_identity_tt().reorder([1, 0, 2])
+        b = _build_non_identity_tt().reorder([2, 0, 1])
+        with pytest.raises(ValueError, match=r"reorder\("):
+            _ = a - b
+
+    def test_realign_via_reorder_then_add(self):
+        a = _build_non_identity_tt().reorder([1, 0, 2])
+        b = _build_non_identity_tt().reorder([2, 0, 1])
+        b_aligned = b.reorder(a.dim_order)
+        s = a + b_aligned
+        assert s.dim_order == a.dim_order
+        rng = np.random.default_rng(13)
+        for _ in range(5):
+            pt = rng.uniform(-1, 1, size=3).tolist()
+            assert abs(s.eval(pt) - 2 * a.eval(pt)) < 1e-6
+
+    def test_iadd_matching_dim_order_works(self):
+        a = _build_non_identity_tt().reorder([1, 0, 2])
+        b = _build_non_identity_tt().reorder([1, 0, 2])
+        ref_eval = a.eval([0.1, 0.2, 0.3]) + b.eval([0.1, 0.2, 0.3])
+        a += b
+        assert a.dim_order == [1, 0, 2]
+        assert abs(a.eval([0.1, 0.2, 0.3]) - ref_eval) < 1e-6
+
+    def test_iadd_mismatched_dim_order_raises(self):
+        a = _build_non_identity_tt().reorder([1, 0, 2])
+        b = _build_non_identity_tt().reorder([2, 0, 1])
+        with pytest.raises(ValueError, match=r"reorder\("):
+            a += b
