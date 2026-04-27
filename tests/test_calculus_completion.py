@@ -1144,3 +1144,55 @@ class TestTTMinimize:
         tt = ChebyshevTT(f, num_dimensions=1, domain=[(-1, 1)], n_nodes=[5])
         with pytest.raises(RuntimeError, match="build"):
             tt.minimize()
+
+
+# ============================================================================
+# TestTTMaximize
+# ============================================================================
+
+class TestTTMaximize:
+    """Tests for ChebyshevTT.maximize()."""
+
+    def test_maximize_quadratic_1d(self):
+        def f(x, _): return -(x[0] - 0.3) ** 2 + 5.0
+        tt = ChebyshevTT(f, num_dimensions=1, domain=[(-1, 1)], n_nodes=[10])
+        tt.build(verbose=False)
+        val, loc = tt.maximize()
+        assert abs(val - 5.0) < 1e-10
+        assert abs(loc - 0.3) < 1e-10
+
+    def test_maximize_constant(self):
+        def f(x, _): return 7.0
+        tt = ChebyshevTT(f, num_dimensions=1, domain=[(-2, 4)], n_nodes=[5])
+        tt.build(verbose=False)
+        val, _ = tt.maximize()
+        assert abs(val - 7.0) < 1e-10
+
+    def test_maximize_2d_fixed(self):
+        def f(x, _): return -(x[0] - 0.5) ** 2 + x[1]
+        tt = ChebyshevTT(f, num_dimensions=2, domain=[(-1, 1), (-1, 1)], n_nodes=[8, 8])
+        tt.build(verbose=False)
+        val, loc = tt.maximize(dim=0, fixed={1: 1.0})
+        assert abs(val - 1.0) < 1e-9
+        assert abs(loc - 0.5) < 1e-9
+
+    def test_maximize_endpoint(self):
+        def f(x, _): return x[0]
+        tt = ChebyshevTT(f, num_dimensions=1, domain=[(0, 1)], n_nodes=[5])
+        tt.build(verbose=False)
+        val, loc = tt.maximize()
+        assert abs(val - 1.0) < 1e-9
+        assert abs(loc - 1.0) < 1e-9
+
+    def test_maximize_missing_fixed_raises(self):
+        def f(x, _): return x[0] + x[1]
+        tt = ChebyshevTT(f, num_dimensions=2, domain=[(-1, 1), (-1, 1)], n_nodes=[5, 5])
+        tt.build(verbose=False)
+        with pytest.raises(ValueError):
+            tt.maximize(dim=0)
+
+    def test_maximize_before_build_raises(self):
+        def f(x, _): return x[0]
+        tt = ChebyshevTT(f, num_dimensions=1, domain=[(-1, 1)], n_nodes=[5])
+        with pytest.raises(RuntimeError, match="build"):
+            tt.maximize()
