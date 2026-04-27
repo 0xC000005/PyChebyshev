@@ -111,6 +111,7 @@ Not part of the library. Compare Chebyshev barycentric against alternative metho
 - `compare_calculus_completion.py` — PyChebyshev v0.17 Slider/TT integrate vs MoCaX 4.3.1 (no equivalent — beyond-MoCaX feature)
 - `compare_v018_tt_parity.py` — PyChebyshev v0.18 TT surface (extrude/slice/algebra/from_values/to_dense) vs MoCaX 4.3.1
 - `compare_v019_build_diagnostics.py` — PyChebyshev v0.19 build optimization (parallel eval, progress bars, visualization) — no MoCaX equivalent
+- `compare_v0211_dim_cluster.py` — PyChebyshev v0.21.1 TT `_dim_order` cluster fixes demo (no MoCaX equivalent — internal-correctness fixes)
 
 ### Tests (`tests/`)
 

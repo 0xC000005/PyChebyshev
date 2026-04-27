@@ -1472,7 +1472,10 @@ class ChebyshevTT:
                 f"other must be a ChebyshevTT, got {type(other).__name__}"
             )
         other._check_built()
-        if self.domain != other.domain:
+        if not np.allclose(
+            np.asarray(self.domain, dtype=float),
+            np.asarray(other.domain, dtype=float),
+        ):
             raise ValueError(
                 "inner_product requires matching domains; "
                 f"got {self.domain} vs {other.domain}"
@@ -3252,7 +3255,10 @@ class ChebyshevTT:
             raise ValueError(
                 f"n_nodes mismatch: {self.n_nodes} vs {other.n_nodes}"
             )
-        if self.domain != other.domain:
+        if not np.allclose(
+            np.asarray(self.domain, dtype=float),
+            np.asarray(other.domain, dtype=float),
+        ):
             raise ValueError(
                 f"domain mismatch: {self.domain} vs {other.domain}"
             )
