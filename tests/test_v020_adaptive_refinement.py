@@ -351,11 +351,6 @@ class TestDimOrderGuards:
         tt._dim_order = [1, 0]  # orig dim 1 stored at TT position 0
         return tt
 
-    def test_eval_multi_with_non_identity_dim_order_raises(self):
-        tt = self._build_non_identity_tt()
-        with pytest.raises(NotImplementedError, match="dim_order"):
-            tt.eval_multi([[0.3, 0.4]], [[1, 0]])
-
     def test_eval_multi_identity_dim_order_works(self):
         """eval_multi should NOT raise when dim_order is identity."""
         def f(x, _):

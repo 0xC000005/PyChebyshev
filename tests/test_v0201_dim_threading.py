@@ -124,3 +124,71 @@ class TestReorder:
         # position 2 = orig dim 1.
         assert new.n_nodes == [7, 3, 5]
         assert new.domain == [[-3, 3], [-1, 1], [-2, 2]]
+
+
+def _build_non_identity_tt(num_dim=3):
+    """Helper: build a TT then reorder it to deterministic non-identity permutation."""
+    if num_dim == 2:
+        f = lambda p, _: np.sin(p[0]) + p[1] ** 2
+    else:
+        f = lambda p, _: np.sin(p[0]) + p[1] ** 2 + np.cos(p[2])
+    tt = ChebyshevTT(
+        f, num_dim, [[-1, 1]] * num_dim, [9] * num_dim,
+        tolerance=1e-10, max_rank=12,
+    )
+    tt.build()
+    return tt
+
+
+class TestEvalMultiThreading:
+    """Tests for _dim_order threading through ChebyshevTT.eval_multi()."""
+
+    def test_eval_multi_value_only_under_permutation(self):
+        """eval_multi() value-only ([0,0,0]) on a permuted TT agrees with eval()."""
+        tt = _build_non_identity_tt()
+        permuted = tt.reorder([2, 0, 1])
+        rng = np.random.default_rng(1)
+        points = rng.uniform(-1, 1, size=(8, 3))
+        for pt in points:
+            pt_list = pt.tolist()
+            out = permuted.eval_multi(pt_list, [[0, 0, 0]])
+            assert abs(out[0] - tt.eval(pt_list)) < 1e-7
+
+    def test_eval_multi_derivatives_under_permutation(self):
+        """User-frame derivatives must be invariant under reorder()."""
+        tt = _build_non_identity_tt()
+        permuted = tt.reorder([2, 0, 1])
+        rng = np.random.default_rng(2)
+        derivs = [[0, 0, 0], [1, 0, 0], [0, 1, 0], [0, 0, 1]]
+        for _ in range(5):
+            pt = rng.uniform(-0.8, 0.8, size=3).tolist()
+            ref = tt.eval_multi(pt, derivs)
+            got = permuted.eval_multi(pt, derivs)
+            for r, g in zip(ref, got):
+                assert abs(r - g) < 1e-3  # FD has limited precision
+
+    def test_eval_multi_second_derivative_under_permutation(self):
+        """Second-order derivatives (one dim) invariant under reorder()."""
+        tt = _build_non_identity_tt()
+        permuted = tt.reorder([2, 0, 1])
+        rng = np.random.default_rng(3)
+        derivs = [[2, 0, 0], [0, 2, 0], [0, 0, 2]]
+        for _ in range(5):
+            pt = rng.uniform(-0.8, 0.8, size=3).tolist()
+            ref = tt.eval_multi(pt, derivs)
+            got = permuted.eval_multi(pt, derivs)
+            for r, g in zip(ref, got):
+                assert abs(r - g) < 1e-2
+
+    def test_eval_multi_cross_derivative_under_permutation(self):
+        """Cross-derivative (mixed partial) invariant under reorder()."""
+        tt = _build_non_identity_tt()
+        permuted = tt.reorder([2, 0, 1])
+        rng = np.random.default_rng(4)
+        derivs = [[1, 1, 0], [1, 0, 1], [0, 1, 1]]
+        for _ in range(3):
+            pt = rng.uniform(-0.8, 0.8, size=3).tolist()
+            ref = tt.eval_multi(pt, derivs)
+            got = permuted.eval_multi(pt, derivs)
+            for r, g in zip(ref, got):
+                assert abs(r - g) < 1e-2

@@ -2000,20 +2000,36 @@ class ChebyshevTT:
         ------
         RuntimeError
             If ``build()`` has not been called.
-        NotImplementedError
-            If this TT was built via :meth:`with_auto_order` with a
-            non-identity ``_dim_order``. Full dim_order threading planned
-            for v0.20.1.
         """
         self._check_built()
-        if self._dim_order != list(range(self.num_dimensions)):
-            raise NotImplementedError(
-                "eval_multi() is not yet supported on TTs built via with_auto_order() "
-                "with a non-identity dim permutation. "
-                "Use eval() for value-only queries, or use the canonical-order "
-                "ChebyshevTT() constructor for derivative queries. "
-                "Full dim_order threading is planned for v0.20.1."
-            )
+
+        # If a non-identity ``_dim_order`` is set (e.g., from
+        # :meth:`with_auto_order` or :meth:`reorder`), permute both the
+        # input ``point`` and each ``deriv_order`` from user-frame into
+        # storage frame so the FD machinery (which references
+        # ``self.domain`` / ``self.n_nodes`` in storage frame) operates
+        # consistently.  Then temporarily neutralize ``_dim_order`` so
+        # the inner ``self.eval`` calls do not re-permute the
+        # already-storage-frame points.
+        canonical = list(range(self.num_dimensions))
+        if self._dim_order != canonical:
+            point = [point[self._dim_order[k]] for k in range(self.num_dimensions)]
+            derivative_orders = [
+                [d[self._dim_order[k]] for k in range(self.num_dimensions)]
+                for d in derivative_orders
+            ]
+            saved_dim_order = self._dim_order
+            self._dim_order = canonical
+            try:
+                results = []
+                for deriv_order in derivative_orders:
+                    if all(d == 0 for d in deriv_order):
+                        results.append(self.eval(point))
+                    else:
+                        results.append(self._fd_derivative(point, deriv_order))
+            finally:
+                self._dim_order = saved_dim_order
+            return results
 
         results = []
         for deriv_order in derivative_orders:
