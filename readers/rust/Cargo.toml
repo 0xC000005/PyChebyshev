@@ -1,0 +1,14 @@
+[package]
+name = "pcb_reader"
+version = "0.1.0"
+edition = "2021"
+authors = ["Max Zhang <maxjingwei.zhang@icloud.com>"]
+license = "MIT"
+description = "Reference reader for the PyChebyshev .pcb portable binary format"
+repository = "https://github.com/0xC000005/PyChebyshev"
+readme = "README.md"
+
+[dependencies]
+byteorder = "1.5"
+
+[dev-dependencies]

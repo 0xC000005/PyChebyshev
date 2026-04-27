@@ -69,6 +69,8 @@ nav:
       - Special Points: user-guide/special-points.md
       - Ergonomics: user-guide/ergonomics.md
       - Build & Diagnostics: user-guide/build-diagnostics.md
+      - Adaptive Refinement: user-guide/adaptive-refinement.md
+      - Cross-language readers: user-guide/cross-language-readers.md
   - API Reference: api/reference.md
   - Benchmarks: benchmarks.md
   - Roadmap: roadmap.md

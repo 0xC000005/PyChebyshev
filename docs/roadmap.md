@@ -177,7 +177,7 @@ New optional dependency group `pychebyshev[viz]` for matplotlib + tqdm.
 **Beyond MoCaX:** MoCaX has neither parallel build nor visualization
 helpers.
 
-## v0.20 — Adaptive Refinement + Interop :material-clock-outline:
+## v0.20 — Adaptive Refinement + Interop :material-check:
 
 Smart node placement plus delivery of the v0.14 `.pcb` portability promise.
 

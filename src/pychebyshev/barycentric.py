@@ -682,6 +682,14 @@ class ChebyshevApproximation:
             self.tensor_values = flat.reshape(self.n_nodes)
         self.n_evaluations = total
 
+        # Guard: reject NaN / Inf before proceeding with weight computation.
+        if not np.isfinite(self.tensor_values).all():
+            n_bad = int(np.sum(~np.isfinite(self.tensor_values)))
+            raise ValueError(
+                f"function returned non-finite values at {n_bad} grid point(s); "
+                "build cannot proceed with NaN/Inf in tensor_values"
+            )
+
         # Step 2: Pre-compute barycentric weights
         self.weights = []
         for d in range(self.num_dimensions):
@@ -1265,6 +1273,36 @@ class ChebyshevApproximation:
         total = float(sum(self._error_estimate_per_dim()))
         self._cached_error_estimate = total
         return total
+
+    def sobol_indices(self) -> dict:
+        """Compute first-order and total-order Sobol sensitivity indices.
+
+        Uses the Chebyshev spectral expansion of the interpolant to compute
+        variance-based sensitivity indices analytically (no Monte Carlo).
+
+        Returns
+        -------
+        dict
+            ``{"first_order": {dim: index}, "total_order": {dim: index},
+            "variance": float}``
+
+        Raises
+        ------
+        RuntimeError
+            If ``build()`` has not been called.
+        """
+        from pychebyshev._sensitivity import (
+            _compute_chebyshev_coefficients,
+            _compute_sobol_from_coeffs,
+        )
+
+        if self.tensor_values is None:
+            raise RuntimeError("Call build() first")
+
+        coeffs = _compute_chebyshev_coefficients(
+            self.tensor_values, self.num_dimensions
+        )
+        return _compute_sobol_from_coeffs(coeffs, self.num_dimensions)
 
     def get_error_threshold(self) -> float | None:
         """Return the error_threshold passed to ``__init__``, or None if unset.

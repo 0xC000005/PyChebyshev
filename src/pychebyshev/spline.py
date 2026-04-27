@@ -732,6 +732,80 @@ class ChebyshevSpline:
         )
         return self._cached_error_estimate
 
+    def sobol_indices(self) -> dict:
+        """Compute Sobol indices aggregated across spline pieces.
+
+        Indices are computed per-piece (under the Chebyshev measure
+        ω(x) = 1/sqrt(1-x²) on [-1, 1] mapped to each piece's local domain),
+        then aggregated by piece volume × piece variance.
+
+        Note
+        ----
+        Per-piece weighting uses uniform domain volume × Chebyshev-weighted
+        variance — a hybrid measure. For a single-piece (no-knot) spline,
+        this reduces to the Approximation case.
+
+        Returns
+        -------
+        dict
+            ``{"first_order": {dim: index}, "total_order": {dim: index},
+            "variance": float}``
+
+        Raises
+        ------
+        RuntimeError
+            If ``build()`` has not been called.
+        """
+        from pychebyshev._sensitivity import (
+            _compute_chebyshev_coefficients,
+            _compute_sobol_from_coeffs,
+        )
+
+        if not self._built:
+            raise RuntimeError("Call build() first")
+
+        total_variance = 0.0
+        first_order_energy = {d: 0.0 for d in range(self.num_dimensions)}
+        total_order_energy = {d: 0.0 for d in range(self.num_dimensions)}
+
+        for piece in self._pieces:
+            if piece is None:
+                continue
+            vol = 1.0
+            for d in range(self.num_dimensions):
+                lo, hi = piece.domain[d]
+                vol *= (hi - lo)
+            coeffs = _compute_chebyshev_coefficients(
+                piece.tensor_values, self.num_dimensions
+            )
+            piece_result = _compute_sobol_from_coeffs(coeffs, self.num_dimensions)
+            total_variance += vol * piece_result["variance"]
+            for d in range(self.num_dimensions):
+                first_order_energy[d] += (
+                    vol * piece_result["first_order"][d] * piece_result["variance"]
+                )
+                total_order_energy[d] += (
+                    vol * piece_result["total_order"][d] * piece_result["variance"]
+                )
+
+        if total_variance == 0:
+            return {
+                "first_order": {d: 0.0 for d in range(self.num_dimensions)},
+                "total_order": {d: 0.0 for d in range(self.num_dimensions)},
+                "variance": 0.0,
+            }
+        return {
+            "first_order": {
+                d: first_order_energy[d] / total_variance
+                for d in range(self.num_dimensions)
+            },
+            "total_order": {
+                d: total_order_energy[d] / total_variance
+                for d in range(self.num_dimensions)
+            },
+            "variance": total_variance,
+        }
+
     # ------------------------------------------------------------------
     # Properties
     # ------------------------------------------------------------------
@@ -2032,3 +2106,121 @@ class ChebyshevSpline:
         return _plot_2d_contour_impl(
             self, ax=ax, n_points=n_points, n_levels=n_levels, fixed=fixed
         )
+
+    @classmethod
+    def auto_knots(
+        cls,
+        function,
+        num_dimensions,
+        domain,
+        *,
+        max_knots_per_dim: int = 5,
+        n_scan_points: int = 200,
+        threshold_factor: float = 5.0,
+        n_nodes_per_piece: int = 10,
+        additional_data=None,
+    ) -> "ChebyshevSpline":
+        """Build a ChebyshevSpline with knots auto-placed at function kinks.
+
+        Algorithm: for each dimension, scan ``function`` on
+        ``n_scan_points`` evenly-spaced points (all other dims fixed at their
+        midpoints), compute ``|d²f|`` (second differences of the sampled
+        values), cluster spikes above ``threshold_factor × mean(|d²f|)``,
+        keep the top spike per cluster, cap at ``max_knots_per_dim``.
+
+        ``mean`` is used instead of ``median`` so that sparse-signal inputs
+        (piecewise-linear functions where almost all second differences are
+        exactly zero) still yield a positive threshold.
+
+        Parameters
+        ----------
+        function : callable
+            Function signature: ``f(point, additional_data) → float``.
+        num_dimensions : int
+            Number of input dimensions.
+        domain : list of [float, float]
+            Bounds ``[lo, hi]`` for each dimension.
+        max_knots_per_dim : int, optional
+            Maximum number of knots placed in any single dimension (default 5).
+        n_scan_points : int, optional
+            Number of evenly-spaced scan points per dimension (default 200).
+        threshold_factor : float, optional
+            Spike threshold as a multiple of the mean ``|d²f|``.  Increase
+            this to suppress knot placement for smooth functions (default 5.0).
+        n_nodes_per_piece : int, optional
+            Chebyshev node count per piece per dimension (default 10).
+        additional_data : object, optional
+            Passed through to ``function`` unchanged.
+
+        Returns
+        -------
+        ChebyshevSpline
+            A built spline with auto-detected knots.
+        """
+        knots = []
+        midpoint = [(d[0] + d[1]) / 2.0 for d in domain]
+
+        for dim_idx in range(num_dimensions):
+            lo, hi = domain[dim_idx]
+            xs = np.linspace(lo, hi, n_scan_points)
+            ys = np.empty(n_scan_points)
+            for i, x in enumerate(xs):
+                point = list(midpoint)
+                point[dim_idx] = float(x)
+                ys[i] = float(function(point, additional_data))
+
+            if not np.isfinite(ys).all():
+                raise ValueError(
+                    f"function returned non-finite values during scan on dim {dim_idx}; "
+                    "auto_knots requires a finite-valued function over the entire domain"
+                )
+
+            d2 = np.abs(np.diff(ys, n=2))
+            if len(d2) == 0:
+                knots.append([])
+                continue
+
+            mean_d2 = np.mean(d2)
+            if mean_d2 == 0:
+                knots.append([])
+                continue
+
+            threshold = threshold_factor * mean_d2
+            spike_indices = np.where(d2 > threshold)[0]
+            if len(spike_indices) == 0:
+                knots.append([])
+                continue
+
+            # Cluster nearby spike indices, keeping the peak per cluster.
+            cluster_radius = max(1, n_scan_points // (max_knots_per_dim * 4))
+            clusters = []
+            current_cluster = [int(spike_indices[0])]
+            for idx in spike_indices[1:]:
+                if int(idx) - current_cluster[-1] <= cluster_radius:
+                    current_cluster.append(int(idx))
+                else:
+                    clusters.append(current_cluster)
+                    current_cluster = [int(idx)]
+            clusters.append(current_cluster)
+
+            # Pick peak index from each cluster, sort by magnitude, cap count.
+            cluster_peaks = [max(c, key=lambda i: d2[i]) for c in clusters]
+            cluster_peaks.sort(key=lambda i: -d2[i])
+            cluster_peaks = cluster_peaks[:max_knots_per_dim]
+
+            # Map each d2 index back to physical x: d2[i] ≈ curvature at xs[i+1]
+            knot_xs = sorted(float(xs[i + 1]) for i in cluster_peaks)
+            knots.append(knot_xs)
+
+        n_nodes = [n_nodes_per_piece] * num_dimensions
+
+        spl = cls(
+            function,
+            num_dimensions,
+            domain,
+            n_nodes=n_nodes,
+            knots=knots,
+            additional_data=additional_data,
+        )
+        spl.build(verbose=False)
+        return spl
