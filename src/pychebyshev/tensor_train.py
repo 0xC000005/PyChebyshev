@@ -2722,6 +2722,8 @@ class ChebyshevTT:
         -------
         np.ndarray
             Shape ``(N, num_dimensions)`` where ``N = prod(n_nodes)``.
+            Columns are in user-frame order: column ``d`` corresponds to
+            user-frame dim ``d`` regardless of internal ``_dim_order``.
         """
         per_dim = []
         for d in range(self.num_dimensions):
@@ -2729,7 +2731,13 @@ class ChebyshevTT:
             a, b = self.domain[d]
             per_dim.append(np.sort(0.5 * (a + b) + 0.5 * (b - a) * nodes_std))
         grids = np.meshgrid(*per_dim, indexing="ij")
-        return np.stack([g.ravel() for g in grids], axis=-1).astype(np.float64)
+        # grids columns are in storage frame. Permute back to user frame:
+        # user-frame dim u corresponds to storage position
+        # self._dim_order.index(u), so grids[self._dim_order.index(u)] is
+        # the array of values for user-frame dim u.
+        user_frame_grids = [grids[self._dim_order.index(u)]
+                            for u in range(self.num_dimensions)]
+        return np.stack([g.ravel() for g in user_frame_grids], axis=-1).astype(np.float64)
 
     def clone(self) -> "ChebyshevTT":
         """Return an independent deep copy of this interpolant.

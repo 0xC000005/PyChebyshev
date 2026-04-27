@@ -572,3 +572,72 @@ class TestCrossFeatureStress:
         restored = pickle.loads(blob)
         assert restored.dim_order == [2, 0, 1]
         assert abs(restored.eval([0.1, -0.2, 0.3]) - tt.eval([0.1, -0.2, 0.3])) < 1e-9
+
+
+class TestGetEvaluationPointsFrame:
+    """v0.21.1: get_evaluation_points must return columns in user-frame
+    order so that eval(get_evaluation_points()[i]) round-trips."""
+
+    def test_round_trip_canonical(self):
+        """Canonical (identity _dim_order) — round-trip works."""
+        def f(x, _): return 0.3 * x[0] + 0.7 * x[1] - 0.2 * x[2]
+        tt = ChebyshevTT(
+            f, num_dimensions=3,
+            domain=[(-1, 1), (-2, 2), (-3, 3)], n_nodes=[5, 5, 5],
+        )
+        tt.build(verbose=False)
+        points = tt.get_evaluation_points()
+        # Sanity: shape and column count
+        assert points.shape == (5 * 5 * 5, 3)
+        # Round-trip a sample of points
+        for i in [0, 7, 31, 50, 124]:
+            pt = points[i]
+            expected = f(pt, None)
+            got = float(tt.eval(pt.tolist()))
+            assert abs(got - expected) < 1e-9, (
+                f"point {i}={pt}: got {got}, expected {expected}"
+            )
+
+    def test_round_trip_after_reorder(self):
+        """Non-identity _dim_order via reorder([2, 0, 1]) — round-trip
+        must still work in user-frame coordinates."""
+        def f(x, _): return 0.3 * x[0] + 0.7 * x[1] - 0.2 * x[2]
+        tt = ChebyshevTT(
+            f, num_dimensions=3,
+            domain=[(-1, 1), (-2, 2), (-3, 3)], n_nodes=[5, 5, 5],
+        )
+        tt.build(verbose=False)
+        tt_reordered = tt.reorder([2, 0, 1])
+        # _dim_order is now non-identity
+        assert tt_reordered._dim_order != [0, 1, 2]
+        points = tt_reordered.get_evaluation_points()
+        assert points.shape == (5 * 5 * 5, 3)
+        # Round-trip in user-frame
+        for i in [0, 7, 31, 50, 124]:
+            pt = points[i]
+            expected = f(pt, None)
+            got = float(tt_reordered.eval(pt.tolist()))
+            assert abs(got - expected) < 1e-9, (
+                f"point {i}={pt}: got {got}, expected {expected}"
+            )
+
+    def test_columns_match_user_frame_domain_after_reorder(self):
+        """After reorder, column d's range must match the user-frame
+        domain[d], not the storage-frame domain."""
+        def f(x, _): return x[0] + x[1] + x[2]
+        tt = ChebyshevTT(
+            f, num_dimensions=3,
+            domain=[(-1, 1), (-2, 2), (-3, 3)], n_nodes=[5, 5, 5],
+        )
+        tt.build(verbose=False)
+        tt_reordered = tt.reorder([2, 0, 1])
+        points = tt_reordered.get_evaluation_points()
+        # Column 0 must be in user-frame dim 0 range: [-1, 1]
+        assert points[:, 0].min() >= -1.0 - 1e-12
+        assert points[:, 0].max() <= 1.0 + 1e-12
+        # Column 1 must be in user-frame dim 1 range: [-2, 2]
+        assert points[:, 1].min() >= -2.0 - 1e-12
+        assert points[:, 1].max() <= 2.0 + 1e-12
+        # Column 2 must be in user-frame dim 2 range: [-3, 3]
+        assert points[:, 2].min() >= -3.0 - 1e-12
+        assert points[:, 2].max() <= 3.0 + 1e-12
