@@ -697,3 +697,50 @@ class TestPortfolioUseCase:
             delta_strad = straddle.vectorized_eval(p, [1, 0])
             weighted = 0.4 * delta_call + 0.3 * delta_put + 0.3 * delta_strad
             assert abs(delta_port - weighted) < 1e-10, f"Delta mismatch at {p}"
+
+
+class TestMixedDomainSyntax:
+    """Issue #22: _check_compatible should treat tuple-of-tuples and
+    list-of-lists domain syntax as numerically equal."""
+
+    def test_chebyshev_algebra_tuple_vs_list_domain(self):
+        """ChebyshevApproximation: tuple domain + list domain combine OK."""
+        def f(x, _): return x[0]
+        def g(x, _): return -x[0]
+        cheb_tuple = ChebyshevApproximation(f, 1, [(-1, 1)], [5])
+        cheb_list = ChebyshevApproximation(g, 1, [[-1, 1]], [5])
+        cheb_tuple.build(verbose=False)
+        cheb_list.build(verbose=False)
+        h = cheb_tuple + cheb_list
+        # f + g = x - x = 0
+        assert abs(h.eval([0.5], [0])) < 1e-12
+
+    def test_slider_algebra_tuple_vs_list_domain(self):
+        """ChebyshevSlider: same parity through scalar mul + add."""
+        def f(x, _): return x[0]
+        def g(x, _): return -x[0]
+        s_f = ChebyshevSlider(
+            f, num_dimensions=1, domain=[(-1, 1)], n_nodes=[5],
+            partition=[[0]], pivot_point=[0.0],
+        )
+        s_g = ChebyshevSlider(
+            g, num_dimensions=1, domain=[(-1, 1)], n_nodes=[5],
+            partition=[[0]], pivot_point=[0.0],
+        )
+        s_f.build(verbose=False)
+        s_g.build(verbose=False)
+        # 2.0 * s_g internally normalizes domain to list-of-lists;
+        # adding to s_f (still tuple-of-tuples) must succeed.
+        h = s_f + 2.0 * s_g
+        # f + 2*g = x - 2x = -x; at x=0.3 should be -0.3
+        assert abs(h.eval([0.3], [0]) - (-0.3)) < 1e-12
+
+    def test_n_nodes_int_vs_list_difference_still_fails(self):
+        """Sanity: legitimate n_nodes mismatch still raises."""
+        def f(x, _): return x[0]
+        cheb_5 = ChebyshevApproximation(f, 1, [[-1, 1]], [5])
+        cheb_7 = ChebyshevApproximation(f, 1, [[-1, 1]], [7])
+        cheb_5.build(verbose=False)
+        cheb_7.build(verbose=False)
+        with pytest.raises(ValueError, match="[Nn]ode"):
+            _ = cheb_5 + cheb_7
