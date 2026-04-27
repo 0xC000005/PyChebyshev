@@ -5,6 +5,41 @@ All notable changes to PyChebyshev will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [0.20.1] - 2026-04-27
+
+### Fixed — TT `_dim_order` Full Threading
+
+- `ChebyshevTT.eval_multi()`, `slice()`, `extrude()`, `to_dense()`, partial
+  `integrate(dims=...)`, and unary algebra (`__neg__`, scalar `__mul__`,
+  `__rmul__`, `__truediv__`, `__imul__`, `__itruediv__`) now correctly
+  thread `_dim_order` through their implementations. The v0.20
+  `NotImplementedError` guards on these methods are removed; users with
+  TTs built via `with_auto_order` can now use the full surface
+  transparently.
+- Binary algebra (`__add__`, `__sub__`, `__iadd__`, `__isub__`) now
+  succeeds when both operands share the same `_dim_order`, with the
+  result inheriting that order. Mismatched `_dim_order` raises
+  `ValueError` (instead of v0.20's `NotImplementedError`) with a hint
+  pointing at `reorder()`.
+
+### Added
+
+- `ChebyshevTT.reorder(new_order, *, max_rank=None, tolerance=None)` —
+  realign storage to a target permutation via TT-swap (adjacent-axis
+  SVDs in coefficient space). Functional API; returns a new TT.
+  Accepts `max_rank=` and `tolerance=` overrides for swap-time SVD
+  truncation. Used as the explicit alignment escape hatch for binary
+  algebra between TTs of different `dim_order`.
+- New private helper `_tt_swap_adjacent()` in `_algebra.py`.
+- `compare_v0201_dim_threading.py` — repo-root script demonstrating
+  the full TT surface working under non-identity `dim_order`.
+
+### Tests
+
+- New `tests/test_v0201_dim_threading.py` (~40 tests).
+- `tests/test_v020_adaptive_refinement.py::TestDimOrderGuards` updated:
+  guard tests flipped from "raises NotImplementedError" to "now works".
+
 ## [0.20.0] - 2026-04-26
 
 ### Added — Adaptive Refinement + Cross-Language Interop
