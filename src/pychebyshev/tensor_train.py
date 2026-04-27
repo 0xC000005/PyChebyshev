@@ -2258,6 +2258,105 @@ class ChebyshevTT:
         """
         return list(self._dim_order)
 
+    def reorder(
+        self,
+        new_order,
+        *,
+        max_rank=None,
+        tolerance=None,
+    ) -> "ChebyshevTT":
+        """Return a new TT whose storage permutation matches ``new_order``.
+
+        Implements the realignment via TT-swap (adjacent-axis SVDs in
+        coefficient space). The swap sequence is determined by bubble-sorting
+        the current ``self._dim_order`` into ``new_order``; each swap costs
+        an SVD over the merged 2-core block.
+
+        Parameters
+        ----------
+        new_order : sequence of int
+            Target permutation. Must be a permutation of
+            ``range(self.num_dimensions)``. The result has ``dim_order ==
+            list(new_order)``.
+        max_rank : int, optional
+            Cap for the rank introduced by each swap's SVD. Defaults to
+            ``self.max_rank``.
+        tolerance : float, optional
+            Relative singular-value cutoff for each swap's SVD. Defaults to
+            ``self.tolerance``.
+
+        Returns
+        -------
+        ChebyshevTT
+            New TT representing the same function with storage permuted to
+            ``new_order``. ``self`` is not mutated.
+
+        Raises
+        ------
+        ValueError
+            If ``new_order`` is not a permutation of
+            ``range(self.num_dimensions)``.
+        """
+        from pychebyshev._algebra import _tt_swap_adjacent
+
+        self._check_built()
+        new_order = list(new_order)
+        d = self.num_dimensions
+        if sorted(new_order) != list(range(d)):
+            raise ValueError(
+                f"new_order must be a permutation of range({d}); got {new_order!r}"
+            )
+        if new_order == self._dim_order:
+            return self.clone()
+
+        eff_max_rank = self.max_rank if max_rank is None else max_rank
+        eff_tol = self.tolerance if tolerance is None else tolerance
+
+        # Bubble-sort current_order into new_order via adjacent swaps.
+        current_order = list(self._dim_order)
+        cores = [c.copy() for c in self._coeff_cores]
+        n_nodes = list(self.n_nodes)
+        domain = list(self.domain)
+
+        # For each target position k, find where the desired orig dim lives
+        # right now and bubble it leftward into place.
+        for k in range(d):
+            target_orig = new_order[k]
+            j = current_order.index(target_orig)
+            while j > k:
+                cores = _tt_swap_adjacent(
+                    cores, j - 1, max_rank=eff_max_rank, tolerance=eff_tol
+                )
+                current_order[j - 1], current_order[j] = (
+                    current_order[j], current_order[j - 1]
+                )
+                n_nodes[j - 1], n_nodes[j] = n_nodes[j], n_nodes[j - 1]
+                domain[j - 1], domain[j] = domain[j], domain[j - 1]
+                j -= 1
+
+        assert current_order == new_order
+
+        obj = self.__class__.__new__(self.__class__)
+        obj.function = None
+        obj.num_dimensions = d
+        obj.domain = domain
+        obj.n_nodes = n_nodes
+        obj.max_rank = self.max_rank
+        obj.tolerance = self.tolerance
+        obj.max_sweeps = self.max_sweeps
+        obj.max_derivative_order = self.max_derivative_order
+        obj.additional_data = self.additional_data
+        obj.descriptor = self.descriptor
+        obj.method = self.method
+        obj._coeff_cores = cores
+        obj._tt_ranks = [c.shape[0] for c in cores] + [cores[-1].shape[2]]
+        obj._built = True
+        obj._build_time = 0.0
+        obj._total_build_evals = 0
+        obj._cached_error_estimate = None
+        obj._dim_order = list(new_order)
+        return obj
+
     # ------------------------------------------------------------------
     # Serialization
     # ------------------------------------------------------------------

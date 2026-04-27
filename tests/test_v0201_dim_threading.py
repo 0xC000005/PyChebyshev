@@ -69,3 +69,58 @@ class TestTtSwapAdjacent:
             _tt_swap_adjacent(list(tt._coeff_cores), i=5, max_rank=10)
         with pytest.raises(ValueError, match="out of range"):
             _tt_swap_adjacent(list(tt._coeff_cores), i=-1, max_rank=10)
+
+
+class TestReorder:
+    """Tests for the public ChebyshevTT.reorder() method."""
+
+    def _build_3d(self):
+        f = lambda p, _: np.sin(p[0]) + p[1] ** 2 + np.cos(p[2])
+        tt = ChebyshevTT(
+            f, 3, [[-1, 1], [-1, 1], [-1, 1]], [9, 9, 9],
+            tolerance=1e-10, max_rank=12,
+        )
+        tt.build()
+        return tt
+
+    def test_reorder_to_same_is_clone(self):
+        """reorder(self.dim_order) returns an independent clone with same eval."""
+        tt = self._build_3d()
+        canonical = list(range(tt.num_dimensions))
+        assert tt.dim_order == canonical
+        new = tt.reorder(canonical)
+        assert new is not tt
+        assert new.dim_order == canonical
+        pt = [0.3, -0.7, 0.5]
+        assert abs(new.eval(pt) - tt.eval(pt)) < 1e-10
+
+    def test_reorder_eval_invariant(self):
+        """reorder() preserves eval at random points."""
+        tt = self._build_3d()
+        rng = np.random.default_rng(0)
+        new = tt.reorder([2, 0, 1])
+        assert new.dim_order == [2, 0, 1]
+        for _ in range(20):
+            pt = rng.uniform(-1, 1, size=3).tolist()
+            assert abs(new.eval(pt) - tt.eval(pt)) < 1e-7
+
+    def test_reorder_invalid_permutation(self):
+        """Non-permutation input raises ValueError."""
+        tt = self._build_3d()
+        with pytest.raises(ValueError, match="permutation"):
+            tt.reorder([0, 0, 1])
+        with pytest.raises(ValueError, match="permutation"):
+            tt.reorder([0, 1])
+
+    def test_reorder_storage_swap(self):
+        """reorder() swaps n_nodes and domain into storage order."""
+        f = lambda p, _: p[0] + 2 * p[1] + 3 * p[2]
+        tt = ChebyshevTT(
+            f, 3, [[-1, 1], [-2, 2], [-3, 3]], [3, 5, 7], tolerance=1e-10
+        )
+        tt.build()
+        new = tt.reorder([2, 0, 1])
+        # storage now: position 0 = orig dim 2, position 1 = orig dim 0,
+        # position 2 = orig dim 1.
+        assert new.n_nodes == [7, 3, 5]
+        assert new.domain == [[-3, 3], [-1, 1], [-2, 2]]
