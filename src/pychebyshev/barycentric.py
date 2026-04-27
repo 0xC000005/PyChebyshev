@@ -976,10 +976,41 @@ class ChebyshevApproximation:
         derivative_order = self._resolve_derivative_args(
             derivative_order, derivative_id
         )
+        if self.tensor_values is None:
+            raise RuntimeError("Call build() first")
+
+        # Hoist: apply all derivative-matrix matmuls once — they are
+        # point-independent (depend only on the grid, not on query coords).
+        # In vectorized_eval the D_T pass for dim d acts on the last axis
+        # of a tensor that has already had dims d+1..D-1 reduced away.
+        # Equivalently, on the full tensor it acts along axis d.  We move
+        # axis d to the last position, apply the matmul, then move it back.
+        tensor_with_derivs = self.tensor_values
+        for d in range(self.num_dimensions - 1, -1, -1):
+            deriv = derivative_order[d]
+            if deriv > 0:
+                D_T = self.diff_matrices[d].T
+                for _ in range(deriv):
+                    arr = np.moveaxis(tensor_with_derivs, d, -1)
+                    arr = arr @ D_T
+                    tensor_with_derivs = np.moveaxis(arr, -1, d)
+
+        # Per-point: only the barycentric reduction (no derivative passes).
+        _matmul = self._matmul_last_axis
         N = points.shape[0]
         results = np.empty(N)
         for i in range(N):
-            results[i] = self.vectorized_eval(points[i], derivative_order=derivative_order)
+            current = tensor_with_derivs
+            for d in range(self.num_dimensions - 1, -1, -1):
+                x = points[i, d]
+                diff = x - self.nodes[d]
+                exact = np.where(np.abs(diff) < 1e-14)[0]
+                if len(exact) > 0:
+                    current = current[..., exact[0]]
+                else:
+                    w_over_diff = self.weights[d] / diff
+                    current = _matmul(current, w_over_diff) / np.sum(w_over_diff)
+            results[i] = float(current)
         return results
 
     def vectorized_eval_multi(

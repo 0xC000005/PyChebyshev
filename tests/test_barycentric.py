@@ -501,3 +501,48 @@ class TestErrorEstimatePerDim:
         )
         with pytest.raises(RuntimeError, match="build"):
             cheb._error_estimate_per_dim()
+
+
+class TestVectorizedEvalBatchDerivativeHoist:
+    """v0.21.1: vectorized_eval_batch should produce identical results
+    before and after the derivative-matrix hoist. Non-regression tests."""
+
+    def test_batch_eval_value_only(self):
+        """Batch eval with derivative_order=[0] returns same as per-point eval."""
+        def f(x, _): return x[0] ** 2 + 0.5 * x[0]
+        cheb = ChebyshevApproximation(f, 1, [(-1, 1)], [10])
+        cheb.build(verbose=False)
+        points = np.array([[-0.7], [-0.3], [0.0], [0.4], [0.8]])
+        batch = cheb.vectorized_eval_batch(points, derivative_order=[0])
+        per_point = np.array([
+            cheb.vectorized_eval([float(p[0])], derivative_order=[0])
+            for p in points
+        ])
+        np.testing.assert_array_almost_equal(batch, per_point, decimal=12)
+
+    def test_batch_eval_with_derivative(self):
+        """Batch eval with derivative_order=[1] returns same as per-point."""
+        def f(x, _): return x[0] ** 2 + 0.5 * x[0]
+        cheb = ChebyshevApproximation(f, 1, [(-1, 1)], [10])
+        cheb.build(verbose=False)
+        points = np.array([[-0.7], [-0.3], [0.0], [0.4], [0.8]])
+        batch = cheb.vectorized_eval_batch(points, derivative_order=[1])
+        per_point = np.array([
+            cheb.vectorized_eval([float(p[0])], derivative_order=[1])
+            for p in points
+        ])
+        np.testing.assert_array_almost_equal(batch, per_point, decimal=12)
+
+    def test_batch_eval_2d_with_derivative(self):
+        """2D function, mixed derivative — batch matches per-point."""
+        def f(x, _): return x[0] ** 2 + x[1] ** 2
+        cheb = ChebyshevApproximation(f, 2, [(-1, 1), (-1, 1)], [8, 8])
+        cheb.build(verbose=False)
+        points = np.array([[-0.5, 0.3], [0.2, -0.4], [0.7, 0.1]])
+        batch = cheb.vectorized_eval_batch(points, derivative_order=[1, 0])
+        per_point = np.array([
+            cheb.vectorized_eval([float(p[0]), float(p[1])],
+                                  derivative_order=[1, 0])
+            for p in points
+        ])
+        np.testing.assert_array_almost_equal(batch, per_point, decimal=12)
