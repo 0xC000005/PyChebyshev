@@ -233,3 +233,46 @@ class TestPartialIntegrateThreading:
         for _ in range(5):
             pt = rng.uniform(-1, 1, size=1).tolist()
             assert abs(a.eval(pt) - b.eval(pt)) < 1e-7
+
+
+class TestToDenseThreading:
+    def test_to_dense_matches_canonical(self):
+        """to_dense returns the original-axis-order tensor regardless of dim_order."""
+        tt_canon = _build_non_identity_tt()
+        tt_perm = tt_canon.reorder([2, 0, 1])
+
+        dense_canon = tt_canon.to_dense()
+        dense_perm = tt_perm.to_dense()
+
+        # Both should be in original axis order with same shape.
+        assert dense_canon.shape == dense_perm.shape
+        assert np.allclose(dense_canon, dense_perm, atol=1e-7)
+
+    def test_to_dense_shape_in_original_axis_order(self):
+        """dense.shape matches n_nodes remapped to original-dim order."""
+        tt = _build_non_identity_tt().reorder([1, 0, 2])
+        dense = tt.to_dense()
+        # Build the expected shape in original-dim order from storage order.
+        n_per_orig = [
+            tt.n_nodes[tt._dim_order.index(d)] for d in range(tt.num_dimensions)
+        ]
+        assert dense.shape == tuple(n_per_orig)
+
+    def test_to_dense_eval_grid_consistency(self):
+        """A few corner grid points: dense[i] == eval at the corresponding point."""
+        f = lambda p, _: np.sin(p[0]) + p[1] ** 2 + np.cos(p[2])
+        tt = ChebyshevTT(
+            f, 3, [[-1, 1], [-2, 2], [-1, 1]], [5, 5, 5],
+            tolerance=1e-10, max_rank=12,
+        )
+        tt.build()
+        permuted = tt.reorder([2, 0, 1])
+        dense = permuted.to_dense()
+        # Build node lists in ORIGINAL-dim order from canonical TT for clarity.
+        from pychebyshev._extrude_slice import _make_nodes_for_dim
+        n0 = _make_nodes_for_dim(-1, 1, 5)
+        n1 = _make_nodes_for_dim(-2, 2, 5)
+        n2 = _make_nodes_for_dim(-1, 1, 5)
+        for (i, j, k) in [(0, 0, 0), (4, 4, 4), (2, 2, 2), (0, 4, 2)]:
+            pt = [n0[i], n1[j], n2[k]]
+            assert abs(dense[i, j, k] - permuted.eval(pt)) < 1e-7

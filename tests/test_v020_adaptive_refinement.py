@@ -401,10 +401,19 @@ class TestDimOrderGuards:
         with pytest.raises(NotImplementedError, match="dim_order"):
             tt.extrude([(2, [-1, 1], 4)])
 
-    def test_to_dense_with_non_identity_dim_order_raises(self):
+    def test_to_dense_with_non_identity_dim_order_works(self):
+        """v0.20.1 lifted the to_dense dim_order guard.
+
+        Returns a dense tensor in original-dim axis order. Verified in
+        detail by tests/test_v0201_dim_threading.py::TestToDenseThreading.
+        """
         tt = self._build_non_identity_tt()
-        with pytest.raises(NotImplementedError, match="dim_order"):
-            tt.to_dense()
+        dense = tt.to_dense()
+        # Shape is in original-dim axis order: remap n_nodes via _dim_order.
+        n_per_orig = [
+            tt.n_nodes[tt._dim_order.index(d)] for d in range(tt.num_dimensions)
+        ]
+        assert dense.shape == tuple(n_per_orig)
 
     def test_partial_integrate_with_non_identity_dim_order_works(self):
         """v0.20.1 lifted the partial-integrate dim_order guard.

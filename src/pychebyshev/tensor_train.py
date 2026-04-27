@@ -1702,21 +1702,12 @@ class ChebyshevTT:
         Use sparingly: storage is ``prod(n_nodes)`` floats. Useful for
         inspection, conversion, or piping through
         :meth:`ChebyshevApproximation.from_values` to convert TT → barycentric.
-
-        Raises
-        ------
-        NotImplementedError
-            If this TT was built via :meth:`with_auto_order` with a
-            non-identity ``_dim_order``. Full dim_order threading planned
-            for v0.20.1.
+        For TTs built with a non-identity ``_dim_order`` (e.g. via
+        :meth:`with_auto_order`), the returned tensor is transposed into
+        original-dim axis order so ``dense[i_0, ..., i_{d-1}]`` always
+        indexes axes by user-frame dim numbering.
         """
         self._check_built()
-        if self._dim_order != list(range(self.num_dimensions)):
-            raise NotImplementedError(
-                "to_dense() is not yet supported on TTs built via with_auto_order() "
-                "with a non-identity dim permutation. "
-                "Full dim_order threading is planned for v0.20.1."
-            )
 
         # Convert all coefficient cores to value cores
         value_cores = [_coeff_core_to_value_core(c) for c in self._coeff_cores]
@@ -1732,6 +1723,13 @@ class ChebyshevTT:
 
         # Squeeze the rank-1 boundary dimensions and reshape to n_nodes
         result = result.reshape(tuple(self.n_nodes))
+        # If non-identity dim_order, transpose into original-dim axis order.
+        canonical = list(range(self.num_dimensions))
+        if self._dim_order != canonical:
+            inv = [0] * self.num_dimensions
+            for storage_pos, orig_dim in enumerate(self._dim_order):
+                inv[orig_dim] = storage_pos
+            result = np.transpose(result, axes=inv)
         return result
 
     def extrude(self, params):
