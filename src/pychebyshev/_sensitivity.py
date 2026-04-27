@@ -11,6 +11,44 @@ from __future__ import annotations
 import numpy as np
 
 
+def _compute_chebyshev_coefficients(
+    tensor_values: np.ndarray, num_dimensions: int
+) -> np.ndarray:
+    """Convert tensor of function values at Chebyshev Type-I nodes to
+    Chebyshev expansion coefficients using the canonical PyChebyshev DCT
+    convention.
+
+    Each axis is processed with the same convention used by
+    ``ChebyshevApproximation._chebyshev_coefficients_1d``:
+    reverse along the axis, apply DCT-II, divide by n, and halve c_0.
+
+    Parameters
+    ----------
+    tensor_values : np.ndarray
+        Shape (n_0, ..., n_{d-1}).  Values at tensor-product Type-I nodes.
+    num_dimensions : int
+        Number of dimensions (equals ``tensor_values.ndim``).
+
+    Returns
+    -------
+    np.ndarray
+        Chebyshev coefficient tensor of the same shape.
+    """
+    from scipy.fft import dct
+
+    coeffs = tensor_values.copy().astype(np.float64)
+    for axis in range(num_dimensions):
+        n = coeffs.shape[axis]
+        reversed_along = np.flip(coeffs, axis=axis)
+        coeffs = dct(reversed_along, type=2, axis=axis) / n
+    # Halve c_0 along every axis (per PyChebyshev convention)
+    for d in range(num_dimensions):
+        slicer = [slice(None)] * num_dimensions
+        slicer[d] = 0
+        coeffs[tuple(slicer)] *= 0.5
+    return coeffs
+
+
 def _chebyshev_norm_squared(degree: int) -> float:
     """⟨T_n, T_n⟩ for Chebyshev T_n under weight ω(x) = 1/sqrt(1-x²)."""
     if degree == 0:

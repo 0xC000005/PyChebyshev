@@ -735,8 +735,15 @@ class ChebyshevSpline:
     def sobol_indices(self) -> dict:
         """Compute Sobol indices aggregated across spline pieces.
 
-        Each piece is treated independently; final indices weight per-piece
-        variances by piece-domain volume.
+        Indices are computed per-piece (under the Chebyshev measure
+        ω(x) = 1/sqrt(1-x²) on [-1, 1] mapped to each piece's local domain),
+        then aggregated by piece volume × piece variance.
+
+        Note
+        ----
+        Per-piece weighting uses uniform domain volume × Chebyshev-weighted
+        variance — a hybrid measure. For a single-piece (no-knot) spline,
+        this reduces to the Approximation case.
 
         Returns
         -------
@@ -749,8 +756,10 @@ class ChebyshevSpline:
         RuntimeError
             If ``build()`` has not been called.
         """
-        from pychebyshev._sensitivity import _compute_sobol_from_coeffs
-        from scipy.fft import dctn
+        from pychebyshev._sensitivity import (
+            _compute_chebyshev_coefficients,
+            _compute_sobol_from_coeffs,
+        )
 
         if not self._built:
             raise RuntimeError("Call build() first")
@@ -766,14 +775,9 @@ class ChebyshevSpline:
             for d in range(self.num_dimensions):
                 lo, hi = piece.domain[d]
                 vol *= (hi - lo)
-            coeffs = dctn(piece.tensor_values, type=2, norm="ortho")
-            if self.num_dimensions == 1:
-                coeffs[0] *= 0.5
-            else:
-                for d in range(self.num_dimensions):
-                    slicer = [slice(None)] * self.num_dimensions
-                    slicer[d] = 0
-                    coeffs[tuple(slicer)] *= 0.5
+            coeffs = _compute_chebyshev_coefficients(
+                piece.tensor_values, self.num_dimensions
+            )
             piece_result = _compute_sobol_from_coeffs(coeffs, self.num_dimensions)
             total_variance += vol * piece_result["variance"]
             for d in range(self.num_dimensions):
@@ -2164,6 +2168,12 @@ class ChebyshevSpline:
                 point = list(midpoint)
                 point[dim_idx] = float(x)
                 ys[i] = float(function(point, additional_data))
+
+            if not np.isfinite(ys).all():
+                raise ValueError(
+                    f"function returned non-finite values during scan on dim {dim_idx}; "
+                    "auto_knots requires a finite-valued function over the entire domain"
+                )
 
             d2 = np.abs(np.diff(ys, n=2))
             if len(d2) == 0:

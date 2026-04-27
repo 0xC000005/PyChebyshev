@@ -1283,21 +1283,17 @@ class ChebyshevApproximation:
         RuntimeError
             If ``build()`` has not been called.
         """
-        from pychebyshev._sensitivity import _compute_sobol_from_coeffs
-        from scipy.fft import dctn
+        from pychebyshev._sensitivity import (
+            _compute_chebyshev_coefficients,
+            _compute_sobol_from_coeffs,
+        )
 
         if self.tensor_values is None:
             raise RuntimeError("Call build() first")
 
-        coeffs = dctn(self.tensor_values, type=2, norm="ortho")
-        # PyChebyshev convention: c_0 is halved per dim
-        if self.num_dimensions == 1:
-            coeffs[0] *= 0.5
-        else:
-            for d in range(self.num_dimensions):
-                slicer = [slice(None)] * self.num_dimensions
-                slicer[d] = 0
-                coeffs[tuple(slicer)] *= 0.5
+        coeffs = _compute_chebyshev_coefficients(
+            self.tensor_values, self.num_dimensions
+        )
         return _compute_sobol_from_coeffs(coeffs, self.num_dimensions)
 
     def get_error_threshold(self) -> float | None:

@@ -102,6 +102,38 @@ class TestSobolIndicesInstance:
         assert "first_order" in result
         assert result["first_order"][0] == pytest.approx(1.0, abs=1e-3)
 
+    def test_sobol_with_constant_and_linear_modes(self):
+        """f(x,y) = x + y + xy should give first ≈ (0.4, 0.4), total ≈ (0.6, 0.6).
+
+        Regression test for the v0.20 DCT convention bug — fails with
+        norm='ortho' + post-hoc c_0 halving (returns ~0.333 and ~0.667).
+        """
+        def f(x, _):
+            return x[0] + x[1] + x[0] * x[1]
+
+        cheb = ChebyshevApproximation(f, 2, [[-1, 1], [-1, 1]], [10, 10])
+        cheb.build(verbose=False)
+        result = cheb.sobol_indices()
+        assert result["first_order"][0] == pytest.approx(0.4, abs=1e-3)
+        assert result["first_order"][1] == pytest.approx(0.4, abs=1e-3)
+        assert result["total_order"][0] == pytest.approx(0.6, abs=1e-3)
+        assert result["total_order"][1] == pytest.approx(0.6, abs=1e-3)
+
+    def test_sobol_with_three_term_function(self):
+        """f(x,y) = sin(x) + cos(y) + x*y — non-trivial mix of all three modes.
+
+        Verifies first_order[0] ≈ 0.584 (the bug returned 0.424).
+        """
+        def f(x, _):
+            return math.sin(x[0]) + math.cos(x[1]) + x[0] * x[1]
+
+        cheb = ChebyshevApproximation(f, 2, [[-1, 1], [-1, 1]], [12, 12])
+        cheb.build(verbose=False)
+        result = cheb.sobol_indices()
+        # first_order[0] should be ~0.584 under canonical convention;
+        # the buggy norm='ortho' path returns ~0.424 (27% error)
+        assert result["first_order"][0] == pytest.approx(0.584, abs=0.05)
+
 
 # ============================================================================
 # T3: ChebyshevSpline.auto_knots()
@@ -154,6 +186,15 @@ class TestAutoKnots:
         )
         knots = spl.get_special_points()[0]
         assert len(knots) <= 1
+
+    def test_auto_knots_rejects_nan_function(self):
+        def f(x, _):
+            if x[0] > 0.5:
+                return float("nan")
+            return abs(x[0])
+
+        with pytest.raises(ValueError, match="non-finite"):
+            ChebyshevSpline.auto_knots(f, 1, [[-1, 1]], max_knots_per_dim=3)
 
 
 # ============================================================================
