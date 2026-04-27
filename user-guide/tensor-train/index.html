@@ -1468,6 +1468,17 @@
 </li>
       
         <li class="md-nav__item">
+  <a href="#pychebyshev.tensor_train.ChebyshevTT.sobol_indices" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        sobol_indices
+      
+    </span>
+  </a>
+  
+</li>
+      
+        <li class="md-nav__item">
   <a href="#pychebyshev.tensor_train.ChebyshevTT.from_values" class="md-nav__link">
     <span class="md-ellipsis">
       
@@ -2985,6 +2996,17 @@
     <span class="md-ellipsis">
       
         clone
+      
+    </span>
+  </a>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#pychebyshev.tensor_train.ChebyshevTT.sobol_indices" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        sobol_indices
       
     </span>
   </a>
@@ -6442,7 +6464,9 @@ returns the underlying full grid the cross algorithm samples from
             </td>
             <td>
               <div class="doc-md-description">
-                <p>Shape <code>(N, num_dimensions)</code> where <code>N = prod(n_nodes)</code>.</p>
+                <p>Shape <code>(N, num_dimensions)</code> where <code>N = prod(n_nodes)</code>.
+Columns are in user-frame order: column <code>d</code> corresponds to
+user-frame dim <code>d</code> regardless of internal <code>_dim_order</code>.</p>
               </div>
             </td>
           </tr>
@@ -6500,6 +6524,81 @@ only :meth:<code>build</code> (which requires a function) does not.</p>
       </tbody>
     </table>
 
+
+    </div>
+
+</div>
+
+<div class="doc doc-object doc-function">
+
+
+<h2 id="pychebyshev.tensor_train.ChebyshevTT.sobol_indices" class="doc doc-heading">
+            <code class="highlight language-python"><span class="n">sobol_indices</span><span class="p">()</span></code>
+
+<a href="#pychebyshev.tensor_train.ChebyshevTT.sobol_indices" class="headerlink" title="Permanent link">&para;</a></h2>
+
+
+    <div class="doc doc-contents ">
+
+        <p>Compute first-order + total-order Sobol sensitivity indices.</p>
+
+
+    <p><span class="doc-section-title">Returns:</span></p>
+    <table>
+      <thead>
+        <tr>
+          <th>Type</th>
+          <th>Description</th>
+        </tr>
+      </thead>
+      <tbody>
+          <tr class="doc-section-item">
+            <td>
+                  <code><span title="dict">dict</span></code>
+            </td>
+            <td>
+              <div class="doc-md-description">
+                <p><code>{"first_order": {dim: index}, "total_order": {dim: index},
+"variance": float}</code> -- keyed by user-frame dim indices.</p>
+              </div>
+            </td>
+          </tr>
+      </tbody>
+    </table>
+
+
+<p><span class="doc-section-title">Raises:</span></p>
+    <table>
+      <thead>
+        <tr>
+          <th>Type</th>
+          <th>Description</th>
+        </tr>
+      </thead>
+      <tbody>
+          <tr class="doc-section-item">
+            <td>
+                  <code><span title="RuntimeError">RuntimeError</span></code>
+            </td>
+            <td>
+              <div class="doc-md-description">
+                <p>If <code>build()</code> has not been called.</p>
+              </div>
+            </td>
+          </tr>
+      </tbody>
+    </table>
+
+
+<details class="note" open>
+  <summary>Notes</summary>
+  <p>Computed natively by contracting through the TT coefficient cores;
+no dense materialization. Cost O(d * n * r^2) per dim. Mathematically
+equivalent to <code>ChebyshevApproximation.sobol_indices()</code> on the
+dense version of the same function.</p>
+<p>Under non-identity <code>_dim_order</code> (after <code>with_auto_order</code> /
+<code>reorder</code>), result keys are user-frame dim indices.</p>
+</details>
 
     </div>
 
