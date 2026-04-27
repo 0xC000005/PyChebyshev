@@ -1175,6 +1175,54 @@ class ChebyshevSlider:
             n_nodes=[int(n)],
         )
 
+    def roots(self, dim=None, fixed=None):
+        """Find all roots of the slider along a specified dimension.
+
+        Reduces to a 1-D problem by slicing all other dimensions to
+        their fixed values, then delegates to
+        ``ChebyshevApproximation.roots()`` (which uses the colleague
+        matrix eigenvalue method, Good 1961).
+
+        Parameters
+        ----------
+        dim : int or None
+            Dimension along which to find roots. For 1-D sliders,
+            defaults to 0.
+        fixed : dict or None
+            For multi-D sliders, ``{dim_index: value}`` for **all**
+            dimensions except *dim*.
+
+        Returns
+        -------
+        ndarray
+            Sorted real root locations in the physical domain.
+
+        Raises
+        ------
+        RuntimeError
+            If ``build()`` has not been called.
+        ValueError
+            If *dim* / *fixed* validation fails or values are out of domain.
+
+        References
+        ----------
+        Good (1961), "The colleague matrix", Quarterly J. Math. 12(1):61–68.
+        Trefethen (2013), "Approximation Theory and Approximation Practice",
+        SIAM, Chapter 18.
+        """
+        if not self._built:
+            raise RuntimeError("Call build() first")
+
+        from pychebyshev._calculus import _validate_calculus_args
+
+        dim, slice_params = _validate_calculus_args(
+            self.num_dimensions, dim, fixed, self.domain
+        )
+
+        sliced = self.slice(slice_params) if slice_params else self
+        cheb_1d = self._to_1d_chebyshev(sliced)
+        return cheb_1d.roots()
+
     def _check_slider_compatible(self, other):
         """Validate that two sliders can be combined arithmetically."""
         from pychebyshev._algebra import _check_compatible
