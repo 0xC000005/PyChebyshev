@@ -1133,6 +1133,9 @@ class ChebyshevTT:
         self._total_build_evals: int = 0
         self._cached_error_estimate: float | None = None
         self.method: str | None = None
+        # Dimension order: _dim_order[k] = original dim index stored at TT position k.
+        # Identity by default; set by with_auto_order() for permuted builds.
+        self._dim_order: List[int] = list(range(num_dimensions))
 
     def build(
         self,
@@ -1636,6 +1639,7 @@ class ChebyshevTT:
         result_tt.descriptor = self.descriptor
         result_tt.additional_data = self.additional_data
         result_tt.method = self.method
+        result_tt._dim_order = list(range(len(kept_dims)))
         return result_tt
 
     def to_dense(self) -> np.ndarray:
@@ -1738,6 +1742,7 @@ class ChebyshevTT:
         obj._build_time = 0.0
         obj._total_build_evals = 0
         obj._cached_error_estimate = None
+        obj._dim_order = list(range(len(new_n_nodes)))
         return obj
 
     def slice(self, params):
@@ -1819,6 +1824,7 @@ class ChebyshevTT:
         obj._build_time = 0.0
         obj._total_build_evals = 0
         obj._cached_error_estimate = None
+        obj._dim_order = list(range(len(new_n_nodes)))
         return obj
 
     def eval(self, point: List[float]) -> float:
@@ -1852,6 +1858,12 @@ class ChebyshevTT:
             If ``build()`` has not been called.
         """
         self._check_built()
+
+        # Remap user coordinates to internal TT storage order when a non-identity
+        # dim_order was set by with_auto_order().  Identity order is a no-op.
+        canonical = list(range(self.num_dimensions))
+        if self._dim_order != canonical:
+            point = [point[self._dim_order[k]] for k in range(self.num_dimensions)]
 
         result = np.ones((1, 1))
         for d in range(self.num_dimensions):
@@ -1897,6 +1909,10 @@ class ChebyshevTT:
         self._check_built()
 
         points = np.asarray(points)
+        # Remap columns from user's original dim order to internal storage order.
+        canonical = list(range(self.num_dimensions))
+        if self._dim_order != canonical:
+            points = points[:, self._dim_order]
         N = points.shape[0]
         result = np.ones((N, 1, 1))
 
@@ -2172,6 +2188,23 @@ class ChebyshevTT:
         """
         return self._total_build_evals
 
+    @property
+    def dim_order(self) -> List[int]:
+        """Permutation of original dimension indices applied at construction.
+
+        ``dim_order[k]`` is the original dimension index stored at TT position
+        ``k``.  For a default (non-permuted) TT this is ``[0, 1, ..., d-1]``.
+        For a TT built by :meth:`with_auto_order` it reflects the chosen
+        ordering.  :meth:`eval` uses this to transparently remap user-supplied
+        coordinates into the internal storage order.
+
+        Returns
+        -------
+        list of int
+            A copy of the internal permutation vector.
+        """
+        return list(self._dim_order)
+
     # ------------------------------------------------------------------
     # Serialization
     # ------------------------------------------------------------------
@@ -2211,6 +2244,9 @@ class ChebyshevTT:
             self.descriptor = ""
         if not hasattr(self, "max_derivative_order"):
             self.max_derivative_order = 2
+        # v0.20: backfill dim_order for pickles saved before with_auto_order existed
+        if not hasattr(self, "_dim_order"):
+            self._dim_order = list(range(self.num_dimensions))
 
     def is_construction_finished(self) -> bool:
         """Return True iff this TT interpolant is built and usable."""
@@ -2404,7 +2440,162 @@ class ChebyshevTT:
         obj._build_time = 0.0
         obj._total_build_evals = 0
         obj._cached_error_estimate = None
+        obj._dim_order = list(range(num_dimensions))
         return obj
+
+    @classmethod
+    def with_auto_order(
+        cls,
+        function,
+        num_dimensions: int,
+        domain,
+        n_nodes,
+        *,
+        max_rank: int = 10,
+        tolerance: float = 1e-6,
+        max_sweeps: int = 10,
+        additional_data=None,
+        n_trials: int = 5,
+        method: str = "greedy_swap",
+    ) -> "ChebyshevTT":
+        """Build a TT, trying multiple dim orderings, returning the lowest-rank result.
+
+        TT-Cross compression depends on the order in which dimensions are
+        processed.  Different orderings yield different TT ranks for the same
+        function.  This classmethod tries several permutations via the chosen
+        ``method`` and returns the TT whose total rank (sum of all bond
+        dimensions) is smallest.
+
+        The returned TT has its :attr:`dim_order` set to the chosen permutation.
+        :meth:`eval` and :meth:`eval_batch` transparently remap user-supplied
+        coordinates so the caller never needs to permute by hand.
+
+        Parameters
+        ----------
+        function : callable
+            Function ``f(point, data) -> float`` in the *original* dimension
+            order (i.e., ``point[0]`` is the first user dimension, etc.).
+        num_dimensions : int
+            Number of input dimensions.
+        domain : list of (float, float)
+            Bounds for each dimension in the original order.
+        n_nodes : list of int
+            Node counts per dimension in the original order.
+        max_rank : int, optional
+            Maximum TT rank passed to each trial build.  Default is 10.
+        tolerance : float, optional
+            Convergence tolerance passed to each trial build.  Default is 1e-6.
+        max_sweeps : int, optional
+            Maximum TT-Cross sweeps per trial.  Default is 10.
+        additional_data : object, optional
+            Passed through to ``function`` as its second argument.
+        n_trials : int, optional
+            Number of swap iterations / random permutations to attempt.
+            Default is 5.
+        method : ``"greedy_swap"`` or ``"random"``, optional
+            Ordering strategy.
+
+            ``"greedy_swap"`` (default) starts from the canonical order and
+            greedily performs adjacent transpositions that reduce total rank,
+            repeating up to ``n_trials`` outer iterations.
+
+            ``"random"`` samples ``n_trials`` random permutations in addition
+            to the canonical order and picks the best.
+
+        Returns
+        -------
+        ChebyshevTT
+            Built TT with possibly-permuted dim order; the :attr:`dim_order`
+            property records the chosen permutation.
+
+        Raises
+        ------
+        ValueError
+            If ``method`` is not one of the supported values.
+
+        Notes
+        -----
+        Each trial is a full TT-Cross build.  With ``greedy_swap`` and
+        ``n_trials=5`` on a 5-D function, up to ~13 builds may be performed.
+        For expensive functions use a small ``n_trials`` or ``method='random'``
+        with a small ``n_trials``.
+
+        Factory-derived objects (``slice``, ``extrude``, algebra results) have
+        an identity dim_order regardless of the source TT's order, because
+        dimension indices shift when dims are added/removed.
+        """
+        import numpy as np
+
+        def build_with_order(order):
+            """Build a TT with dimensions permuted according to *order*.
+
+            ``order[k]`` is the original dimension index placed at TT position k.
+            The permuted function and domain/n_nodes are constructed internally;
+            the returned TT has ``_dim_order = list(order)`` so that ``eval``
+            can remap back to the original ordering transparently.
+            """
+            perm_domain = [domain[order[k]] for k in range(num_dimensions)]
+            perm_n_nodes = [n_nodes[order[k]] for k in range(num_dimensions)]
+
+            def perm_f(point, ad):
+                # point is in PERMUTED order; map each coordinate back to orig dim
+                orig = [0.0] * num_dimensions
+                for k in range(num_dimensions):
+                    orig[order[k]] = point[k]
+                return function(orig, ad)
+
+            tt = cls(
+                perm_f, num_dimensions, perm_domain, perm_n_nodes,
+                max_rank=max_rank, tolerance=tolerance, max_sweeps=max_sweeps,
+                additional_data=additional_data,
+            )
+            tt.build(verbose=False)
+            # Record which original dim lives at each TT position
+            tt._dim_order = list(order)
+            return tt
+
+        def total_rank(tt):
+            return sum(tt.tt_ranks)
+
+        canonical = list(range(num_dimensions))
+        best_tt = build_with_order(canonical)
+        best_rank = total_rank(best_tt)
+
+        if method == "random":
+            rng = np.random.default_rng(42)
+            for _ in range(n_trials):
+                perm = rng.permutation(num_dimensions).tolist()
+                tt = build_with_order(perm)
+                r = total_rank(tt)
+                if r < best_rank:
+                    best_tt = tt
+                    best_rank = r
+        elif method == "greedy_swap":
+            improved = True
+            trial = 0
+            while improved and trial < n_trials:
+                improved = False
+                current = best_tt.dim_order
+                for i in range(num_dimensions - 1):
+                    trial_order = list(current)
+                    trial_order[i], trial_order[i + 1] = (
+                        trial_order[i + 1], trial_order[i]
+                    )
+                    tt = build_with_order(trial_order)
+                    r = total_rank(tt)
+                    if r < best_rank:
+                        best_tt = tt
+                        best_rank = r
+                        improved = True
+                        break
+                trial += 1
+        else:
+            raise ValueError(
+                f"with_auto_order: unknown method {method!r}; "
+                "expected 'greedy_swap' or 'random'"
+            )
+
+        return best_tt
 
     @staticmethod
     def nodes(num_dimensions, domain, n_nodes):
@@ -2633,6 +2824,7 @@ class ChebyshevTT:
         obj._build_time = 0.0
         obj._total_build_evals = 0
         obj._cached_error_estimate = None
+        obj._dim_order = list(range(self.num_dimensions))
         return obj
 
     def __neg__(self) -> "ChebyshevTT":
@@ -2659,6 +2851,7 @@ class ChebyshevTT:
         obj._build_time = 0.0
         obj._total_build_evals = 0
         obj._cached_error_estimate = None
+        obj._dim_order = list(range(self.num_dimensions))
         return obj
 
     def __sub__(self, other: "ChebyshevTT") -> "ChebyshevTT":
@@ -2697,6 +2890,7 @@ class ChebyshevTT:
         obj._build_time = 0.0
         obj._total_build_evals = 0
         obj._cached_error_estimate = None
+        obj._dim_order = list(range(self.num_dimensions))
         return obj
 
     def __rmul__(self, scalar) -> "ChebyshevTT":

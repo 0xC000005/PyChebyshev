@@ -154,3 +154,69 @@ class TestAutoKnots:
         )
         knots = spl.get_special_points()[0]
         assert len(knots) <= 1
+
+
+# ============================================================================
+# T4: TT auto dim reordering
+# ============================================================================
+
+def _t4_f_5d(x, _):
+    return math.sin(x[0]) * math.cos(x[2]) + x[1] * x[4]
+
+
+class TestAutoDimOrder:
+    def test_with_auto_order_returns_tt(self):
+        tt = ChebyshevTT.with_auto_order(
+            _t4_f_5d, 5, [[-1, 1]] * 5, [6] * 5,
+            max_rank=8, n_trials=3,
+        )
+        assert isinstance(tt, ChebyshevTT)
+        assert tt.num_dimensions == 5
+
+    def test_dim_order_property_default(self):
+        def f(x, _):
+            return x[0]
+        tt = ChebyshevTT(f, 1, [[-1, 1]], [4])
+        tt.build(verbose=False)
+        assert tt.dim_order == [0]
+
+    def test_dim_order_after_with_auto_order(self):
+        tt = ChebyshevTT.with_auto_order(
+            _t4_f_5d, 5, [[-1, 1]] * 5, [6] * 5,
+            max_rank=8, n_trials=3,
+        )
+        assert sorted(tt.dim_order) == [0, 1, 2, 3, 4]
+
+    def test_eval_accepts_original_order(self):
+        tt = ChebyshevTT.with_auto_order(
+            _t4_f_5d, 5, [[-1, 1]] * 5, [6] * 5,
+            max_rank=8, n_trials=3,
+        )
+        ref = ChebyshevTT(_t4_f_5d, 5, [[-1, 1]] * 5, [6] * 5, max_rank=8)
+        ref.build(verbose=False)
+        x_test = [0.3, -0.4, 0.5, 0.1, -0.2]
+        np.testing.assert_allclose(
+            tt.eval(x_test), ref.eval(x_test), atol=1e-5
+        )
+
+    def test_save_load_preserves_dim_order(self, tmp_path):
+        tt = ChebyshevTT.with_auto_order(
+            _t4_f_5d, 5, [[-1, 1]] * 5, [6] * 5,
+            max_rank=8, n_trials=3,
+        )
+        path = tmp_path / "tt.pkl"
+        tt.save(str(path))
+        loaded = ChebyshevTT.load(str(path))
+        assert loaded.dim_order == tt.dim_order
+
+    def test_pre_v020_pickle_backfills_dim_order(self):
+        def f(x, _):
+            return x[0]
+        tt = ChebyshevTT(f, 1, [[-1, 1]], [4])
+        tt.build(verbose=False)
+        state = tt.__getstate__()
+        if "_dim_order" in state:
+            del state["_dim_order"]
+        restored = ChebyshevTT.__new__(ChebyshevTT)
+        restored.__setstate__(state)
+        assert restored.dim_order == [0]
