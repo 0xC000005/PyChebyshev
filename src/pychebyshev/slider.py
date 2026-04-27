@@ -1135,6 +1135,44 @@ class ChebyshevSlider:
         obj._derivative_id_to_orders = []
         return obj
 
+    def _to_1d_chebyshev(self, sliced_1d):
+        """Build a 1-D ChebyshevApproximation from a 1-D Slider.
+
+        Evaluates *sliced_1d* at the Type-I Chebyshev nodes of its
+        surviving dimension and constructs a ``ChebyshevApproximation``
+        via ``from_values``. The result is bit-identical equivalent to
+        a direct ``ChebyshevApproximation`` build of the same function
+        over the same nodes.
+
+        Parameters
+        ----------
+        sliced_1d : ChebyshevSlider
+            A 1-D Slider (``num_dimensions == 1``).
+
+        Returns
+        -------
+        ChebyshevApproximation
+            1-D Chebyshev approximation matching *sliced_1d*'s values.
+        """
+        from pychebyshev.barycentric import ChebyshevApproximation
+
+        n = sliced_1d.n_nodes[0]
+        a, b = sliced_1d.domain[0]
+        # Type-I Chebyshev nodes in [a, b], ascending order
+        k = np.arange(n)
+        t = -np.cos((2.0 * k + 1.0) * np.pi / (2.0 * n))
+        cheb_nodes = 0.5 * (a + b) + 0.5 * (b - a) * t
+
+        values = np.array([
+            float(sliced_1d.eval([float(x)], derivative_order=[0])) for x in cheb_nodes
+        ])
+        return ChebyshevApproximation.from_values(
+            values,
+            num_dimensions=1,
+            domain=[(float(a), float(b))],
+            n_nodes=[int(n)],
+        )
+
     def _check_slider_compatible(self, other):
         """Validate that two sliders can be combined arithmetically."""
         from pychebyshev._algebra import _check_compatible

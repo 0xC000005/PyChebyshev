@@ -639,3 +639,42 @@ class TestSliderIntegrateValidation:
         slider.build(verbose=False)
         with pytest.raises(ValueError):
             slider.integrate(dims=[0], bounds=[(-2.0, 2.0)])
+
+
+# ======================================================================
+# v0.21 — Slider/TT roots, minimize, maximize
+# ======================================================================
+
+class TestSliderTo1DChebyshev:
+    """Slider._to_1d_chebyshev: build a 1-D ChebyshevApproximation from
+    a 1-D Slider via eval at Chebyshev nodes."""
+
+    def test_to_1d_chebyshev_recovers_function(self):
+        """1-D Slider built from f(x) = x^3, _to_1d_chebyshev returns
+        a 1-D Approximation with the same values."""
+        def f(x, _): return x[0] ** 3
+        slider = ChebyshevSlider(
+            f, num_dimensions=1, domain=[(-1, 1)], n_nodes=[7],
+            partition=[[0]], pivot_point=[0.0],
+        )
+        slider.build(verbose=False)
+        cheb_1d = slider._to_1d_chebyshev(slider)
+        # Compare on a fine grid
+        for x in np.linspace(-0.9, 0.9, 11):
+            expected = x ** 3
+            got = float(cheb_1d.eval([float(x)], derivative_order=[0]))
+            assert abs(got - expected) < 1e-10, f"x={x}: got {got}, expected {expected}"
+
+    def test_to_1d_chebyshev_preserves_domain_and_n_nodes(self):
+        """The 1-D Approximation has the same domain and n_nodes as input."""
+        def f(x, _): return x[0]
+        slider = ChebyshevSlider(
+            f, num_dimensions=1, domain=[(-2.5, 3.5)], n_nodes=[9],
+            partition=[[0]], pivot_point=[0.0],
+        )
+        slider.build(verbose=False)
+        cheb_1d = slider._to_1d_chebyshev(slider)
+        assert cheb_1d.num_dimensions == 1
+        assert cheb_1d.domain[0][0] == -2.5
+        assert cheb_1d.domain[0][1] == 3.5
+        assert cheb_1d.n_nodes[0] == 9
