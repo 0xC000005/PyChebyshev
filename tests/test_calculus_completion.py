@@ -311,6 +311,23 @@ class TestTTIntegrateBoundsAndValidation:
         loaded = ChebyshevTT.load(str(path))
         assert loaded.eval([0.5]) == pytest.approx(result.eval([0.5]), abs=1e-12)
 
+    def test_out_of_domain_error_uses_user_frame_dim(self):
+        """Issue #20: error message must reference the user-frame dim
+        the user passed, not the storage-frame index."""
+        def f(x, _): return x[0] + x[1] + x[2]
+        tt = ChebyshevTT(
+            f, num_dimensions=3,
+            domain=[(-1, 1), (-2, 2), (-3, 3)], n_nodes=[5, 5, 5],
+        )
+        tt.build(verbose=False)
+        tt_reordered = tt.reorder([2, 0, 1])
+        # User passes dims=[1] (user-frame dim 1, range [-2, 2]).
+        # Pre-fix: error would reference dim 2 (storage position).
+        with pytest.raises(ValueError) as exc_info:
+            tt_reordered.integrate(dims=[1], bounds=[(5.0, 6.0)])
+        msg = str(exc_info.value)
+        assert "dim 1" in msg, f"Error message references wrong dim: {msg}"
+
 
 # ============================================================================
 # T6: Slider full integration (returns scalar)

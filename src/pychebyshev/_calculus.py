@@ -133,7 +133,7 @@ def _compute_sub_interval_weights(n: int, t_lo: float,
     return weights_desc[::-1].copy()
 
 
-def _normalize_bounds(dims, bounds, domain):
+def _normalize_bounds(dims, bounds, domain, dim_labels=None):
     """Normalize and validate the *bounds* parameter for ``integrate()``.
 
     Parameters
@@ -144,6 +144,12 @@ def _normalize_bounds(dims, bounds, domain):
         User-provided bounds specification.
     domain : list
         Per-dimension ``[lo, hi]`` bounds.
+    dim_labels : list of int or None
+        Optional override for dim labels used in error messages. When
+        ``None`` (default), error messages use the corresponding entry
+        from ``dims``. When provided, ``dim_labels[i]`` is used instead
+        of ``dims[i]`` so callers can present user-frame indices when
+        ``dims`` is in storage frame.
 
     Returns
     -------
@@ -173,14 +179,15 @@ def _normalize_bounds(dims, bounds, domain):
             result.append(None)
             continue
         lo, hi = bd
+        label = dim_labels[i] if dim_labels is not None else dims[i]
         if lo > hi:
-            raise ValueError(f"bounds lo={lo} > hi={hi} for dim {dims[i]}")
+            raise ValueError(f"bounds lo={lo} > hi={hi} for dim {label}")
         d = dims[i]
         dom_lo, dom_hi = domain[d]
         if lo < dom_lo - 1e-14 or hi > dom_hi + 1e-14:
             raise ValueError(
                 f"bounds ({lo}, {hi}) outside domain [{dom_lo}, {dom_hi}] "
-                f"for dim {d}"
+                f"for dim {label}"
             )
         lo = max(lo, dom_lo)
         hi = min(hi, dom_hi)

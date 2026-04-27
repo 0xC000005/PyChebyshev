@@ -1570,9 +1570,12 @@ class ChebyshevTT:
         # Normalize bounds: validates against domain in *storage* frame using
         # storage positions (since `self.domain[storage_pos]` gives the
         # physical domain of the corresponding original dim after reorder).
+        # Pass dims_sorted as dim_labels so error messages reference the
+        # user-frame dim the caller passed, not the storage-frame index.
         bounds_storage_dims = [storage_for[d] for d in dims_sorted]
         normalized_bounds = _normalize_bounds(
-            bounds_storage_dims, bounds, self.domain
+            bounds_storage_dims, bounds, self.domain,
+            dim_labels=dims_sorted,
         )
 
         # Compute scaled quadrature weights per *storage* position.
