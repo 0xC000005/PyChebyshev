@@ -89,7 +89,7 @@ The installable package. Public classes: `ChebyshevApproximation`, `ChebyshevSpl
   `inner_product` raises on mismatched `_dim_order`; `get_evaluation_points`
   returns user-frame columns; `eval_multi` no longer mutates `_dim_order`.
   Perf: vectorized `_optimize_1d` and `vectorized_eval_batch` derivative
-  hoist. `ChebyshevTT.sobol_indices` deferred to v0.22.
+  hoist. Adds `ChebyshevTT.sobol_indices()` parity (native TT contraction).
 
 ### Benchmark Scripts (project root)
 

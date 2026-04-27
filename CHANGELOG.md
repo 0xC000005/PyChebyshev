@@ -7,6 +7,14 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [0.21.1] - 2026-04-27
 
+### Added
+
+- `ChebyshevTT.sobol_indices()` — first-order and total-order Sobol
+  sensitivity indices computed natively by contracting through the TT
+  coefficient cores. O(d · n · r²) per dim, no dense materialization.
+  Mirrors v0.20 `ChebyshevApproximation.sobol_indices` API; keys are
+  user-frame dim indices regardless of internal `_dim_order`.
+
 ### Fixed
 
 - `ChebyshevTT.roots()`/`minimize()`/`maximize()` previously validated
@@ -53,8 +61,6 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
   correct behavior. The `inner_product` strict-mode raises on mismatched
   `_dim_order` (previously silently returned wrong numbers), which is
   a behavior change in the failure path only.
-- `ChebyshevTT.sobol_indices()` deferred to v0.22 (native TT
-  contraction implementation exceeded v0.21.1 time budget).
 
 ## [0.21.0] - 2026-04-27
 
