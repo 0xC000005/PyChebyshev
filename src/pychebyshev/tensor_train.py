@@ -1720,6 +1720,49 @@ class ChebyshevTT:
             n_nodes=[int(sliced_1d.n_nodes[0])],
         )
 
+    def roots(self, dim=None, fixed=None):
+        """Find all roots of the TT-approximated function along *dim*.
+
+        Reduces to a 1-D problem by slicing all other dimensions to
+        their fixed values, then delegates to
+        ``ChebyshevApproximation.roots()``. The user-frame dim/fixed
+        keys translate to storage frame transparently inside
+        ``self.slice()`` and ``self.to_dense()`` per v0.20.1 frame
+        discipline.
+
+        Parameters
+        ----------
+        dim : int or None
+            User-frame dimension index. Defaults to 0 for 1-D.
+        fixed : dict or None
+            ``{dim_index: value}`` for all dimensions except *dim*.
+            User-frame indices.
+
+        Returns
+        -------
+        ndarray
+            Sorted real root locations in the physical domain.
+
+        Raises
+        ------
+        RuntimeError
+            If ``build()`` has not been called.
+        ValueError
+            If validation fails or values are out of domain.
+        """
+        if not self._built:
+            raise RuntimeError("Call build() first")
+
+        from pychebyshev._calculus import _validate_calculus_args
+
+        dim, slice_params = _validate_calculus_args(
+            self.num_dimensions, dim, fixed, self.domain
+        )
+
+        sliced = self.slice(slice_params) if slice_params else self
+        cheb_1d = self._to_1d_chebyshev(sliced)
+        return cheb_1d.roots()
+
     def to_dense(self) -> np.ndarray:
         """Materialize the TT chain into a full N-D tensor of values.
 

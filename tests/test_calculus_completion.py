@@ -1028,3 +1028,66 @@ class TestTTTo1DChebyshev:
         assert abs(cheb_1d.domain[0][0] - (-2.5)) < 1e-12
         assert abs(cheb_1d.domain[0][1] - 3.5) < 1e-12
         assert cheb_1d.n_nodes[0] == 9
+
+
+class TestTTRoots:
+    """Tests for ChebyshevTT.roots()."""
+
+    def test_roots_quadratic_1d(self):
+        """1-D TT: roots of x^2 - 0.25 on [-1,1] are {-0.5, 0.5}."""
+        def f(x, _): return x[0] ** 2 - 0.25
+        tt = ChebyshevTT(f, num_dimensions=1, domain=[(-1, 1)], n_nodes=[10])
+        tt.build(verbose=False)
+        roots = tt.roots()
+        assert len(roots) == 2
+        for r, e in zip(roots, [-0.5, 0.5]):
+            assert abs(r - e) < 1e-9
+
+    def test_roots_no_roots_1d(self):
+        """1-D TT: exp(x) on [0,1] has no roots."""
+        def f(x, _): return math.exp(x[0])
+        tt = ChebyshevTT(f, num_dimensions=1, domain=[(0, 1)], n_nodes=[10])
+        tt.build(verbose=False)
+        roots = tt.roots()
+        assert len(roots) == 0
+
+    def test_roots_2d_fixed(self):
+        """2-D TT: f(x,y) = x - y, with y fixed at 0.3, root at x=0.3."""
+        def f(x, _): return x[0] - x[1]
+        tt = ChebyshevTT(f, num_dimensions=2, domain=[(-1, 1), (-1, 1)], n_nodes=[5, 5])
+        tt.build(verbose=False)
+        roots = tt.roots(dim=0, fixed={1: 0.3})
+        assert len(roots) == 1
+        assert abs(roots[0] - 0.3) < 1e-9
+
+    def test_roots_3d_fixed(self):
+        """3-D TT: f(x,y,z) = x*y - z, with y=2, z=0.5, root at x=0.25."""
+        def f(x, _): return x[0] * x[1] - x[2]
+        tt = ChebyshevTT(
+            f, num_dimensions=3,
+            domain=[(-1, 1), (1, 3), (-1, 1)], n_nodes=[7, 7, 7],
+        )
+        tt.build(verbose=False)
+        roots = tt.roots(dim=0, fixed={1: 2.0, 2: 0.5})
+        assert len(roots) == 1
+        assert abs(roots[0] - 0.25) < 1e-8
+
+    def test_roots_missing_fixed_raises(self):
+        def f(x, _): return x[0] + x[1]
+        tt = ChebyshevTT(f, num_dimensions=2, domain=[(-1, 1), (-1, 1)], n_nodes=[5, 5])
+        tt.build(verbose=False)
+        with pytest.raises(ValueError):
+            tt.roots(dim=0)
+
+    def test_roots_fixed_out_of_domain_raises(self):
+        def f(x, _): return x[0] + x[1]
+        tt = ChebyshevTT(f, num_dimensions=2, domain=[(-1, 1), (-1, 1)], n_nodes=[5, 5])
+        tt.build(verbose=False)
+        with pytest.raises(ValueError):
+            tt.roots(dim=0, fixed={1: 5.0})
+
+    def test_roots_before_build_raises(self):
+        def f(x, _): return x[0]
+        tt = ChebyshevTT(f, num_dimensions=1, domain=[(-1, 1)], n_nodes=[5])
+        with pytest.raises(RuntimeError, match="build"):
+            tt.roots()
