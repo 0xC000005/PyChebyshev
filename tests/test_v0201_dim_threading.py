@@ -192,3 +192,44 @@ class TestEvalMultiThreading:
             got = permuted.eval_multi(pt, derivs)
             for r, g in zip(ref, got):
                 assert abs(r - g) < 1e-2
+
+
+class TestPartialIntegrateThreading:
+    def test_partial_integrate_matches_canonical(self):
+        """Partial integrate over original-dim 0 gives same scalar/eval as canonical TT."""
+        tt_canon = _build_non_identity_tt()  # identity dim_order
+        tt_perm = tt_canon.reorder([2, 0, 1])
+
+        # Integrate out original dim 0.
+        result_canon = tt_canon.integrate(dims=[0])
+        result_perm = tt_perm.integrate(dims=[0])
+
+        # Both are 2D TTs in (orig dim 1, orig dim 2) ordering — surviving
+        # dims renumbered to 0..1 in original-order order.
+        assert result_canon.num_dimensions == 2
+        assert result_perm.num_dimensions == 2
+        rng = np.random.default_rng(2)
+        for _ in range(5):
+            pt = rng.uniform(-1, 1, size=2).tolist()
+            assert abs(result_canon.eval(pt) - result_perm.eval(pt)) < 1e-7
+
+    def test_partial_integrate_full_still_works(self):
+        """Full integrate (dims=None) is dim_order-invariant."""
+        tt_canon = _build_non_identity_tt()
+        tt_perm = tt_canon.reorder([1, 2, 0])
+        a = tt_canon.integrate()
+        b = tt_perm.integrate()
+        assert abs(a - b) < 1e-7
+
+    def test_partial_integrate_multiple_dims(self):
+        """Integrating two dims (orig 0 and 2) leaves a 1D TT over orig dim 1."""
+        tt_canon = _build_non_identity_tt()
+        tt_perm = tt_canon.reorder([2, 0, 1])
+        a = tt_canon.integrate(dims=[0, 2])
+        b = tt_perm.integrate(dims=[0, 2])
+        assert a.num_dimensions == 1
+        assert b.num_dimensions == 1
+        rng = np.random.default_rng(3)
+        for _ in range(5):
+            pt = rng.uniform(-1, 1, size=1).tolist()
+            assert abs(a.eval(pt) - b.eval(pt)) < 1e-7

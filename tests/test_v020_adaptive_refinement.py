@@ -406,10 +406,17 @@ class TestDimOrderGuards:
         with pytest.raises(NotImplementedError, match="dim_order"):
             tt.to_dense()
 
-    def test_partial_integrate_with_non_identity_dim_order_raises(self):
+    def test_partial_integrate_with_non_identity_dim_order_works(self):
+        """v0.20.1 lifted the partial-integrate dim_order guard.
+
+        Translates user-frame ``dims`` to storage positions and renumbers the
+        result ``_dim_order``. Verified in detail by
+        ``test_v0201_dim_threading.TestPartialIntegrateThreading``; here we
+        just confirm the guard no longer raises.
+        """
         tt = self._build_non_identity_tt()
-        with pytest.raises(NotImplementedError, match="dim_order"):
-            tt.integrate(dims=0)
+        result = tt.integrate(dims=0)
+        assert result.num_dimensions == tt.num_dimensions - 1
 
     def test_full_integrate_works_with_non_identity_dim_order(self):
         """Full integration is dim_order-invariant — should NOT raise."""

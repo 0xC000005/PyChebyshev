@@ -1532,7 +1532,9 @@ class ChebyshevTT:
 
         self._check_built()
 
-        # Normalize dims (None = all)
+        # Normalize dims (None = all). dims_sorted is in *user* frame
+        # (original-dim numbering). The user's dim labels are independent of
+        # the storage permutation `self._dim_order`.
         if dims is None:
             dims_sorted = list(range(self.num_dimensions))
         elif isinstance(dims, int):
@@ -1546,21 +1548,37 @@ class ChebyshevTT:
                 f"(num_dimensions={self.num_dimensions}, dims={dims_sorted})"
             )
 
-        # Normalize bounds: returns list of (lo, hi) or None per dim
-        normalized_bounds = _normalize_bounds(dims_sorted, bounds, self.domain)
+        # Translate user-frame dim indices to storage positions. The cores,
+        # domain, and n_nodes are all in storage frame after a reorder().
+        canonical = list(range(self.num_dimensions))
+        if self._dim_order != canonical:
+            # storage_pos for orig dim d == self._dim_order.index(d)
+            storage_for = {d: self._dim_order.index(d) for d in dims_sorted}
+        else:
+            storage_for = {d: d for d in dims_sorted}
+        integrated_storage = sorted(storage_for.values())
+        integrated_set = set(integrated_storage)
 
-        # Compute scaled quadrature weights per integrated dim.
+        # Normalize bounds: validates against domain in *storage* frame using
+        # storage positions (since `self.domain[storage_pos]` gives the
+        # physical domain of the corresponding original dim after reorder).
+        bounds_storage_dims = [storage_for[d] for d in dims_sorted]
+        normalized_bounds = _normalize_bounds(
+            bounds_storage_dims, bounds, self.domain
+        )
+
+        # Compute scaled quadrature weights per *storage* position.
         # Cores are in Chebyshev coefficient space; convert to value space
         # first via _coeff_core_to_value_core before applying Fejer-1 weights.
-        weights_per_dim = {}
-        for d, bd in zip(dims_sorted, normalized_bounds):
-            n = self.n_nodes[d]
-            a, b = self.domain[d]
+        weights_per_storage = {}
+        for sp, bd in zip(bounds_storage_dims, normalized_bounds):
+            n = self.n_nodes[sp]
+            a, b = self.domain[sp]
             if bd is None:
                 # Full domain: use standard Fejer-1 weights scaled by (b-a)/2
                 weights_unscaled = _compute_fejer1_weights(n)
                 scale = (b - a) / 2.0
-                weights_per_dim[d] = weights_unscaled * scale
+                weights_per_storage[sp] = weights_unscaled * scale
             else:
                 # Sub-interval: map bounds to reference [-1, 1], use
                 # _compute_sub_interval_weights which already returns the
@@ -1571,36 +1589,31 @@ class ChebyshevTT:
                 t_hi = 2.0 * (b_hi - a) / (b - a) - 1.0
                 weights_sub = _compute_sub_interval_weights(n, t_lo, t_hi)
                 scale = (b - a) / 2.0
-                weights_per_dim[d] = weights_sub * scale
+                weights_per_storage[sp] = weights_sub * scale
 
-        # Contract each integrated core: coefficient core → value core → M_k
+        # Contract each integrated core (by storage position):
+        # coefficient core → value core → M_k
         contracted = {}
-        for d in dims_sorted:
-            val_core = _coeff_core_to_value_core(self._coeff_cores[d])
-            contracted[d] = _integrate_tt_along_dim(val_core, weights_per_dim[d])
+        for sp in integrated_storage:
+            val_core = _coeff_core_to_value_core(self._coeff_cores[sp])
+            contracted[sp] = _integrate_tt_along_dim(
+                val_core, weights_per_storage[sp]
+            )
 
         if len(dims_sorted) == self.num_dimensions:
             # Full integration: chain-multiply all M_k matrices → scalar
             # Full integration is dim_order-invariant (sum is commutative),
-            # so no dim_order guard is needed here.
-            result = contracted[dims_sorted[0]]
-            for d in dims_sorted[1:]:
-                result = result @ contracted[d]
+            # so no dim_order guard is needed here. We chain in storage order
+            # to keep rank dims compatible.
+            result = contracted[integrated_storage[0]]
+            for sp in integrated_storage[1:]:
+                result = result @ contracted[sp]
             return float(result.ravel()[0])
-
-        # Partial integration returns a ChebyshevTT — dim_order must be identity
-        # or the result TT would have wrong core ordering.
-        if self._dim_order != list(range(self.num_dimensions)):
-            raise NotImplementedError(
-                "Partial integrate() is not yet supported on TTs built via "
-                "with_auto_order() with a non-identity dim permutation. "
-                "Full integration (all dims) works regardless of dim_order. "
-                "Full dim_order threading is planned for v0.20.1."
-            )
 
         # Partial integration: absorb each contracted matrix into a
         # neighboring kept core via matrix multiplication on the rank dim.
-        integrated_set = set(dims_sorted)
+        # We iterate over *storage* positions because rank dims chain in
+        # storage order.
         new_coeff_cores = []
         pending = None  # accumulated product of consecutive M_k matrices
 
@@ -1611,8 +1624,8 @@ class ChebyshevTT:
                     M = pending @ M
                 pending = M
                 continue
-            # k is a kept dim — absorb any pending matrix into this core's
-            # left rank dimension
+            # k is a kept storage position — absorb any pending matrix into
+            # this core's left rank dimension
             core = self._coeff_cores[k].copy()
             if pending is not None:
                 core = np.einsum("lr,rjs->ljs", pending, core)
@@ -1626,10 +1639,30 @@ class ChebyshevTT:
             last = np.einsum("ljs,sr->ljr", last, pending)
             new_coeff_cores[-1] = last
 
-        # Construct result TT via factory bypass (skip __init__ / build())
-        kept_dims = [d for d in range(self.num_dimensions) if d not in integrated_set]
-        new_domain = [self.domain[d] for d in kept_dims]
-        new_n_nodes = [self.n_nodes[d] for d in kept_dims]
+        # Construct result TT via factory bypass (skip __init__ / build()).
+        # `kept_dims` are *storage* positions of surviving cores.
+        kept_dims = [
+            sp for sp in range(self.num_dimensions) if sp not in integrated_set
+        ]
+        new_domain = [self.domain[sp] for sp in kept_dims]
+        new_n_nodes = [self.n_nodes[sp] for sp in kept_dims]
+
+        # Build result _dim_order: surviving original-dim indices renumbered
+        # to 0..len(kept)-1 in original-order ascending order. Each surviving
+        # storage position k corresponds to original dim self._dim_order[k];
+        # that original dim gets a new index based on its rank among the
+        # surviving original dims sorted ascending.
+        integrated_orig = sorted(dims_sorted)
+        new_dim_index = {}
+        next_idx = 0
+        for orig_d in range(self.num_dimensions):
+            if orig_d in integrated_orig:
+                continue
+            new_dim_index[orig_d] = next_idx
+            next_idx += 1
+        new_dim_order = [
+            new_dim_index[self._dim_order[sp]] for sp in kept_dims
+        ]
 
         result_tt = self.__class__.__new__(self.__class__)
         result_tt.function = None
@@ -1651,7 +1684,7 @@ class ChebyshevTT:
         result_tt.descriptor = self.descriptor
         result_tt.additional_data = self.additional_data
         result_tt.method = self.method
-        result_tt._dim_order = list(range(len(kept_dims)))
+        result_tt._dim_order = new_dim_order
         return result_tt
 
     def to_dense(self) -> np.ndarray:
