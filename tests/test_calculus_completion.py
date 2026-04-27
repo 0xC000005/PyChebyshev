@@ -639,3 +639,706 @@ class TestSliderIntegrateValidation:
         slider.build(verbose=False)
         with pytest.raises(ValueError):
             slider.integrate(dims=[0], bounds=[(-2.0, 2.0)])
+
+
+# ======================================================================
+# v0.21 — Slider/TT roots, minimize, maximize
+# ======================================================================
+
+class TestSliderTo1DChebyshev:
+    """Slider._to_1d_chebyshev: build a 1-D ChebyshevApproximation from
+    a 1-D Slider via eval at Chebyshev nodes."""
+
+    def test_to_1d_chebyshev_recovers_function(self):
+        """1-D Slider built from f(x) = x^3, _to_1d_chebyshev returns
+        a 1-D Approximation with the same values."""
+        def f(x, _): return x[0] ** 3
+        slider = ChebyshevSlider(
+            f, num_dimensions=1, domain=[(-1, 1)], n_nodes=[7],
+            partition=[[0]], pivot_point=[0.0],
+        )
+        slider.build(verbose=False)
+        cheb_1d = slider._to_1d_chebyshev(slider)
+        # Compare on a fine grid
+        for x in np.linspace(-0.9, 0.9, 11):
+            expected = x ** 3
+            got = float(cheb_1d.eval([float(x)], derivative_order=[0]))
+            assert abs(got - expected) < 1e-10, f"x={x}: got {got}, expected {expected}"
+
+    def test_to_1d_chebyshev_preserves_domain_and_n_nodes(self):
+        """The 1-D Approximation has the same domain and n_nodes as input."""
+        def f(x, _): return x[0]
+        slider = ChebyshevSlider(
+            f, num_dimensions=1, domain=[(-2.5, 3.5)], n_nodes=[9],
+            partition=[[0]], pivot_point=[0.0],
+        )
+        slider.build(verbose=False)
+        cheb_1d = slider._to_1d_chebyshev(slider)
+        assert cheb_1d.num_dimensions == 1
+        assert cheb_1d.domain[0][0] == -2.5
+        assert cheb_1d.domain[0][1] == 3.5
+        assert cheb_1d.n_nodes[0] == 9
+
+
+class TestSliderRoots:
+    """Tests for ChebyshevSlider.roots() — mirrors test_calculus.py::TestRootsApprox."""
+
+    def test_roots_quadratic_1d(self):
+        """1-D Slider: roots of x^2 - 0.25 on [-1,1] are {-0.5, 0.5}."""
+        def f(x, _): return x[0] ** 2 - 0.25
+        slider = ChebyshevSlider(
+            f, num_dimensions=1, domain=[(-1, 1)], n_nodes=[10],
+            partition=[[0]], pivot_point=[0.0],
+        )
+        slider.build(verbose=False)
+        roots = slider.roots()
+        assert len(roots) == 2, f"Expected 2 roots, got {len(roots)}: {roots}"
+        for r, e in zip(roots, [-0.5, 0.5]):
+            assert abs(r - e) < 1e-10, f"Root {r} != {e}"
+
+    def test_roots_no_roots_1d(self):
+        """1-D Slider: exp(x) on [0,1] has no roots."""
+        def f(x, _): return math.exp(x[0])
+        slider = ChebyshevSlider(
+            f, num_dimensions=1, domain=[(0, 1)], n_nodes=[10],
+            partition=[[0]], pivot_point=[0.5],
+        )
+        slider.build(verbose=False)
+        roots = slider.roots()
+        assert len(roots) == 0, f"Expected no roots, got {roots}"
+
+    def test_roots_2d_fixed(self):
+        """2-D Slider: f(x,y) = x - y, with y fixed at 0.3, root at x=0.3."""
+        def f(x, _): return x[0] - x[1]
+        slider = ChebyshevSlider(
+            f, num_dimensions=2, domain=[(-1, 1), (-1, 1)], n_nodes=[5, 5],
+            partition=[[0], [1]], pivot_point=[0.0, 0.0],
+        )
+        slider.build(verbose=False)
+        roots = slider.roots(dim=0, fixed={1: 0.3})
+        assert len(roots) == 1, f"Expected 1 root, got {len(roots)}: {roots}"
+        assert abs(roots[0] - 0.3) < 1e-10, f"Root {roots[0]} != 0.3"
+
+    def test_roots_3d_fixed(self):
+        """3-D Slider: f(x,y,z) = x*y - z, with y=2, z=0.5, root at x=0.25."""
+        def f(x, _): return x[0] * x[1] - x[2]
+        slider = ChebyshevSlider(
+            f, num_dimensions=3,
+            domain=[(-1, 1), (1, 3), (-1, 1)], n_nodes=[7, 7, 7],
+            partition=[[0], [1], [2]], pivot_point=[0.0, 2.0, 0.0],
+        )
+        slider.build(verbose=False)
+        roots = slider.roots(dim=0, fixed={1: 2.0, 2: 0.5})
+        assert len(roots) == 1, f"Expected 1 root, got {len(roots)}: {roots}"
+        assert abs(roots[0] - 0.25) < 1e-8
+
+    def test_roots_missing_fixed_raises(self):
+        """Multi-D without full fixed dict raises ValueError."""
+        def f(x, _): return x[0] + x[1]
+        slider = ChebyshevSlider(
+            f, num_dimensions=2, domain=[(-1, 1), (-1, 1)], n_nodes=[5, 5],
+            partition=[[0], [1]], pivot_point=[0.0, 0.0],
+        )
+        slider.build(verbose=False)
+        with pytest.raises(ValueError):
+            slider.roots(dim=0)
+
+    def test_roots_fixed_out_of_domain_raises(self):
+        """Fixed value outside domain raises ValueError."""
+        def f(x, _): return x[0] + x[1]
+        slider = ChebyshevSlider(
+            f, num_dimensions=2, domain=[(-1, 1), (-1, 1)], n_nodes=[5, 5],
+            partition=[[0], [1]], pivot_point=[0.0, 0.0],
+        )
+        slider.build(verbose=False)
+        with pytest.raises(ValueError):
+            slider.roots(dim=0, fixed={1: 5.0})
+
+    def test_roots_before_build_raises(self):
+        """roots() before build() raises RuntimeError."""
+        def f(x, _): return x[0]
+        slider = ChebyshevSlider(
+            f, num_dimensions=1, domain=[(-1, 1)], n_nodes=[5],
+            partition=[[0]], pivot_point=[0.0],
+        )
+        with pytest.raises(RuntimeError, match="build"):
+            slider.roots()
+
+
+# ============================================================================
+# TestSliderMinimize
+# ============================================================================
+
+class TestSliderMinimize:
+    """Tests for ChebyshevSlider.minimize() — mirrors test_calculus.py::TestMinMaxApprox."""
+
+    def test_minimize_quadratic_1d(self):
+        """1-D Slider: min of (x-0.3)^2 + 1 is 1.0 at x=0.3."""
+        def f(x, _): return (x[0] - 0.3) ** 2 + 1.0
+        slider = ChebyshevSlider(
+            f, num_dimensions=1, domain=[(-1, 1)], n_nodes=[10],
+            partition=[[0]], pivot_point=[0.0],
+        )
+        slider.build(verbose=False)
+        val, loc = slider.minimize()
+        assert abs(val - 1.0) < 1e-10, f"min value {val} != 1.0"
+        assert abs(loc - 0.3) < 1e-10, f"min loc {loc} != 0.3"
+
+    def test_minimize_constant(self):
+        """Constant 5 — min is 5, location is at left endpoint."""
+        def f(x, _): return 5.0
+        slider = ChebyshevSlider(
+            f, num_dimensions=1, domain=[(-2, 4)], n_nodes=[5],
+            partition=[[0]], pivot_point=[0.0],
+        )
+        slider.build(verbose=False)
+        val, loc = slider.minimize()
+        assert abs(val - 5.0) < 1e-12
+
+    def test_minimize_2d_fixed(self):
+        """2-D Slider: min of (x-0.5)^2 + y at y=0 is 0 at x=0.5."""
+        def f(x, _): return (x[0] - 0.5) ** 2 + x[1]
+        slider = ChebyshevSlider(
+            f, num_dimensions=2, domain=[(-1, 1), (-1, 1)], n_nodes=[8, 8],
+            partition=[[0], [1]], pivot_point=[0.0, 0.0],
+        )
+        slider.build(verbose=False)
+        val, loc = slider.minimize(dim=0, fixed={1: 0.0})
+        assert abs(val - 0.0) < 1e-9
+        assert abs(loc - 0.5) < 1e-9
+
+    def test_minimize_endpoint(self):
+        """Linear x on [0,1] — min is 0 at x=0."""
+        def f(x, _): return x[0]
+        slider = ChebyshevSlider(
+            f, num_dimensions=1, domain=[(0, 1)], n_nodes=[5],
+            partition=[[0]], pivot_point=[0.5],
+        )
+        slider.build(verbose=False)
+        val, loc = slider.minimize()
+        assert abs(val - 0.0) < 1e-10
+        assert abs(loc - 0.0) < 1e-10
+
+    def test_minimize_missing_fixed_raises(self):
+        def f(x, _): return x[0] + x[1]
+        slider = ChebyshevSlider(
+            f, num_dimensions=2, domain=[(-1, 1), (-1, 1)], n_nodes=[5, 5],
+            partition=[[0], [1]], pivot_point=[0.0, 0.0],
+        )
+        slider.build(verbose=False)
+        with pytest.raises(ValueError):
+            slider.minimize(dim=0)
+
+    def test_minimize_before_build_raises(self):
+        def f(x, _): return x[0]
+        slider = ChebyshevSlider(
+            f, num_dimensions=1, domain=[(-1, 1)], n_nodes=[5],
+            partition=[[0]], pivot_point=[0.0],
+        )
+        with pytest.raises(RuntimeError, match="build"):
+            slider.minimize()
+
+
+# ============================================================================
+# TestSliderMaximize
+# ============================================================================
+
+class TestSliderMaximize:
+    """Tests for ChebyshevSlider.maximize()."""
+
+    def test_maximize_quadratic_1d(self):
+        """1-D Slider: max of -(x-0.3)^2 + 5 is 5 at x=0.3."""
+        def f(x, _): return -(x[0] - 0.3) ** 2 + 5.0
+        slider = ChebyshevSlider(
+            f, num_dimensions=1, domain=[(-1, 1)], n_nodes=[10],
+            partition=[[0]], pivot_point=[0.0],
+        )
+        slider.build(verbose=False)
+        val, loc = slider.maximize()
+        assert abs(val - 5.0) < 1e-10
+        assert abs(loc - 0.3) < 1e-10
+
+    def test_maximize_constant(self):
+        """Constant 7 — max is 7."""
+        def f(x, _): return 7.0
+        slider = ChebyshevSlider(
+            f, num_dimensions=1, domain=[(-2, 4)], n_nodes=[5],
+            partition=[[0]], pivot_point=[0.0],
+        )
+        slider.build(verbose=False)
+        val, _ = slider.maximize()
+        assert abs(val - 7.0) < 1e-12
+
+    def test_maximize_2d_fixed(self):
+        """2-D Slider: max of -(x-0.5)^2 + y at y=1 is 1 at x=0.5."""
+        def f(x, _): return -(x[0] - 0.5) ** 2 + x[1]
+        slider = ChebyshevSlider(
+            f, num_dimensions=2, domain=[(-1, 1), (-1, 1)], n_nodes=[8, 8],
+            partition=[[0], [1]], pivot_point=[0.0, 0.0],
+        )
+        slider.build(verbose=False)
+        val, loc = slider.maximize(dim=0, fixed={1: 1.0})
+        assert abs(val - 1.0) < 1e-9
+        assert abs(loc - 0.5) < 1e-9
+
+    def test_maximize_endpoint(self):
+        """Linear x on [0,1] — max is 1 at x=1."""
+        def f(x, _): return x[0]
+        slider = ChebyshevSlider(
+            f, num_dimensions=1, domain=[(0, 1)], n_nodes=[5],
+            partition=[[0]], pivot_point=[0.5],
+        )
+        slider.build(verbose=False)
+        val, loc = slider.maximize()
+        assert abs(val - 1.0) < 1e-10
+        assert abs(loc - 1.0) < 1e-10
+
+    def test_maximize_missing_fixed_raises(self):
+        def f(x, _): return x[0] + x[1]
+        slider = ChebyshevSlider(
+            f, num_dimensions=2, domain=[(-1, 1), (-1, 1)], n_nodes=[5, 5],
+            partition=[[0], [1]], pivot_point=[0.0, 0.0],
+        )
+        slider.build(verbose=False)
+        with pytest.raises(ValueError):
+            slider.maximize(dim=0)
+
+    def test_maximize_before_build_raises(self):
+        def f(x, _): return x[0]
+        slider = ChebyshevSlider(
+            f, num_dimensions=1, domain=[(-1, 1)], n_nodes=[5],
+            partition=[[0]], pivot_point=[0.0],
+        )
+        with pytest.raises(RuntimeError, match="build"):
+            slider.maximize()
+
+
+# ============================================================================
+# TestSliderCalculusCrossFeature
+# ============================================================================
+
+class TestSliderCalculusCrossFeature:
+    """Cross-feature integration tests for Slider roots/min/max."""
+
+    def test_roots_after_extrude(self):
+        """Extrude a 1-D slider to 2-D, roots along original dim still work."""
+        def f(x, _): return x[0] ** 2 - 0.25
+        slider_1d = ChebyshevSlider(
+            f, num_dimensions=1, domain=[(-1, 1)], n_nodes=[10],
+            partition=[[0]], pivot_point=[0.0],
+        )
+        slider_1d.build(verbose=False)
+        slider_2d = slider_1d.extrude((1, (-1.0, 1.0), 5))
+        # After extrude, dim 0 still has the quadratic structure.
+        roots = slider_2d.roots(dim=0, fixed={1: 0.5})
+        assert len(roots) == 2
+        for r, e in zip(roots, [-0.5, 0.5]):
+            assert abs(r - e) < 1e-9
+
+    def test_minimize_after_slice(self):
+        """Slice a 3-D slider down to 2-D, then minimize along surviving dim."""
+        def f(x, _): return (x[0] - 0.2) ** 2 + x[1] ** 2 + x[2]
+        slider_3d = ChebyshevSlider(
+            f, num_dimensions=3, domain=[(-1, 1)] * 3, n_nodes=[7, 7, 7],
+            partition=[[0], [1], [2]], pivot_point=[0.0, 0.0, 0.0],
+        )
+        slider_3d.build(verbose=False)
+        slider_2d = slider_3d.slice([(2, 0.5)])
+        val, loc = slider_2d.minimize(dim=0, fixed={1: 0.0})
+        # f(0.2, 0, 0.5) = 0 + 0 + 0.5 = 0.5
+        assert abs(val - 0.5) < 1e-9
+        assert abs(loc - 0.2) < 1e-9
+
+    def test_maximize_after_algebra(self):
+        """Slider built via algebra (no .function) — maximize still works."""
+        def f(x, _): return x[0]
+        def g(x, _): return -x[0]
+        s_f = ChebyshevSlider(
+            f, num_dimensions=1, domain=[[-1, 1]], n_nodes=[5],
+            partition=[[0]], pivot_point=[0.0],
+        )
+        s_g = ChebyshevSlider(
+            g, num_dimensions=1, domain=[[-1, 1]], n_nodes=[5],
+            partition=[[0]], pivot_point=[0.0],
+        )
+        s_f.build(verbose=False)
+        s_g.build(verbose=False)
+        # h(x) = f(x) + 2*g(x) = x - 2x = -x; max on [-1,1] is 1 at x=-1
+        h = s_f + 2.0 * s_g
+        val, loc = h.maximize()
+        assert abs(val - 1.0) < 1e-10
+        assert abs(loc - (-1.0)) < 1e-10
+
+    def test_roots_2d_coupled_partition(self):
+        """Slider with 2-D coupled group [[0,1]] — roots in dim 0 with dim 1 fixed."""
+        def f(x, _): return x[0] * x[1] - 0.1
+        slider = ChebyshevSlider(
+            f, num_dimensions=2, domain=[(-1, 1), (0.5, 1.5)], n_nodes=[6, 6],
+            partition=[[0, 1]], pivot_point=[0.0, 1.0],
+        )
+        slider.build(verbose=False)
+        # f(x, 0.5) = 0.5*x - 0.1 = 0 at x = 0.2
+        roots = slider.roots(dim=0, fixed={1: 0.5})
+        assert len(roots) == 1
+        assert abs(roots[0] - 0.2) < 1e-9
+
+    def test_save_load_round_trip_preserves_roots(self):
+        """Pickle round-trip preserves roots()."""
+        import pickle
+        def f(x, _): return x[0] ** 2 - 0.25
+        slider = ChebyshevSlider(
+            f, num_dimensions=1, domain=[(-1, 1)], n_nodes=[10],
+            partition=[[0]], pivot_point=[0.0],
+        )
+        slider.build(verbose=False)
+        roots_before = slider.roots()
+        data = pickle.dumps(slider)
+        slider_loaded = pickle.loads(data)
+        roots_after = slider_loaded.roots()
+        np.testing.assert_array_almost_equal(roots_before, roots_after, decimal=12)
+
+
+class TestTTTo1DChebyshev:
+    """TT._to_1d_chebyshev: build a 1-D ChebyshevApproximation from
+    a 1-D TT via to_dense()."""
+
+    def test_to_1d_chebyshev_recovers_function(self):
+        """1-D TT built from f(x) = x^3, _to_1d_chebyshev returns
+        a 1-D Approximation with the same values."""
+        def f(x, _): return x[0] ** 3
+        tt = ChebyshevTT(
+            f, num_dimensions=1, domain=[(-1, 1)], n_nodes=[7],
+        )
+        tt.build(verbose=False)
+        cheb_1d = tt._to_1d_chebyshev(tt)
+        for x in np.linspace(-0.9, 0.9, 11):
+            expected = x ** 3
+            got = float(cheb_1d.eval([float(x)], derivative_order=[0]))
+            assert abs(got - expected) < 1e-9, f"x={x}: got {got}, expected {expected}"
+
+    def test_to_1d_chebyshev_preserves_domain_and_n_nodes(self):
+        """The 1-D Approximation has the same domain and n_nodes as input."""
+        def f(x, _): return x[0]
+        tt = ChebyshevTT(
+            f, num_dimensions=1, domain=[(-2.5, 3.5)], n_nodes=[9],
+        )
+        tt.build(verbose=False)
+        cheb_1d = tt._to_1d_chebyshev(tt)
+        assert cheb_1d.num_dimensions == 1
+        assert abs(cheb_1d.domain[0][0] - (-2.5)) < 1e-12
+        assert abs(cheb_1d.domain[0][1] - 3.5) < 1e-12
+        assert cheb_1d.n_nodes[0] == 9
+
+
+class TestTTRoots:
+    """Tests for ChebyshevTT.roots()."""
+
+    def test_roots_quadratic_1d(self):
+        """1-D TT: roots of x^2 - 0.25 on [-1,1] are {-0.5, 0.5}."""
+        def f(x, _): return x[0] ** 2 - 0.25
+        tt = ChebyshevTT(f, num_dimensions=1, domain=[(-1, 1)], n_nodes=[10])
+        tt.build(verbose=False)
+        roots = tt.roots()
+        assert len(roots) == 2
+        for r, e in zip(roots, [-0.5, 0.5]):
+            assert abs(r - e) < 1e-9
+
+    def test_roots_no_roots_1d(self):
+        """1-D TT: exp(x) on [0,1] has no roots."""
+        def f(x, _): return math.exp(x[0])
+        tt = ChebyshevTT(f, num_dimensions=1, domain=[(0, 1)], n_nodes=[10])
+        tt.build(verbose=False)
+        roots = tt.roots()
+        assert len(roots) == 0
+
+    def test_roots_2d_fixed(self):
+        """2-D TT: f(x,y) = x - y, with y fixed at 0.3, root at x=0.3."""
+        def f(x, _): return x[0] - x[1]
+        tt = ChebyshevTT(f, num_dimensions=2, domain=[(-1, 1), (-1, 1)], n_nodes=[5, 5])
+        tt.build(verbose=False)
+        roots = tt.roots(dim=0, fixed={1: 0.3})
+        assert len(roots) == 1
+        assert abs(roots[0] - 0.3) < 1e-9
+
+    def test_roots_3d_fixed(self):
+        """3-D TT: f(x,y,z) = x*y - z, with y=2, z=0.5, root at x=0.25."""
+        def f(x, _): return x[0] * x[1] - x[2]
+        tt = ChebyshevTT(
+            f, num_dimensions=3,
+            domain=[(-1, 1), (1, 3), (-1, 1)], n_nodes=[7, 7, 7],
+        )
+        tt.build(verbose=False)
+        roots = tt.roots(dim=0, fixed={1: 2.0, 2: 0.5})
+        assert len(roots) == 1
+        assert abs(roots[0] - 0.25) < 1e-8
+
+    def test_roots_missing_fixed_raises(self):
+        def f(x, _): return x[0] + x[1]
+        tt = ChebyshevTT(f, num_dimensions=2, domain=[(-1, 1), (-1, 1)], n_nodes=[5, 5])
+        tt.build(verbose=False)
+        with pytest.raises(ValueError):
+            tt.roots(dim=0)
+
+    def test_roots_fixed_out_of_domain_raises(self):
+        def f(x, _): return x[0] + x[1]
+        tt = ChebyshevTT(f, num_dimensions=2, domain=[(-1, 1), (-1, 1)], n_nodes=[5, 5])
+        tt.build(verbose=False)
+        with pytest.raises(ValueError):
+            tt.roots(dim=0, fixed={1: 5.0})
+
+    def test_roots_before_build_raises(self):
+        def f(x, _): return x[0]
+        tt = ChebyshevTT(f, num_dimensions=1, domain=[(-1, 1)], n_nodes=[5])
+        with pytest.raises(RuntimeError, match="build"):
+            tt.roots()
+
+
+# ============================================================================
+# TestTTMinimize
+# ============================================================================
+
+class TestTTMinimize:
+    """Tests for ChebyshevTT.minimize()."""
+
+    def test_minimize_quadratic_1d(self):
+        def f(x, _): return (x[0] - 0.3) ** 2 + 1.0
+        tt = ChebyshevTT(f, num_dimensions=1, domain=[(-1, 1)], n_nodes=[10])
+        tt.build(verbose=False)
+        val, loc = tt.minimize()
+        assert abs(val - 1.0) < 1e-10
+        assert abs(loc - 0.3) < 1e-10
+
+    def test_minimize_constant(self):
+        def f(x, _): return 5.0
+        tt = ChebyshevTT(f, num_dimensions=1, domain=[(-2, 4)], n_nodes=[5])
+        tt.build(verbose=False)
+        val, _ = tt.minimize()
+        assert abs(val - 5.0) < 1e-10
+
+    def test_minimize_2d_fixed(self):
+        def f(x, _): return (x[0] - 0.5) ** 2 + x[1]
+        tt = ChebyshevTT(f, num_dimensions=2, domain=[(-1, 1), (-1, 1)], n_nodes=[8, 8])
+        tt.build(verbose=False)
+        val, loc = tt.minimize(dim=0, fixed={1: 0.0})
+        assert abs(val - 0.0) < 1e-9
+        assert abs(loc - 0.5) < 1e-9
+
+    def test_minimize_endpoint(self):
+        """Linear x on [0,1] — min at x=0."""
+        def f(x, _): return x[0]
+        tt = ChebyshevTT(f, num_dimensions=1, domain=[(0, 1)], n_nodes=[5])
+        tt.build(verbose=False)
+        val, loc = tt.minimize()
+        assert abs(val - 0.0) < 1e-9
+        assert abs(loc - 0.0) < 1e-9
+
+    def test_minimize_missing_fixed_raises(self):
+        def f(x, _): return x[0] + x[1]
+        tt = ChebyshevTT(f, num_dimensions=2, domain=[(-1, 1), (-1, 1)], n_nodes=[5, 5])
+        tt.build(verbose=False)
+        with pytest.raises(ValueError):
+            tt.minimize(dim=0)
+
+    def test_minimize_before_build_raises(self):
+        def f(x, _): return x[0]
+        tt = ChebyshevTT(f, num_dimensions=1, domain=[(-1, 1)], n_nodes=[5])
+        with pytest.raises(RuntimeError, match="build"):
+            tt.minimize()
+
+
+# ============================================================================
+# TestTTMaximize
+# ============================================================================
+
+class TestTTMaximize:
+    """Tests for ChebyshevTT.maximize()."""
+
+    def test_maximize_quadratic_1d(self):
+        def f(x, _): return -(x[0] - 0.3) ** 2 + 5.0
+        tt = ChebyshevTT(f, num_dimensions=1, domain=[(-1, 1)], n_nodes=[10])
+        tt.build(verbose=False)
+        val, loc = tt.maximize()
+        assert abs(val - 5.0) < 1e-10
+        assert abs(loc - 0.3) < 1e-10
+
+    def test_maximize_constant(self):
+        def f(x, _): return 7.0
+        tt = ChebyshevTT(f, num_dimensions=1, domain=[(-2, 4)], n_nodes=[5])
+        tt.build(verbose=False)
+        val, _ = tt.maximize()
+        assert abs(val - 7.0) < 1e-10
+
+    def test_maximize_2d_fixed(self):
+        def f(x, _): return -(x[0] - 0.5) ** 2 + x[1]
+        tt = ChebyshevTT(f, num_dimensions=2, domain=[(-1, 1), (-1, 1)], n_nodes=[8, 8])
+        tt.build(verbose=False)
+        val, loc = tt.maximize(dim=0, fixed={1: 1.0})
+        assert abs(val - 1.0) < 1e-9
+        assert abs(loc - 0.5) < 1e-9
+
+    def test_maximize_endpoint(self):
+        def f(x, _): return x[0]
+        tt = ChebyshevTT(f, num_dimensions=1, domain=[(0, 1)], n_nodes=[5])
+        tt.build(verbose=False)
+        val, loc = tt.maximize()
+        assert abs(val - 1.0) < 1e-9
+        assert abs(loc - 1.0) < 1e-9
+
+    def test_maximize_missing_fixed_raises(self):
+        def f(x, _): return x[0] + x[1]
+        tt = ChebyshevTT(f, num_dimensions=2, domain=[(-1, 1), (-1, 1)], n_nodes=[5, 5])
+        tt.build(verbose=False)
+        with pytest.raises(ValueError):
+            tt.maximize(dim=0)
+
+    def test_maximize_before_build_raises(self):
+        def f(x, _): return x[0]
+        tt = ChebyshevTT(f, num_dimensions=1, domain=[(-1, 1)], n_nodes=[5])
+        with pytest.raises(RuntimeError, match="build"):
+            tt.maximize()
+
+
+# ============================================================================
+# TestTTCalculusCrossFeature
+# ============================================================================
+
+class TestTTCalculusCrossFeature:
+    """Cross-feature integration tests for TT roots/min/max."""
+
+    def test_roots_after_with_auto_order(self):
+        """with_auto_order builds a TT with potentially non-identity _dim_order;
+        roots in user-frame must still find the correct values."""
+        # Function with known root structure along dim 0
+        def f(x, _): return (x[0] - 0.4) * (1.0 + 0.1 * x[1] + 0.2 * x[2])
+        tt = ChebyshevTT.with_auto_order(
+            f, num_dimensions=3, domain=[(-1, 1)] * 3, n_nodes=[10, 10, 10],
+            n_trials=3,
+        )
+        # Whatever the storage order, user-frame dim=0 should yield root at 0.4
+        roots = tt.roots(dim=0, fixed={1: 0.0, 2: 0.0})
+        assert len(roots) == 1
+        assert abs(roots[0] - 0.4) < 1e-8
+
+    def test_minimize_after_reorder(self):
+        """Explicit reorder([2, 0, 1]) preserves user-frame minimize results."""
+        def f(x, _): return (x[0] - 0.2) ** 2 + x[1] ** 2 + x[2] ** 2
+        tt = ChebyshevTT(
+            f, num_dimensions=3, domain=[(-1, 1)] * 3, n_nodes=[8, 8, 8],
+        )
+        tt.build(verbose=False)
+        tt_reordered = tt.reorder([2, 0, 1])
+        val, loc = tt_reordered.minimize(dim=0, fixed={1: 0.0, 2: 0.0})
+        # f(0.2, 0, 0) = 0
+        assert abs(val - 0.0) < 1e-7
+        assert abs(loc - 0.2) < 1e-7
+
+    def test_maximize_after_extrude(self):
+        """Extrude a 1-D TT to 2-D; max along original dim still works."""
+        def f(x, _): return -(x[0] - 0.3) ** 2 + 5.0
+        tt_1d = ChebyshevTT(f, num_dimensions=1, domain=[(-1, 1)], n_nodes=[10])
+        tt_1d.build(verbose=False)
+        tt_2d = tt_1d.extrude([(1, (-1.0, 1.0), 5)])
+        val, loc = tt_2d.maximize(dim=0, fixed={1: 0.5})
+        assert abs(val - 5.0) < 1e-9
+        assert abs(loc - 0.3) < 1e-9
+
+    def test_roots_after_slice(self):
+        """Slice a 3-D TT to 2-D, then roots along surviving dim."""
+        def f(x, _): return x[0] * x[1] - 0.1 + 0.0 * x[2]
+        tt = ChebyshevTT(
+            f, num_dimensions=3, domain=[(-1, 1), (0.5, 1.5), (-1, 1)],
+            n_nodes=[7, 7, 7],
+        )
+        tt.build(verbose=False)
+        tt_2d = tt.slice([(2, 0.0)])
+        # f(x, 0.5, 0) = 0.5*x - 0.1 = 0 at x = 0.2
+        roots = tt_2d.roots(dim=0, fixed={1: 0.5})
+        assert len(roots) == 1
+        assert abs(roots[0] - 0.2) < 1e-8
+
+    def test_minimize_after_algebra(self):
+        """TT built via algebra (e.g. tt + 2*other) — minimize still works."""
+        def f(x, _): return x[0]
+        def g(x, _): return -x[0]
+        tf = ChebyshevTT(f, num_dimensions=1, domain=[(-1, 1)], n_nodes=[5])
+        tg = ChebyshevTT(g, num_dimensions=1, domain=[(-1, 1)], n_nodes=[5])
+        tf.build(verbose=False)
+        tg.build(verbose=False)
+        # h(x) = f(x) + 2*g(x) = x - 2x = -x; min on [-1,1] is -1 at x=1
+        h = tf + 2.0 * tg
+        val, loc = h.minimize()
+        assert abs(val - (-1.0)) < 1e-10
+        assert abs(loc - 1.0) < 1e-10
+
+    def test_save_load_round_trip_preserves_roots(self):
+        """Pickle round-trip preserves TT.roots()."""
+        import pickle
+        def f(x, _): return x[0] ** 2 - 0.25
+        tt = ChebyshevTT(f, num_dimensions=1, domain=[(-1, 1)], n_nodes=[10])
+        tt.build(verbose=False)
+        roots_before = tt.roots()
+        data = pickle.dumps(tt)
+        tt_loaded = pickle.loads(data)
+        roots_after = tt_loaded.roots()
+        np.testing.assert_array_almost_equal(roots_before, roots_after, decimal=10)
+
+
+# ============================================================================
+# TestCrossClassCalculusConsistency
+# ============================================================================
+
+class TestCrossClassCalculusConsistency:
+    """Slider/TT roots/min/max must match ChebyshevApproximation on the
+    same function to ~1e-9."""
+
+    def test_slider_matches_approx_roots(self):
+        """Same quadratic, same nodes — Slider.roots == Approx.roots."""
+        def f(x, _): return x[0] ** 2 - 0.25
+        cheb = ChebyshevApproximation(f, 1, [(-1, 1)], [10])
+        slider = ChebyshevSlider(
+            f, num_dimensions=1, domain=[(-1, 1)], n_nodes=[10],
+            partition=[[0]], pivot_point=[0.0],
+        )
+        cheb.build(verbose=False)
+        slider.build(verbose=False)
+        np.testing.assert_array_almost_equal(
+            sorted(cheb.roots()), sorted(slider.roots()), decimal=10
+        )
+
+    def test_tt_matches_approx_roots(self):
+        """Same quadratic — TT.roots == Approx.roots."""
+        def f(x, _): return x[0] ** 2 - 0.25
+        cheb = ChebyshevApproximation(f, 1, [(-1, 1)], [10])
+        tt = ChebyshevTT(f, num_dimensions=1, domain=[(-1, 1)], n_nodes=[10])
+        cheb.build(verbose=False)
+        tt.build(verbose=False)
+        np.testing.assert_array_almost_equal(
+            sorted(cheb.roots()), sorted(tt.roots()), decimal=9
+        )
+
+    def test_slider_matches_approx_minmax_2d(self):
+        """2-D function — Slider min/max == Approx min/max with same fixed."""
+        def f(x, _): return (x[0] - 0.2) ** 2 + (x[1] - 0.1) ** 2
+        cheb = ChebyshevApproximation(f, 2, [(-1, 1), (-1, 1)], [9, 9])
+        slider = ChebyshevSlider(
+            f, num_dimensions=2, domain=[(-1, 1), (-1, 1)], n_nodes=[9, 9],
+            partition=[[0], [1]], pivot_point=[0.0, 0.0],
+        )
+        cheb.build(verbose=False)
+        slider.build(verbose=False)
+        v_c, l_c = cheb.minimize(dim=0, fixed={1: 0.1})
+        v_s, l_s = slider.minimize(dim=0, fixed={1: 0.1})
+        assert abs(v_c - v_s) < 1e-9
+        assert abs(l_c - l_s) < 1e-9
+
+    def test_tt_matches_approx_minmax_3d(self):
+        """3-D — TT min/max == Approx min/max with same fixed."""
+        def f(x, _): return (x[0] - 0.3) ** 2 + (x[1] + 0.1) ** 2 + x[2]
+        cheb = ChebyshevApproximation(f, 3, [(-1, 1)] * 3, [7, 7, 7])
+        tt = ChebyshevTT(f, num_dimensions=3, domain=[(-1, 1)] * 3, n_nodes=[7, 7, 7])
+        cheb.build(verbose=False)
+        tt.build(verbose=False)
+        v_c, l_c = cheb.maximize(dim=0, fixed={1: 0.0, 2: 0.5})
+        v_t, l_t = tt.maximize(dim=0, fixed={1: 0.0, 2: 0.5})
+        assert abs(v_c - v_t) < 1e-7
+        assert abs(l_c - l_t) < 1e-7

@@ -36,8 +36,8 @@ all from a single pre-built proxy, without calling the pricing engine again.
 |-------|:---:|:---:|:---:|
 | `ChebyshevApproximation` | Yes | Yes | Yes |
 | `ChebyshevSpline` | Yes | Yes | Yes |
-| `ChebyshevSlider` | Yes (v0.17) | No | No |
-| `ChebyshevTT` | Yes (v0.17) | No | No |
+| `ChebyshevSlider` | Yes (v0.17) | Yes (v0.21) | Yes (v0.21) |
+| `ChebyshevTT` | Yes (v0.17) | Yes (v0.21) | Yes (v0.21) |
 
 ## Integration
 
@@ -484,12 +484,10 @@ matrices, and barycentric evaluation.
 
 ## Limitations
 
-- **`roots()`, `minimize()`, and `maximize()` are not yet supported on
-  `ChebyshevSlider` or `ChebyshevTT`.**  These operations require
-  1-D polynomial coefficient extraction; generalising to the sliding
-  decomposition or TT format is deferred.
 - **Multi-D rootfinding** (2D Bezout resultants) is not implemented. Only
-  1-D slices are supported via the `dim` + `fixed` interface.
+  1-D slices are supported via the `dim` + `fixed` interface. This applies
+  to all four classes — `ChebyshevApproximation`, `ChebyshevSpline`,
+  `ChebyshevSlider`, and `ChebyshevTT`.
 - **Result has `function=None`** -- partial integration results cannot call
   `build()` again, since there is no underlying function reference.
 
@@ -507,3 +505,91 @@ matrices, and barycentric evaluation.
 
 4. Berrut, J.-P. & Trefethen, L.N. (2004), "Barycentric Lagrange
    Interpolation", *SIAM Review* 46(3):501--517.
+
+## Slider and TT calculus (v0.21+)
+
+Starting in v0.21, `ChebyshevSlider` and `ChebyshevTT` support the same
+calculus surface as `ChebyshevApproximation` and `ChebyshevSpline`:
+`integrate`, `roots`, `minimize`, `maximize`. The signatures are
+identical.
+
+### Roots
+
+```python
+from pychebyshev import ChebyshevTT
+
+def f(x, _): return x[0] ** 2 - 0.25
+tt = ChebyshevTT(f, num_dimensions=1, domain=[(-1, 1)], n_nodes=[10])
+tt.build()
+
+print(tt.roots())          # [-0.5, 0.5]
+```
+
+For multi-D TT/Slider, fix all but one dimension:
+
+```python
+def g(x, _): return x[0] - x[1]
+tt = ChebyshevTT(g, num_dimensions=2, domain=[(-1, 1), (-1, 1)], n_nodes=[5, 5])
+tt.build()
+
+print(tt.roots(dim=0, fixed={1: 0.3}))   # [0.3]
+```
+
+### Minimize / maximize
+
+```python
+def f(x, _): return (x[0] - 0.3) ** 2 + 1.0
+tt = ChebyshevTT(f, num_dimensions=1, domain=[(-1, 1)], n_nodes=[10])
+tt.build()
+
+val, loc = tt.minimize()    # (1.0, 0.3)
+val, loc = tt.maximize()    # endpoint maximum
+```
+
+### Frame transparency under `with_auto_order`/`reorder`
+
+`ChebyshevTT.roots()`, `minimize()`, and `maximize()` accept user-frame
+`dim` and `fixed` keys. After `with_auto_order()` or `reorder()`
+permute the internal storage layout, the user-frame interface is
+unchanged — same call, same answer:
+
+```python
+import numpy as np
+from pychebyshev import ChebyshevTT
+
+def f(x, _): return (x[0] - 0.4) * (1.0 + 0.1*x[1] + 0.2*x[2])
+
+tt = ChebyshevTT(f, num_dimensions=3, domain=[(-1, 1)]*3, n_nodes=[10, 10, 10])
+tt.build()
+tt_optimized = ChebyshevTT.with_auto_order(
+    f, num_dimensions=3, domain=[(-1, 1)]*3, n_nodes=[10, 10, 10],
+)
+# Same user-frame call, same result regardless of internal _dim_order
+roots_a = tt.roots(dim=0, fixed={1: 0.0, 2: 0.0})
+roots_b = tt_optimized.roots(dim=0, fixed={1: 0.0, 2: 0.0})
+np.testing.assert_array_almost_equal(roots_a, roots_b)
+```
+
+### Slider example
+
+```python
+from pychebyshev import ChebyshevSlider
+
+def f(x, _): return x[0] ** 2 - 0.25
+slider = ChebyshevSlider(
+    f, num_dimensions=1, domain=[(-1, 1)], n_nodes=[10],
+    partition=[[0]], pivot_point=[0.0],
+)
+slider.build()
+print(slider.roots())            # [-0.5, 0.5]
+val, loc = slider.minimize()     # (-0.25, 0.0)
+val, loc = slider.maximize()     # (0.75, ±1)
+```
+
+### Implementation note
+
+Both classes implement these methods by reducing to a 1-D problem
+(via `slice()`), constructing a 1-D `ChebyshevApproximation`, and
+delegating to its `roots()`/`minimize()`/`maximize()`. No new math —
+all spectral algorithms reuse the v0.9 primitives in
+`pychebyshev._calculus`.

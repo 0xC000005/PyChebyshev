@@ -1135,6 +1135,153 @@ class ChebyshevSlider:
         obj._derivative_id_to_orders = []
         return obj
 
+    def _to_1d_chebyshev(self, sliced_1d):
+        """Build a 1-D ChebyshevApproximation from a 1-D Slider.
+
+        Evaluates *sliced_1d* at the Type-I Chebyshev nodes of its
+        surviving dimension and constructs a ``ChebyshevApproximation``
+        via ``from_values``. The result is bit-identical equivalent to
+        a direct ``ChebyshevApproximation`` build of the same function
+        over the same nodes.
+
+        Parameters
+        ----------
+        sliced_1d : ChebyshevSlider
+            A 1-D Slider (``num_dimensions == 1``).
+
+        Returns
+        -------
+        ChebyshevApproximation
+            1-D Chebyshev approximation matching *sliced_1d*'s values.
+        """
+        from pychebyshev._extrude_slice import _make_nodes_for_dim
+
+        assert sliced_1d.num_dimensions == 1, (
+            f"_to_1d_chebyshev expects a 1-D Slider, got {sliced_1d.num_dimensions}-D"
+        )
+
+        n = sliced_1d.n_nodes[0]
+        a, b = sliced_1d.domain[0]
+        # Type-I Chebyshev nodes in [a, b], ascending order
+        cheb_nodes = _make_nodes_for_dim(a, b, n)
+
+        values = np.array([
+            float(sliced_1d.eval([float(x)], derivative_order=[0])) for x in cheb_nodes
+        ])
+        return ChebyshevApproximation.from_values(
+            values,
+            num_dimensions=1,
+            domain=[(float(a), float(b))],
+            n_nodes=[int(n)],
+        )
+
+    def roots(self, dim=None, fixed=None):
+        """Find all roots of the slider along a specified dimension.
+
+        Reduces to a 1-D problem by slicing all other dimensions to
+        their fixed values, then delegates to
+        ``ChebyshevApproximation.roots()`` (which uses the colleague
+        matrix eigenvalue method, Good 1961).
+
+        Parameters
+        ----------
+        dim : int or None
+            Dimension along which to find roots. For 1-D sliders,
+            defaults to 0.
+        fixed : dict or None
+            For multi-D sliders, ``{dim_index: value}`` for **all**
+            dimensions except *dim*.
+
+        Returns
+        -------
+        ndarray
+            Sorted real root locations in the physical domain.
+
+        Raises
+        ------
+        RuntimeError
+            If ``build()`` has not been called.
+        ValueError
+            If *dim* / *fixed* validation fails or values are out of domain.
+
+        References
+        ----------
+        Good (1961), "The colleague matrix", Quarterly J. Math. 12(1):61–68.
+        Trefethen (2013), "Approximation Theory and Approximation Practice",
+        SIAM, Chapter 18.
+        """
+        if not self._built:
+            raise RuntimeError("Call build() first")
+
+        from pychebyshev._calculus import _validate_calculus_args
+
+        dim, slice_params = _validate_calculus_args(
+            self.num_dimensions, dim, fixed, self.domain
+        )
+
+        sliced = self.slice(slice_params) if slice_params else self
+        cheb_1d = self._to_1d_chebyshev(sliced)
+        return cheb_1d.roots()
+
+    def minimize(self, dim=None, fixed=None):
+        """Find the minimum value of the slider along a dimension.
+
+        Computes derivative roots to locate critical points, then
+        evaluates at all critical points and domain endpoints. For
+        multi-D sliders, all dimensions except the target must be
+        fixed.
+
+        Parameters
+        ----------
+        dim : int or None
+            Dimension along which to minimize. Defaults to 0 for 1-D.
+        fixed : dict or None
+            For multi-D, ``{dim_index: value}`` for all other dims.
+
+        Returns
+        -------
+        (value, location) : (float, float)
+            The minimum value and its coordinate in the target dimension.
+
+        Raises
+        ------
+        RuntimeError
+            If ``build()`` has not been called.
+        ValueError
+            If *dim* / *fixed* validation fails.
+        """
+        if not self._built:
+            raise RuntimeError("Call build() first")
+
+        from pychebyshev._calculus import _validate_calculus_args
+
+        dim, slice_params = _validate_calculus_args(
+            self.num_dimensions, dim, fixed, self.domain
+        )
+
+        sliced = self.slice(slice_params) if slice_params else self
+        cheb_1d = self._to_1d_chebyshev(sliced)
+        return cheb_1d.minimize()
+
+    def maximize(self, dim=None, fixed=None):
+        """Find the maximum value of the slider along a dimension.
+
+        See ``minimize()`` for parameter details. Returns
+        ``(max_value, max_location)`` instead.
+        """
+        if not self._built:
+            raise RuntimeError("Call build() first")
+
+        from pychebyshev._calculus import _validate_calculus_args
+
+        dim, slice_params = _validate_calculus_args(
+            self.num_dimensions, dim, fixed, self.domain
+        )
+
+        sliced = self.slice(slice_params) if slice_params else self
+        cheb_1d = self._to_1d_chebyshev(sliced)
+        return cheb_1d.maximize()
+
     def _check_slider_compatible(self, other):
         """Validate that two sliders can be combined arithmetically."""
         from pychebyshev._algebra import _check_compatible

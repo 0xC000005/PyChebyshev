@@ -12,7 +12,7 @@ PyChebyshev is a pip-installable Python library for multi-dimensional Chebyshev 
 # Setup
 uv sync
 
-# Run tests (~1055 tests, ~115s due to 5D Black-Scholes builds)
+# Run tests (~1112 tests, ~115s due to 5D Black-Scholes builds)
 uv run pytest tests/ -v
 
 # Run a single test
@@ -61,7 +61,7 @@ The installable package. Public classes: `ChebyshevApproximation`, `ChebyshevSpl
   typed helpers (constructors accept both forms).
 - v0.17 adds `integrate()` on `ChebyshevSlider` and `ChebyshevTT` (full +
   partial integration). After v0.17, every PyChebyshev class supports
-  integration. Roots/min/max on Slider/TT remain deferred to v0.21.
+  integration.
 - v0.18 adds TT feature parity: `ChebyshevTT.nodes()` static,
   `from_values()` classmethod, `extrude()`, `slice()`, algebra
   (`+`, `-`, `*` scalar, in-place variants, `__neg__`), and `to_dense()`.
@@ -81,6 +81,9 @@ The installable package. Public classes: `ChebyshevApproximation`, `ChebyshevSpl
   fully thread `_dim_order`. New public `ChebyshevTT.reorder(new_order)`
   method (TT-swap via adjacent SVDs) is the explicit alignment escape
   hatch for binary algebra between TTs of different orders.
+- v0.21 adds `ChebyshevSlider.roots()/minimize()/maximize()` and
+  `ChebyshevTT.roots()/minimize()/maximize()`. After v0.21, all four
+  classes support the full calculus surface (integrate + roots + min/max).
 
 ### Benchmark Scripts (project root)
 
@@ -126,9 +129,12 @@ Not part of the library. Compare Chebyshev barycentric against alternative metho
   `get_evaluation_points`, `get_num_evaluation_points`), `peek_format_version`,
   `is_dimensionality_allowed`, `defer_build` + `set_original_function_values`,
   `Domain`/`Ns`/`SpecialPoints` typed helpers.
-- `test_calculus_completion.py` — ~37 tests: `ChebyshevSlider.integrate()` (full
-  and partial), `ChebyshevTT.integrate()` (full and partial), cross-class
-  consistency checks, bounds validation.
+- `test_calculus_completion.py` — ~101 tests: `ChebyshevSlider.integrate/roots/minimize/maximize`,
+  `ChebyshevTT.integrate/roots/minimize/maximize` (full and partial,
+  user-frame dim/fixed transparent under `_dim_order`), cross-class
+  consistency checks, bounds validation. v0.21 additions: 57 tests
+  across 9 new test classes covering Slider/TT roots/min/max parity
+  with Approximation/Spline.
 - `test_v018_tt_parity.py` — ~52 tests: `ChebyshevTT.nodes()`, `from_values()`,
   `extrude()`, `slice()`, algebra (`+`, `-`, `*` scalar, in-place, `__neg__`),
   `to_dense()`; cross-feature and round-trip checks.

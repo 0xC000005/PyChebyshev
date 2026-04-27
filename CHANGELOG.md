@@ -5,6 +5,29 @@ All notable changes to PyChebyshev will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [0.21.0] - 2026-04-27
+
+### Added
+- `ChebyshevSlider.roots(dim, fixed)` — find all roots along `dim` with other dims fixed
+- `ChebyshevSlider.minimize(dim, fixed)` — find global minimum along `dim`
+- `ChebyshevSlider.maximize(dim, fixed)` — find global maximum along `dim`
+- `ChebyshevTT.roots(dim, fixed)` — same, for ChebyshevTT (user-frame `dim`, transparent under `_dim_order`)
+- `ChebyshevTT.minimize(dim, fixed)` — same, for ChebyshevTT
+- `ChebyshevTT.maximize(dim, fixed)` — same, for ChebyshevTT
+
+### Notes
+- Closes the calculus parity gap promised since v0.17. All four public
+  classes (`ChebyshevApproximation`, `ChebyshevSpline`, `ChebyshevSlider`,
+  `ChebyshevTT`) now support the full calculus surface: `integrate`,
+  `roots`, `minimize`, `maximize`.
+- Implementation reuses the existing 1-D primitives in `_calculus.py`
+  (`_roots_1d`, `_optimize_1d`) — no new math.
+- Mirrors v0.9 `ChebyshevApproximation`/`ChebyshevSpline` semantics:
+  multi-D requires `fixed={d: v, ...}` for all dims except target.
+- Under `ChebyshevTT.with_auto_order()` / `reorder()` (v0.20+), the
+  user-frame `dim` and `fixed` keys translate to storage frame
+  transparently via `slice()` and `to_dense()`.
+
 ## [0.20.1] - 2026-04-27
 
 ### Fixed — TT `_dim_order` Full Threading
