@@ -1154,14 +1154,16 @@ class ChebyshevSlider:
         ChebyshevApproximation
             1-D Chebyshev approximation matching *sliced_1d*'s values.
         """
-        from pychebyshev.barycentric import ChebyshevApproximation
+        from pychebyshev._extrude_slice import _make_nodes_for_dim
+
+        assert sliced_1d.num_dimensions == 1, (
+            f"_to_1d_chebyshev expects a 1-D Slider, got {sliced_1d.num_dimensions}-D"
+        )
 
         n = sliced_1d.n_nodes[0]
         a, b = sliced_1d.domain[0]
         # Type-I Chebyshev nodes in [a, b], ascending order
-        k = np.arange(n)
-        t = -np.cos((2.0 * k + 1.0) * np.pi / (2.0 * n))
-        cheb_nodes = 0.5 * (a + b) + 0.5 * (b - a) * t
+        cheb_nodes = _make_nodes_for_dim(a, b, n)
 
         values = np.array([
             float(sliced_1d.eval([float(x)], derivative_order=[0])) for x in cheb_nodes
