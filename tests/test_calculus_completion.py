@@ -911,3 +911,88 @@ class TestSliderMaximize:
         )
         with pytest.raises(RuntimeError, match="build"):
             slider.maximize()
+
+
+# ============================================================================
+# TestSliderCalculusCrossFeature
+# ============================================================================
+
+class TestSliderCalculusCrossFeature:
+    """Cross-feature integration tests for Slider roots/min/max."""
+
+    def test_roots_after_extrude(self):
+        """Extrude a 1-D slider to 2-D, roots along original dim still work."""
+        def f(x, _): return x[0] ** 2 - 0.25
+        slider_1d = ChebyshevSlider(
+            f, num_dimensions=1, domain=[(-1, 1)], n_nodes=[10],
+            partition=[[0]], pivot_point=[0.0],
+        )
+        slider_1d.build(verbose=False)
+        slider_2d = slider_1d.extrude((1, (-1.0, 1.0), 5))
+        # After extrude, dim 0 still has the quadratic structure.
+        roots = slider_2d.roots(dim=0, fixed={1: 0.5})
+        assert len(roots) == 2
+        for r, e in zip(roots, [-0.5, 0.5]):
+            assert abs(r - e) < 1e-9
+
+    def test_minimize_after_slice(self):
+        """Slice a 3-D slider down to 2-D, then minimize along surviving dim."""
+        def f(x, _): return (x[0] - 0.2) ** 2 + x[1] ** 2 + x[2]
+        slider_3d = ChebyshevSlider(
+            f, num_dimensions=3, domain=[(-1, 1)] * 3, n_nodes=[7, 7, 7],
+            partition=[[0], [1], [2]], pivot_point=[0.0, 0.0, 0.0],
+        )
+        slider_3d.build(verbose=False)
+        slider_2d = slider_3d.slice([(2, 0.5)])
+        val, loc = slider_2d.minimize(dim=0, fixed={1: 0.0})
+        # f(0.2, 0, 0.5) = 0 + 0 + 0.5 = 0.5
+        assert abs(val - 0.5) < 1e-9
+        assert abs(loc - 0.2) < 1e-9
+
+    def test_maximize_after_algebra(self):
+        """Slider built via algebra (no .function) — maximize still works."""
+        def f(x, _): return x[0]
+        def g(x, _): return -x[0]
+        s_f = ChebyshevSlider(
+            f, num_dimensions=1, domain=[[-1, 1]], n_nodes=[5],
+            partition=[[0]], pivot_point=[0.0],
+        )
+        s_g = ChebyshevSlider(
+            g, num_dimensions=1, domain=[[-1, 1]], n_nodes=[5],
+            partition=[[0]], pivot_point=[0.0],
+        )
+        s_f.build(verbose=False)
+        s_g.build(verbose=False)
+        # h(x) = f(x) + 2*g(x) = x - 2x = -x; max on [-1,1] is 1 at x=-1
+        h = s_f + 2.0 * s_g
+        val, loc = h.maximize()
+        assert abs(val - 1.0) < 1e-10
+        assert abs(loc - (-1.0)) < 1e-10
+
+    def test_roots_2d_coupled_partition(self):
+        """Slider with 2-D coupled group [[0,1]] — roots in dim 0 with dim 1 fixed."""
+        def f(x, _): return x[0] * x[1] - 0.1
+        slider = ChebyshevSlider(
+            f, num_dimensions=2, domain=[(-1, 1), (0.5, 1.5)], n_nodes=[6, 6],
+            partition=[[0, 1]], pivot_point=[0.0, 1.0],
+        )
+        slider.build(verbose=False)
+        # f(x, 0.5) = 0.5*x - 0.1 = 0 at x = 0.2
+        roots = slider.roots(dim=0, fixed={1: 0.5})
+        assert len(roots) == 1
+        assert abs(roots[0] - 0.2) < 1e-9
+
+    def test_save_load_round_trip_preserves_roots(self):
+        """Pickle round-trip preserves roots()."""
+        import pickle
+        def f(x, _): return x[0] ** 2 - 0.25
+        slider = ChebyshevSlider(
+            f, num_dimensions=1, domain=[(-1, 1)], n_nodes=[10],
+            partition=[[0]], pivot_point=[0.0],
+        )
+        slider.build(verbose=False)
+        roots_before = slider.roots()
+        data = pickle.dumps(slider)
+        slider_loaded = pickle.loads(data)
+        roots_after = slider_loaded.roots()
+        np.testing.assert_array_almost_equal(roots_before, roots_after, decimal=12)
