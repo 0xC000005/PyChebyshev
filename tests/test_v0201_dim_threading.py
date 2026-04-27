@@ -476,3 +476,99 @@ class TestBinaryAlgebraStrict:
         b = _build_non_identity_tt().reorder([2, 0, 1])
         with pytest.raises(ValueError, match=r"reorder\("):
             a += b
+
+
+class TestCrossFeatureStress:
+    def test_workflow_auto_order_then_full_surface(self):
+        """Build → reorder → slice → partial integrate → pickle round-trip."""
+        import pickle
+        f = lambda p, _: np.sin(p[0]) + p[1] ** 2 + 0.5 * p[2]
+        tt = ChebyshevTT(
+            f, 3, [[-1, 1]] * 3, [9] * 3, tolerance=1e-10, max_rank=12
+        )
+        tt.build()
+
+        # Reorder, slice, integrate.
+        permuted = tt.reorder([2, 0, 1])
+        sliced = permuted.slice((1, 0.0))  # original dim 1 → 2D TT
+        integ = sliced.integrate(dims=[0])  # partial integrate over original dim 0
+        # integ is a 1D TT over original dim 2.
+        assert integ.num_dimensions == 1
+
+        # Pickle round-trip.
+        blob = pickle.dumps(integ)
+        restored = pickle.loads(blob)
+        assert restored.dim_order == integ.dim_order
+        rng = np.random.default_rng(42)
+        for _ in range(5):
+            pt = rng.uniform(-1, 1, size=1).tolist()
+            assert abs(restored.eval(pt) - integ.eval(pt)) < 1e-9
+
+    def test_to_dense_axis_order_invariant(self):
+        """to_dense from a permuted TT == to_dense from canonical TT."""
+        tt_canon = _build_non_identity_tt()
+        tt_perm = tt_canon.reorder([2, 0, 1])
+        dense_canon = tt_canon.to_dense()
+        dense_perm = tt_perm.to_dense()
+        assert dense_canon.shape == dense_perm.shape
+        assert np.allclose(dense_canon, dense_perm, atol=1e-7)
+
+    def test_algebra_chain_via_reorder(self):
+        """Add two TTs from different orderings via explicit reorder()."""
+        f = lambda p, _: np.exp(-p[0] * p[1] - 0.3 * p[2])
+        a = ChebyshevTT(
+            f, 3, [[-1, 1]] * 3, [9] * 3, tolerance=1e-10, max_rank=12
+        )
+        a.build()
+        a_perm = a.reorder([2, 0, 1])
+        b_perm = a.reorder([1, 0, 2])
+
+        # Mismatched dim_orders: explicit ValueError, hint at reorder().
+        with pytest.raises(ValueError, match=r"reorder\("):
+            _ = a_perm + b_perm
+
+        # Realign and add.
+        b_aligned = b_perm.reorder(a_perm.dim_order)
+        s = a_perm + b_aligned
+        assert s.dim_order == a_perm.dim_order
+
+        rng = np.random.default_rng(11)
+        for _ in range(5):
+            pt = rng.uniform(-0.9, 0.9, size=3).tolist()
+            # a, b are built from the same f; both equal a as functions.
+            # Sum ≈ 2*a.
+            assert abs(s.eval(pt) - 2 * a.eval(pt)) < 1e-5
+
+    def test_extrude_slice_integrate_chain(self):
+        """Chain extrude → slice → partial integrate on a permuted TT."""
+        tt = _build_non_identity_tt().reorder([2, 0, 1])
+        # Extrude a new dim at position 1.
+        ext = tt.extrude((1, (-2, 2), 5))
+        assert ext.num_dimensions == 4
+        # Slice the original dim 0 (now at user-frame index 0 in the
+        # 4-dim result).
+        sliced = ext.slice((0, 0.5))
+        assert sliced.num_dimensions == 3
+        # Partial integrate over user-frame dim 0 (the new extruded dim).
+        # Result is 2D.
+        result = sliced.integrate(dims=[0])
+        assert result.num_dimensions == 2
+        # Sanity: eval is finite.
+        rng = np.random.default_rng(20)
+        for _ in range(3):
+            pt = rng.uniform(-1, 1, size=2).tolist()
+            v = result.eval(pt)
+            assert np.isfinite(v)
+
+    def test_save_load_pcb_not_supported_for_tt(self):
+        """ChebyshevTT save/load goes via pickle, not .pcb (v0.14 limitation).
+
+        v0.20.1 does not change this; just confirm the pickle round-trip
+        preserves dim_order on a reordered TT.
+        """
+        import pickle
+        tt = _build_non_identity_tt().reorder([2, 0, 1])
+        blob = pickle.dumps(tt)
+        restored = pickle.loads(blob)
+        assert restored.dim_order == [2, 0, 1]
+        assert abs(restored.eval([0.1, -0.2, 0.3]) - tt.eval([0.1, -0.2, 0.3])) < 1e-9
