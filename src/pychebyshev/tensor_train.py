@@ -1832,18 +1832,8 @@ class ChebyshevTT:
         ValueError
             If a slice value is outside the domain, if slicing all
             dimensions, or if ``dim_index`` is out of range or duplicated.
-        NotImplementedError
-            If this TT was built via :meth:`with_auto_order` with a
-            non-identity ``_dim_order``. Full dim_order threading planned
-            for v0.20.1.
         """
         self._check_built()
-        if self._dim_order != list(range(self.num_dimensions)):
-            raise NotImplementedError(
-                "slice() is not yet supported on TTs built via with_auto_order() "
-                "with a non-identity dim permutation. "
-                "Full dim_order threading is planned for v0.20.1."
-            )
 
         from pychebyshev._extrude_slice import (
             _normalize_slicing_params,
@@ -1853,9 +1843,17 @@ class ChebyshevTT:
 
         norm_params = _normalize_slicing_params(params, self.num_dimensions)
 
-        # Validate values within domain before modifying anything
+        canonical = list(range(self.num_dimensions))
+        identity = self._dim_order == canonical
+
+        # Validate values within domain before modifying anything. The user's
+        # dim_idx is in original-dim frame; translate to the storage position
+        # to look up the storage-frame domain.
         for dim_idx, value in norm_params:
-            lo, hi = self.domain[dim_idx]
+            storage_pos = (
+                dim_idx if identity else self._dim_order.index(dim_idx)
+            )
+            lo, hi = self.domain[storage_pos]
             if value < lo or value > hi:
                 raise ValueError(
                     f"Slice value {value} for dim {dim_idx} is outside "
@@ -1865,18 +1863,42 @@ class ChebyshevTT:
         new_cores = list(self._coeff_cores)
         new_domain = list(self.domain)
         new_n_nodes = list(self.n_nodes)
-        # Process slices in DESCENDING dim order so earlier indices remain valid
-        for dim_idx, value in sorted(norm_params, key=lambda p: -p[0]):
-            lo, hi = new_domain[dim_idx]
-            nodes = _make_nodes_for_dim(lo, hi, new_n_nodes[dim_idx])
-            new_cores = _slice_tt_core(new_cores, dim_idx, value, lo, hi, nodes)
-            new_domain.pop(dim_idx)
-            new_n_nodes.pop(dim_idx)
+        live_dim_order = list(self._dim_order)
+
+        # Translate every (orig_dim, value) to (storage_pos, value).
+        translated = []
+        for dim_idx, value in norm_params:
+            storage_pos = live_dim_order.index(dim_idx)
+            translated.append((storage_pos, value))
+        # Process in descending storage_pos so earlier indices remain valid
+        # as cores are popped.
+        for storage_pos, value in sorted(translated, key=lambda t: -t[0]):
+            lo, hi = new_domain[storage_pos]
+            nodes = _make_nodes_for_dim(lo, hi, new_n_nodes[storage_pos])
+            new_cores = _slice_tt_core(
+                new_cores, storage_pos, value, lo, hi, nodes
+            )
+            new_domain.pop(storage_pos)
+            new_n_nodes.pop(storage_pos)
+            live_dim_order.pop(storage_pos)
 
         if len(new_cores) == 0:
             raise RuntimeError("internal error: cannot slice all dimensions")
 
         new_tt_ranks = [c.shape[0] for c in new_cores] + [new_cores[-1].shape[2]]
+
+        # Build the result _dim_order. live_dim_order contains the surviving
+        # original-dim indices in storage order; renumber to 0..len(kept)-1
+        # in original-order ascending order.
+        sliced_orig = {dim_idx for dim_idx, _ in norm_params}
+        new_dim_index = {}
+        next_idx = 0
+        for orig_d in range(self.num_dimensions):
+            if orig_d in sliced_orig:
+                continue
+            new_dim_index[orig_d] = next_idx
+            next_idx += 1
+        result_dim_order = [new_dim_index[d] for d in live_dim_order]
 
         obj = self.__class__.__new__(self.__class__)
         obj.function = None
@@ -1896,7 +1918,7 @@ class ChebyshevTT:
         obj._build_time = 0.0
         obj._total_build_evals = 0
         obj._cached_error_estimate = None
-        obj._dim_order = list(range(len(new_n_nodes)))
+        obj._dim_order = result_dim_order
         return obj
 
     def eval(self, point: List[float]) -> float:

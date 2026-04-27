@@ -391,10 +391,16 @@ class TestDimOrderGuards:
         with pytest.raises(NotImplementedError, match="dim_order"):
             _ = tt / 2.0
 
-    def test_slice_with_non_identity_dim_order_raises(self):
+    def test_slice_with_non_identity_dim_order_works(self):
+        """v0.20.1 lifted the slice dim_order guard.
+
+        Slicing on a permuted TT now succeeds via storage-frame translation.
+        Verified in detail by tests/test_v0201_dim_threading.py::TestSliceThreading.
+        """
         tt = self._build_non_identity_tt()
-        with pytest.raises(NotImplementedError, match="dim_order"):
-            tt.slice([(0, 0.5)])
+        sliced = tt.slice([(0, 0.5)])
+        assert sliced.num_dimensions == 1
+        assert isinstance(sliced.eval([0.2]), float)
 
     def test_extrude_with_non_identity_dim_order_raises(self):
         tt = self._build_non_identity_tt()

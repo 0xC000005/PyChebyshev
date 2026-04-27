@@ -276,3 +276,50 @@ class TestToDenseThreading:
         for (i, j, k) in [(0, 0, 0), (4, 4, 4), (2, 2, 2), (0, 4, 2)]:
             pt = [n0[i], n1[j], n2[k]]
             assert abs(dense[i, j, k] - permuted.eval(pt)) < 1e-7
+
+
+class TestSliceThreading:
+    def test_slice_one_dim_matches_canonical(self):
+        """slice(orig_dim=0, value=v) on permuted TT agrees with same slice on canonical."""
+        tt_canon = _build_non_identity_tt()
+        tt_perm = tt_canon.reorder([2, 0, 1])
+
+        sliced_canon = tt_canon.slice((0, 0.3))
+        sliced_perm = tt_perm.slice((0, 0.3))
+
+        assert sliced_canon.num_dimensions == 2
+        assert sliced_perm.num_dimensions == 2
+        rng = np.random.default_rng(3)
+        for _ in range(10):
+            pt = rng.uniform(-1, 1, size=2).tolist()
+            assert abs(sliced_canon.eval(pt) - sliced_perm.eval(pt)) < 1e-7
+
+    def test_slice_multiple_dims(self):
+        """Slicing two dims (orig 0 and 2) produces a 1D TT."""
+        tt_canon = _build_non_identity_tt()
+        tt_perm = tt_canon.reorder([2, 0, 1])
+        sliced_canon = tt_canon.slice([(0, 0.2), (2, -0.4)])
+        sliced_perm = tt_perm.slice([(0, 0.2), (2, -0.4)])
+        assert sliced_canon.num_dimensions == 1
+        assert sliced_perm.num_dimensions == 1
+        rng = np.random.default_rng(4)
+        for _ in range(10):
+            pt = rng.uniform(-1, 1, size=1).tolist()
+            assert abs(sliced_canon.eval(pt) - sliced_perm.eval(pt)) < 1e-7
+
+    def test_slice_dim_index_out_of_domain_user_frame(self):
+        """Out-of-domain value uses original-dim's domain (user frame)."""
+        f = lambda p, _: p[0] + p[1] + p[2]
+        tt = ChebyshevTT(
+            f, 3, [[-1, 1], [-2, 2], [-3, 3]], [3, 3, 3], tolerance=1e-10
+        )
+        tt.build()
+        permuted = tt.reorder([2, 0, 1])
+        # Original dim 1 has domain [-2, 2]; storage pos 2 also has domain [-2, 2]
+        # because reorder swapped n_nodes/domain. But the error message should
+        # reference dim 1 (user frame).
+        with pytest.raises(ValueError, match="outside"):
+            permuted.slice((1, 5.0))  # 5.0 is outside [-2, 2]
+        # Within original dim 1's domain, this should succeed.
+        sliced = permuted.slice((1, 1.0))
+        assert sliced.num_dimensions == 2
